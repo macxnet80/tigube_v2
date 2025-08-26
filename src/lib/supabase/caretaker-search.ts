@@ -14,6 +14,9 @@ export interface SearchFilters {
   radius?: string;
   minPrice?: number;
   maxPrice?: number;
+  verified?: boolean;
+  commercial?: boolean;
+  shortTermAvailable?: boolean;
 }
 
 // Interface für die Anzeige in der UI (basierend auf der alten CaretakerResult)
@@ -28,6 +31,8 @@ export interface CaretakerDisplayData {
   hourlyRate: number;
   prices?: Record<string, number | string>; // Service-spezifische Preise
   services: string[];
+  servicesWithCategories: any[]; // Services mit Kategorien
+  animalTypes: string[]; // Tierarten aus der Datenbank
   bio: string;
   verified: boolean;
   isCommercial: boolean;
@@ -36,19 +41,33 @@ export interface CaretakerDisplayData {
 
 /**
  * Berechnet den besten/niedrigsten Preis aus den verfügbaren Service-Preisen
+ * Anfahrkosten werden ausgeschlossen, da sie zusätzliche Kosten sind
  */
 function getBestPrice(prices: Record<string, number | string>): number {
   if (!prices || Object.keys(prices).length === 0) return 0;
   
-  const numericPrices = Object.values(prices)
-    .filter(price => price !== '' && price !== null && price !== undefined) // Filtere leere Strings und null/undefined
-    .map(price => {
+  console.log('🔍 Calculating best price from:', prices);
+  
+  // Filtere Anfahrkosten aus der Preisberechnung aus
+  const pricesWithoutTravelCosts = Object.entries(prices)
+    .filter(([key, price]) => {
+      // Schließe "Anfahrkosten" aus der Preisberechnung aus
+      if (key === 'Anfahrkosten') {
+        console.log('🚗 Excluding travel costs from price calculation:', price);
+        return false;
+      }
+      return price !== '' && price !== null && price !== undefined;
+    })
+    .map(([key, price]) => {
       const num = typeof price === 'string' ? parseFloat(price) : price;
       return isNaN(num) ? 0 : num;
     })
     .filter(price => price > 0);
   
-  return numericPrices.length > 0 ? Math.min(...numericPrices) : 0;
+  const bestPrice = pricesWithoutTravelCosts.length > 0 ? Math.min(...pricesWithoutTravelCosts) : 0;
+  console.log('🔍 Best price calculated:', bestPrice, 'from prices (excluding travel costs):', pricesWithoutTravelCosts);
+  
+  return bestPrice;
 }
 
 /**
@@ -57,6 +76,8 @@ function getBestPrice(prices: Record<string, number | string>): number {
 interface CaretakerJoinRow {
   id: string;
   services: any;
+  services_with_categories: any;
+  animal_types: string[] | null;
   prices: Record<string, any> | null;
   hourly_rate: number | null;
   rating: number | null;
@@ -104,6 +125,32 @@ function transformCaretakerData(viewData: CaretakerJoinRow): CaretakerDisplayDat
     services = [];
   }
 
+  // Animal types verarbeiten
+  let animalTypes: string[] = [];
+  try {
+    if (viewData.animal_types && Array.isArray(viewData.animal_types)) {
+      animalTypes = viewData.animal_types.filter(s => typeof s === 'string');
+    }
+  } catch (error) {
+    console.warn('⚠️ Error parsing animal_types:', error, 'Original value:', viewData.animal_types);
+    animalTypes = [];
+  }
+
+  // Services with categories verarbeiten
+  let servicesWithCategories: any[] = [];
+  try {
+    if (viewData.services_with_categories) {
+      if (Array.isArray(viewData.services_with_categories)) {
+        servicesWithCategories = viewData.services_with_categories;
+      } else if (typeof viewData.services_with_categories === 'string') {
+        servicesWithCategories = JSON.parse(viewData.services_with_categories);
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Error parsing services_with_categories:', error, 'Original value:', viewData.services_with_categories);
+    servicesWithCategories = [];
+  }
+
   // Preise verarbeiten - kann JSON object sein
   let prices: Record<string, number | string> = {};
   try {
@@ -125,9 +172,11 @@ function transformCaretakerData(viewData: CaretakerJoinRow): CaretakerDisplayDat
     location: viewData.users?.city && viewData.users?.plz ? `${viewData.users.city} ${viewData.users.plz}` : (viewData.users?.city || 'Unbekannt'),
     rating: Number(viewData.rating) || 0,
     reviewCount: viewData.review_count || 0,
-    hourlyRate: bestPrice,
+    hourlyRate: bestPrice, // Verwende den besten Preis aus service-spezifischen Preisen
     prices: prices,
     services: services,
+    servicesWithCategories: servicesWithCategories,
+    animalTypes: animalTypes,
     bio: viewData.short_about_me || viewData.long_about_me || 'Keine Beschreibung verfügbar.',
     verified: viewData.is_verified || false,
     isCommercial: viewData.is_commercial || false,
@@ -158,6 +207,8 @@ export async function searchCaretakers(filters?: SearchFilters): Promise<Caretak
       .select(`
         id,
         services,
+        services_with_categories,
+        animal_types,
         prices,
         hourly_rate,
         rating,
@@ -186,16 +237,61 @@ export async function searchCaretakers(filters?: SearchFilters): Promise<Caretak
       query = query.or(`users.city.ilike.%${location}%,users.plz.ilike.%${location}%`);
     }
 
-    // Optional: Preis-Filter
-    if (filters?.minPrice !== undefined) {
-      console.log('💰 Adding min price filter:', filters.minPrice);
-      query = query.gte('hourly_rate', filters.minPrice);
+    // Optional: Tierart-Filter (animal_types)
+    if (filters?.petType && filters.petType !== '') {
+      console.log('🐾 Adding pet type filter:', filters.petType);
+      // Konvertiere deutsche Tierart-Namen zu Datenbank-Werten
+      const petTypeMapping: { [key: string]: string } = {
+        'Hund': 'Hunde',
+        'Katze': 'Katzen',
+        'Kleintier': 'Kleintiere',
+        'Vogel': 'Vögel',
+        'Reptil': 'Reptilien',
+        'Sonstiges': 'Sonstige'
+      };
+      const dbPetType = petTypeMapping[filters.petType] || filters.petType;
+      query = query.contains('animal_types', [dbPetType]);
     }
 
-    if (filters?.maxPrice !== undefined) {
-      console.log('💰 Adding max price filter:', filters.maxPrice);
-      query = query.lte('hourly_rate', filters.maxPrice);
+    // Optional: Service-Filter (services)
+    if (filters?.service && filters.service !== '') {
+      console.log('🔧 Adding service filter:', filters.service);
+      query = query.contains('services', [filters.service]);
     }
+
+    // Service-Kategorie-Filter wird client-seitig angewendet, da JSONB-Array-Filterung komplex ist
+    if (filters?.serviceCategory && filters.serviceCategory !== '') {
+      console.log('🏷️ Service category filter will be applied client-side');
+    }
+
+    // Optional: Bewertungs-Filter (rating)
+    if (filters?.minRating && filters.minRating !== '') {
+      const minRating = parseFloat(filters.minRating);
+      console.log('⭐ Adding min rating filter:', minRating);
+      query = query.gte('rating', minRating);
+    }
+
+    // Optional: Verifizierungs-Filter
+    if (filters?.verified) {
+      console.log('✅ Adding verified filter');
+      query = query.eq('is_verified', true);
+    }
+
+    // Optional: Kommerzielle Betreuer-Filter
+    if (filters?.commercial) {
+      console.log('🏢 Adding commercial filter');
+      query = query.eq('is_commercial', true);
+    }
+
+    // Optional: Kurzfristige Verfügbarkeit
+    if (filters?.shortTermAvailable) {
+      console.log('⏰ Adding short term availability filter');
+      query = query.eq('short_term_available', true);
+    }
+
+    // Preis-Filter wird client-seitig angewendet, da die Preise in JSON-Format sind
+    // und hourly_rate null ist
+    console.log('💰 Price filters will be applied client-side');
 
     const { data, error } = await query;
 
@@ -213,48 +309,6 @@ export async function searchCaretakers(filters?: SearchFilters): Promise<Caretak
 
     // Transformiere die Daten für die UI
     let transformedData = (data as unknown as CaretakerJoinRow[]).map(item => transformCaretakerData(item));
-
-    // Client-seitige Filterung für service (da PostgreSQL JSON-Array-Suche kompliziert ist)
-    if (filters?.service) {
-      console.log('🔧 Applying client-side service filter:', filters.service);
-      transformedData = transformedData.filter(caretaker => {
-        return caretaker.services.includes(filters.service!);
-      });
-      console.log(`🔧 After service filter: ${transformedData.length} caretakers`);
-    }
-
-    // Client-seitige Filterung für serviceCategory
-    if (filters?.serviceCategory) {
-      console.log('🏷️ Applying client-side service category filter:', filters.serviceCategory);
-      transformedData = transformedData.filter(caretaker => {
-        // Für jeden Caretaker prüfen wir, ob er Services in der gewünschten Kategorie anbietet
-        const categorizedServices = ServiceUtils.migrateStringArrayToCategories(caretaker.services);
-        return categorizedServices.some(service => service.categoryId === filters.serviceCategory);
-      });
-      console.log(`🏷️ After service category filter: ${transformedData.length} caretakers`);
-    }
-
-    // Client-seitige Filterung für petType (da wir noch keine pet_types in der DB haben)
-    if (filters?.petType) {
-      console.log('🐾 Applying client-side pet type filter:', filters.petType);
-      transformedData = transformedData.filter(caretaker => {
-        // Vereinfachte Logik: Wenn Tierart "Hund" ist, schauen wir nach hunde-bezogenen Services
-        if (filters.petType === 'Hund') {
-          return caretaker.services.some(service => 
-            service.toLowerCase().includes('hund') || 
-            service.toLowerCase().includes('gassi')
-          );
-        }
-        if (filters.petType === 'Katze') {
-          return caretaker.services.some(service => 
-            service.toLowerCase().includes('katze')
-          );
-        }
-        // Für andere Tierarten oder "Alle Tiere" alle anzeigen
-        return true;
-      });
-      console.log(`🐾 After pet type filter: ${transformedData.length} caretakers`);
-    }
 
     console.log(`🎯 Final result: ${transformedData.length} caretakers`);
     return transformedData;

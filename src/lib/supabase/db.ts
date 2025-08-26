@@ -854,18 +854,27 @@ export const caretakerSearchService = {
       }
 
       // Bestpreis ermitteln - verwende Preis-Object falls verfügbar, sonst hourly_rate
+      // Anfahrkosten werden ausgeschlossen, da sie zusätzliche Kosten sind
       const getBestPrice = (prices: Record<string, number | string>): number => {
         if (!prices || Object.keys(prices).length === 0) return 0;
         
-        const numericPrices = Object.values(prices)
-          .filter(price => price !== '' && price !== null && price !== undefined) // Filtere leere Strings
-          .map(price => {
+        // Filtere Anfahrkosten aus der Preisberechnung aus
+        const pricesWithoutTravelCosts = Object.entries(prices)
+          .filter(([key, price]) => {
+            // Schließe "Anfahrkosten" aus der Preisberechnung aus
+            if (key === 'Anfahrkosten') {
+              console.log('🚗 Excluding travel costs from price calculation:', price);
+              return false;
+            }
+            return price !== '' && price !== null && price !== undefined;
+          })
+          .map(([key, price]) => {
             const num = typeof price === 'string' ? parseFloat(price) : price;
             return isNaN(num) ? 0 : num;
           })
           .filter(price => price > 0);
         
-        return numericPrices.length > 0 ? Math.min(...numericPrices) : 0;
+        return pricesWithoutTravelCosts.length > 0 ? Math.min(...pricesWithoutTravelCosts) : 0;
       };
       
       const bestPrice = getBestPrice(prices) || Number(result.hourly_rate) || 0;

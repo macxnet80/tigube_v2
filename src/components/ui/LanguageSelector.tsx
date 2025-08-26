@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Check } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { clsx } from 'clsx';
 
 // Verfügbare Sprachen für Tierbetreuer
@@ -51,7 +51,6 @@ function LanguageSelector({
 }: LanguageSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [customLanguage, setCustomLanguage] = useState('');
 
   // Filter verfügbare Sprachen basierend auf Suchanfrage
   const filteredLanguages = AVAILABLE_LANGUAGES.filter(lang => 
@@ -71,20 +70,7 @@ function LanguageSelector({
     onChange(selectedLanguages.filter(l => l !== language));
   };
 
-  const handleAddCustomLanguage = () => {
-    if (customLanguage.trim() && !selectedLanguages.includes(customLanguage.trim())) {
-      onChange([...selectedLanguages, customLanguage.trim()]);
-      setCustomLanguage('');
-    }
-  };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (customLanguage.trim()) {
-        handleAddCustomLanguage();
-      }
-    }
     if (e.key === 'Escape') {
       setIsOpen(false);
     }
@@ -166,38 +152,9 @@ function LanguageSelector({
             )}
           </div>
 
-          {/* Custom Language Input */}
-          <div className="p-3 border-t border-gray-200 bg-gray-50">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Andere Sprache hinzufügen..."
-                value={customLanguage}
-                onChange={(e) => setCustomLanguage(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddCustomLanguage}
-                disabled={!customLanguage.trim()}
-                className="px-3 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
 
-          {/* Close Button */}
-          <div className="p-2 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md"
-            >
-              Schließen
-            </button>
-          </div>
+
+
         </div>
       )}
 

@@ -83,7 +83,7 @@ function SearchPage() {
   const serviceCategoryOptions = [
     { value: '', label: 'Alle Kategorien' },
     ...DEFAULT_SERVICE_CATEGORIES.map(category => ({
-      value: category.id,
+      value: category.id.toString(),
       label: category.name
     }))
   ];
@@ -122,7 +122,9 @@ function SearchPage() {
       availabilityTime: selectedAvailabilityTime,
       minRating: selectedMinRating,
       radius: selectedRadius,
-      maxPrice: maxPrice
+      maxPrice: maxPrice,
+      maxPriceType: typeof maxPrice,
+      shouldApplyPriceFilter: maxPrice < 100
     });
     
     setLoading(true);
@@ -135,6 +137,7 @@ function SearchPage() {
       if (selectedPetType) filters.petType = selectedPetType;
       if (selectedService) filters.service = selectedService;
       if (selectedServiceCategory) filters.serviceCategory = selectedServiceCategory;
+      if (selectedMinRating) filters.minRating = selectedMinRating;
       
       // Nur Preis-Filter setzen wenn er nicht dem Default-Wert entspricht
       if (maxPrice < 100) {
@@ -146,32 +149,41 @@ function SearchPage() {
       try {
         data = await searchCaretakersService(filters);
         console.log('📊 Service returned:', data);
+        
+        // Wenn der Service erfolgreich ist, verwende die echten Daten
+        if (data && Array.isArray(data)) {
+          console.log('✅ Using real data from service');
+          
+          // DEBUG: Zeige alle Preise der geladenen Daten
+          console.log('🔍 DEBUG: All loaded caretakers with prices:');
+          data.forEach((caretaker, index) => {
+            console.log(`  ${index + 1}. ${caretaker.name}:`);
+            console.log(`     - hourlyRate: ${caretaker.hourlyRate}`);
+            console.log(`     - prices:`, caretaker.prices);
+            console.log(`     - location: ${caretaker.location}`);
+            console.log(`     - services:`, caretaker.services);
+          });
+        } else {
+          console.log('⚠️ Service returned invalid data, setting to empty array');
+          data = [];
+        }
       } catch (serviceError) {
-        console.warn('⚠️ Service error, falling back to mock data:', serviceError);
+        console.error('❌ Service error:', serviceError);
+        console.log('⚠️ Service failed, showing empty results');
         data = [];
       }
       
-      // Fallback to mock data only if service failed completely (not for empty results)
-      if (data === undefined || data === null) {
-        console.log('🔄 Service failed, using mock data for development');
-        const { mockCaregivers } = await import('../data/mockData');
-        data = mockCaregivers.map(mock => ({
-          id: mock.id,
-          userId: mock.id, // Using id as userId for mock data
-          name: mock.name,
-          avatar: mock.avatar,
-          location: mock.location,
-          rating: mock.rating,
-          reviewCount: mock.reviewCount,
-          hourlyRate: mock.hourlyRate,
-          prices: { default: mock.hourlyRate },
-          services: mock.services,
-          bio: mock.bio,
-          verified: mock.verified,
-          isCommercial: false,
-          short_term_available: user && mock.id === user.id ? shortTermAvailable : false // Use context value for current user
-        }));
-        console.log('📊 Using mock data:', data);
+      // Debug: Zeige alle verfügbaren Betreuer und ihre Preise
+      if (data && data.length > 0) {
+        console.log('🔍 All available caretakers with prices:');
+        data.forEach(caretaker => {
+          const prices = Object.values(caretaker.prices || {}).filter(p => p > 0);
+          const lowestPrice = prices.length > 0 ? Math.min(...prices) : caretaker.hourlyRate;
+          console.log(`  - ${caretaker.name}: hourlyRate=${caretaker.hourlyRate}, lowestPrice=${lowestPrice}, prices=`, caretaker.prices);
+          console.log(`    Raw data:`, caretaker);
+        });
+      } else {
+        console.log('📭 No caretakers found in data');
       }
       
       // Client-seitige Standort-Filterung (muss zuerst kommen)
@@ -226,12 +238,96 @@ function SearchPage() {
         console.log(`🕒 After availability filter: ${data.length} caretakers`);
       }
 
-      // Client-seitige Bewertungs-Filterung
-      if (selectedMinRating && data) {
-        const minRating = parseFloat(selectedMinRating);
-        console.log('⭐ Applying rating filter:', minRating);
-        data = data.filter(caretaker => caretaker.rating >= minRating);
-        console.log(`⭐ After rating filter: ${data.length} caretakers`);
+      // Bewertungs-Filter wird jetzt server-seitig angewendet
+
+      // Client-seitige Service-Kategorie-Filterung
+      if (selectedServiceCategory && data) {
+        console.log('🏷️ Applying service category filter:', selectedServiceCategory);
+        console.log('🏷️ DEBUG: Checking servicesWithCategories for all caretakers:');
+        data.forEach(caretaker => {
+          console.log(`  - ${caretaker.name}: servicesWithCategories=`, caretaker.servicesWithCategories);
+        });
+        
+        data = data.filter(caretaker => {
+          // Prüfe ob der Betreuer Services in der gewählten Kategorie hat
+          if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
+            const hasCategory = caretaker.servicesWithCategories.some(service => 
+              service.category_id === parseInt(selectedServiceCategory)
+            );
+            console.log(`🏷️ ${caretaker.name}: has category ${selectedServiceCategory} = ${hasCategory}`);
+            return hasCategory;
+          }
+          console.log(`🏷️ ${caretaker.name}: no servicesWithCategories data`);
+          return false;
+        });
+        console.log(`🏷️ After service category filter: ${data.length} caretakers`);
+      }
+
+      // Client-seitige Preis-Filterung
+      if (maxPrice < 100 && data && data.length > 0) {
+        console.log('💰 Applying price filter:', maxPrice, '€/hour');
+        console.log('💰 Available caretakers before price filter:', data.length);
+        
+        const originalLength = data.length;
+        const originalData = [...data]; // Backup für Debugging
+        
+        // DEBUG: Zeige alle Preise vor der Filterung
+        console.log('💰 DEBUG: All prices before filtering:');
+        data.forEach(caretaker => {
+          console.log(`  - ${caretaker.name}: hourlyRate=${caretaker.hourlyRate}, prices=`, caretaker.prices);
+        });
+        
+        data = data.filter(caretaker => {
+          // Preis-Ermittlung aus service-spezifischen Preisen
+          let lowestPrice = 0;
+          
+          if (caretaker.prices && Object.keys(caretaker.prices).length > 0) {
+            // Filtere Anfahrkosten aus der Preisberechnung aus
+            const pricesWithoutTravelCosts = Object.entries(caretaker.prices)
+              .filter(([key, price]) => {
+                // Schließe "Anfahrkosten" aus der Preisberechnung aus
+                if (key === 'Anfahrkosten') {
+                  return false;
+                }
+                return price !== '' && price !== null && price !== undefined;
+              })
+              .map(([key, price]) => {
+                const num = typeof price === 'string' ? parseFloat(price) : price;
+                return isNaN(num) ? 0 : num;
+              })
+              .filter(price => price > 0);
+            
+            if (pricesWithoutTravelCosts.length > 0) {
+              lowestPrice = Math.min(...pricesWithoutTravelCosts);
+            }
+          }
+          
+          // Fallback zu hourlyRate wenn keine service-spezifischen Preise vorhanden
+          if (lowestPrice === 0 && caretaker.hourlyRate) {
+            lowestPrice = caretaker.hourlyRate;
+          }
+          
+          // Prüfe ob Preis unter dem Max-Preis liegt
+          const isWithinBudget = lowestPrice <= maxPrice;
+          
+          console.log(`💰 ${caretaker.name}: lowestPrice=${lowestPrice}, maxPrice=${maxPrice}, withinBudget=${isWithinBudget}`);
+          
+          if (!isWithinBudget) {
+            console.log(`💰 Filtering out "${caretaker.name}" - price €${lowestPrice} > max €${maxPrice}`);
+          }
+          
+          return isWithinBudget;
+        });
+        
+        console.log(`💰 Price filter: ${originalLength} → ${data.length} caretakers`);
+        
+        if (data.length === 0) {
+          console.log('💰 WARNING: All caretakers filtered out by price filter!');
+          console.log('💰 This might indicate a bug in the price calculation or filter logic.');
+          console.log('💰 TEMPORARY: Showing all caretakers for debugging');
+          // TEMPORARY: Zeige alle Betreuer für Debugging
+          data = originalData || [];
+        }
       }
 
       // Client-seitige Umkreis-Filterung (vereinfacht)
@@ -314,7 +410,7 @@ function SearchPage() {
     }, 300); // 300ms Debounce
     
     return () => clearTimeout(timeoutId);
-  }, [location, selectedPetType, selectedService, selectedAvailabilityDays, selectedAvailabilityTime, selectedMinRating, selectedRadius, maxPrice]); // Dependencies für Live-Suche
+  }, [location, selectedPetType, selectedService, selectedServiceCategory, selectedAvailabilityDays, selectedAvailabilityTime, selectedMinRating, selectedRadius, maxPrice]); // Dependencies für Live-Suche
 
   const clearAllFilters = () => {
     setSelectedPetType('');
@@ -535,6 +631,18 @@ function SearchPage() {
                           </button>
                         </div>
                       )}
+
+                      {selectedServiceCategory && (
+                        <div className="flex items-center bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm">
+                          🏷️ {serviceCategoryOptions.find(opt => opt.value === selectedServiceCategory)?.label || selectedServiceCategory}
+                          <button
+                            onClick={() => setSelectedServiceCategory('')}
+                            className="ml-2 hover:text-primary-900"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
                       
                       {selectedAvailabilityDays.length > 0 && (
                         <div className="flex items-center bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm">
@@ -667,30 +775,24 @@ function SearchPage() {
             <div className="mb-6">
               <div className="text-6xl mb-4">🐕‍🦺</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Wuff! Keine Betreuer in der Nähe gefunden
+                Wuff! Keine Betreuer gefunden
               </h3>
               <p className="text-gray-600 mb-4">
-                Auch unser bester Spürhund konnte in dieser Gegend keine Tierbetreuer aufspüren! 
+                Auch unser bester Spürhund konnte keine passenden Tierbetreuer aufspüren! 
               </p>
               <p className="text-gray-500 text-sm">
                 {location && `Für "${location}" haben wir leider keine passenden Betreuer.`}
               </p>
             </div>
             
-            <div className="space-y-3">
-              <p className="text-gray-600 text-sm">
-                💡 Tipp: Versuche es mit anderen Suchkriterien oder erweitere deine Filter
-              </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button onClick={clearAllFilters} variant="outline">
+                Filter zurücksetzen
+              </Button>
               
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button onClick={clearAllFilters} variant="outline">
-                  Filter zurücksetzen
-                </Button>
-                
-                <Button onClick={performSearch}>
-                  Erneut suchen
-                </Button>
-              </div>
+              <Button onClick={performSearch}>
+                Erneut suchen
+              </Button>
             </div>
           </div>
         )}
@@ -714,22 +816,29 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
   const getDisplayPrice = (caretaker: Caretaker) => {
     // 1. Wenn Service-spezifische Preise vorhanden sind, zeige den niedrigsten
     if (caretaker.prices && Object.keys(caretaker.prices).length > 0) {
-      const prices = Object.values(caretaker.prices)
-        .filter(price => price !== '' && price !== null && price !== undefined) // Filtere leere Strings
-        .map(price => {
+      // Filtere Anfahrkosten aus der Preisberechnung aus
+      const pricesWithoutTravelCosts = Object.entries(caretaker.prices)
+        .filter(([key, price]) => {
+          // Schließe "Anfahrkosten" aus der Preisberechnung aus
+          if (key === 'Anfahrkosten') {
+            return false;
+          }
+          return price !== '' && price !== null && price !== undefined;
+        })
+        .map(([key, price]) => {
           const num = typeof price === 'string' ? parseFloat(price) : price;
           return isNaN(num) ? 0 : num;
         })
         .filter(price => price > 0);
       
-      if (prices.length > 0) {
-        const minPrice = Math.min(...prices);
+      if (pricesWithoutTravelCosts.length > 0) {
+        const minPrice = Math.min(...pricesWithoutTravelCosts);
         return `ab €${minPrice}/Std.`;
       }
     }
     
     // 2. Fallback zu hourlyRate
-    if (caretaker.hourlyRate > 0) {
+    if (caretaker.hourlyRate && caretaker.hourlyRate > 0) {
       return `ab €${caretaker.hourlyRate}/Std.`;
     }
     

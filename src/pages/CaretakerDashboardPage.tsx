@@ -142,22 +142,71 @@ function CaretakerDashboardPage() {
   };
 
   // --- Leistungen & Qualifikationen State ---
-  // Leistungen State
-  const [editServices, setEditServices] = useState(false);
+  // Leistungen State mit sessionStorage Persistierung
+  const [editServices, setEditServices] = useState(() => {
+    return sessionStorage.getItem('editServices') === 'true';
+  });
+  
   const [servicesDraft, setServicesDraft] = useState<{
     services: string[];
     servicesWithCategories: CategorizedService[];
     animal_types: string[];
     prices: Record<string, string>;
-  }>({
-    services: profile?.services || [],
-    servicesWithCategories: profile?.services_with_categories || [],
-    animal_types: profile?.animal_types || [],
-    prices: profile?.prices || {},
+  }>(() => {
+    const saved = sessionStorage.getItem('servicesDraft');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return {
+      services: profile?.services || [],
+      servicesWithCategories: profile?.services_with_categories || [],
+      animal_types: profile?.animal_types || [],
+      prices: profile?.prices || {},
+    };
   });
 
-  // Qualifikationen State
-  const [editQualifications, setEditQualifications] = useState(false);
+  // Services Edit-Modus in sessionStorage speichern
+  useEffect(() => {
+    sessionStorage.setItem('editServices', editServices.toString());
+  }, [editServices]);
+
+  // Services Draft in sessionStorage speichern
+  useEffect(() => {
+    sessionStorage.setItem('servicesDraft', JSON.stringify(servicesDraft));
+  }, [servicesDraft]);
+
+  // Initialisiere servicesDraft nur beim ersten Laden des Profils (wenn keine sessionStorage-Daten vorhanden)
+  useEffect(() => {
+    if (profile && !sessionStorage.getItem('servicesDraft')) {
+      // Nur initialisieren wenn keine sessionStorage-Daten vorhanden sind
+      const profileServices = profile.services || [];
+      const servicesWithCategories = profile.services_with_categories;
+      
+      let normalizedServices: string[];
+      if (servicesWithCategories && Array.isArray(servicesWithCategories)) {
+        // Neue kategorisierte Services verwenden
+        normalizedServices = SupabaseServiceUtils.extractServiceNames(servicesWithCategories);
+      } else if (SupabaseServiceUtils.isLegacyFormat(profileServices)) {
+        // Legacy String-Array Services
+        normalizedServices = profileServices;
+      } else {
+        normalizedServices = [];
+      }
+
+      setServicesDraft({
+        services: normalizedServices,
+        servicesWithCategories: servicesWithCategories || [],
+        animal_types: profile.animal_types || [],
+        prices: profile.prices || {},
+      });
+    }
+  }, [profile]);
+
+  // Qualifikationen State mit sessionStorage Persistierung
+  const [editQualifications, setEditQualifications] = useState(() => {
+    return sessionStorage.getItem('editQualifications') === 'true';
+  });
+  
   const [qualificationsDraft, setQualificationsDraft] = useState<{
     qualifications: string[];
     experience_description: string;
@@ -166,15 +215,47 @@ function CaretakerDashboardPage() {
     companyName: string;
     taxNumber: string;
     vatId: string;
-  }>({
-    qualifications: profile?.qualifications || [],
-    experience_description: profile?.experience_description || '',
-    languages: profile?.languages || [],
-    isCommercial: profile?.is_commercial || false,
-    companyName: profile?.company_name || '',
-    taxNumber: profile?.tax_number || '',
-    vatId: profile?.vat_id || '',
+  }>(() => {
+    const saved = sessionStorage.getItem('qualificationsDraft');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    return {
+      qualifications: profile?.qualifications || [],
+      experience_description: profile?.experience_description || '',
+      languages: profile?.languages || [],
+      isCommercial: profile?.is_commercial || false,
+      companyName: profile?.company_name || '',
+      taxNumber: profile?.tax_number || '',
+      vatId: profile?.vat_id || '',
+    };
   });
+
+  // Qualifikationen Edit-Modus in sessionStorage speichern
+  useEffect(() => {
+    sessionStorage.setItem('editQualifications', editQualifications.toString());
+  }, [editQualifications]);
+
+  // Qualifikationen Draft in sessionStorage speichern
+  useEffect(() => {
+    sessionStorage.setItem('qualificationsDraft', JSON.stringify(qualificationsDraft));
+  }, [qualificationsDraft]);
+
+  // Initialisiere qualificationsDraft nur beim ersten Laden des Profils (wenn keine sessionStorage-Daten vorhanden)
+  useEffect(() => {
+    if (profile && !sessionStorage.getItem('qualificationsDraft')) {
+      // Nur initialisieren wenn keine sessionStorage-Daten vorhanden sind
+      setQualificationsDraft({
+        qualifications: profile.qualifications || [],
+        experience_description: profile.experience_description || '',
+        languages: profile.languages || [],
+        isCommercial: profile.is_commercial || false,
+        companyName: profile.company_name || '',
+        taxNumber: profile.tax_number || '',
+        vatId: profile.vat_id || '',
+      });
+    }
+  }, [profile]);
 
   // Freie Eingabe für Leistungen, Tierarten, Qualifikationen
   const [newService, setNewService] = useState('');
@@ -183,15 +264,7 @@ function CaretakerDashboardPage() {
   const [newQualification, setNewQualification] = useState('');
   const [serviceCategories, setServiceCategories] = useState<any[]>(DEFAULT_SERVICE_CATEGORIES as unknown as any[]);
 
-  // Default-Listen wie bei Anmeldung
-  const defaultServices = [
-    'Gassi-Service',
-    'Haustierbetreuung',
-    'Übernachtung',
-    'Kurzbesuche',
-    'Haussitting',
-    'Hundetagesbetreuung',
-  ];
+  // Default-Listen für Tierarten und Qualifikationen
   const defaultAnimals = [
     'Hunde',
     'Katzen',
@@ -207,18 +280,27 @@ function CaretakerDashboardPage() {
     'Tierheim-Erfahrung',
   ];
 
-  // Standard-Preisfelder wie bei der Anmeldung
-  const defaultPriceFields = {
-    'Gassi-Service': '',
-    'Haustierbetreuung': '',
-    'Übernachtung': '',
+  // Standard-Leistungen mit Preisfeldern
+  const defaultServices = [
+    'Gassi-Service',
+    'Haustierbetreuung',
+    'Übernachtung',
+    'Kurzbesuche',
+    'Haussitting',
+    'Hundetagesbetreuung',
+  ];
+
+  const servicePriceLabels: Record<string, string> = {
+    'Gassi-Service': '€/30 Min',
+    'Haustierbetreuung': '€/Besuch',
+    'Übernachtung': '€/Nacht',
+    'Kurzbesuche': '€/Besuch',
+    'Haussitting': '€/Tag',
+    'Hundetagesbetreuung': '€/Tag',
   };
 
-  const priceFieldLabels = {
-    'Gassi-Service': 'Gassi-Service (pro 30 Min)',
-    'Haustierbetreuung': 'Haustierbetreuung (pro Besuch)',
-    'Übernachtung': 'Übernachtung (pro Nacht)',
-  };
+  // Anfahrkosten separat
+  const travelCostsLabel = 'Anfahrkosten (€/Km)';
 
   // Farbsystem für Service-Kategorien
   const getServiceCategoryColor = (serviceName: string) => {
@@ -284,13 +366,35 @@ function CaretakerDashboardPage() {
 
   function handlePriceChange(key: string, value: string) {
     const validatedValue = validatePriceInput(value);
-    setServicesDraft(d => ({ ...d, prices: { ...d.prices, [key]: validatedValue } }));
+    setServicesDraft(d => {
+      const newPrices = { ...d.prices };
+      newPrices[key] = validatedValue;
+      return { ...d, prices: newPrices };
+    });
   }
   function handleRemovePrice(key: string) {
-    setServicesDraft(d => { const p = { ...d.prices }; delete p[key]; return { ...d, prices: p }; });
+    setServicesDraft(d => {
+      const newPrices = { ...d.prices };
+      delete newPrices[key];
+      return { ...d, prices: newPrices };
+    });
   }
   function handleAddPrice() {
-    setServicesDraft(d => ({ ...d, prices: { ...d.prices, '': '' } }));
+    // Erstelle einen eindeutigen Key für den neuen Preis
+    const timestamp = Date.now();
+    const newKey = `custom_${timestamp}`;
+    setServicesDraft(d => ({ ...d, prices: { ...d.prices, [newKey]: '' } }));
+    
+    // Füge auch einen neuen Service zur servicesWithCategories hinzu
+    const newService: CategorizedService = {
+      name: '',
+      category_id: 8, // Default: Allgemein
+      category_name: 'Allgemein'
+    };
+    setServicesDraft(d => ({ 
+      ...d, 
+      servicesWithCategories: [...d.servicesWithCategories, newService]
+    }));
   }
 
   // Speichern der Leistungen
@@ -327,6 +431,9 @@ function CaretakerDashboardPage() {
       
       setEditServices(false);
       setError(null); // Lösche eventuelle Fehler
+      // Cleanup sessionStorage
+      sessionStorage.removeItem('editServices');
+      sessionStorage.removeItem('servicesDraft');
     } catch (error) {
       console.error('❌ Exception beim Speichern der Leistungen:', error);
       setError('Unerwarteter Fehler beim Speichern');
@@ -342,6 +449,9 @@ function CaretakerDashboardPage() {
       prices: profile?.prices || {},
     });
     setEditServices(false);
+    // Cleanup sessionStorage
+    sessionStorage.removeItem('editServices');
+    sessionStorage.removeItem('servicesDraft');
   }
 
   // Speichern der Qualifikationen
@@ -349,8 +459,9 @@ function CaretakerDashboardPage() {
     if (!user || !profile) return;
     
     // Validierung für gewerbliche Betreuer
-    if (qualificationsDraft.isCommercial && !qualificationsDraft.taxNumber.trim()) {
-      setError('Bitte gib deine Steuernummer an, wenn du als gewerblicher Betreuer tätig bist.');
+    // Steuernummer ist nur Pflicht, wenn keine USt-IdNr. angegeben ist
+    if (qualificationsDraft.isCommercial && !qualificationsDraft.taxNumber.trim() && !qualificationsDraft.vatId.trim()) {
+      setError('Bitte gib entweder deine Steuernummer oder USt-IdNr. an, wenn du als gewerblicher Betreuer tätig bist.');
       return;
     }
     
@@ -391,6 +502,9 @@ function CaretakerDashboardPage() {
       
       setEditQualifications(false);
       setError(null); // Lösche eventuelle Fehler
+      // Cleanup sessionStorage
+      sessionStorage.removeItem('editQualifications');
+      sessionStorage.removeItem('qualificationsDraft');
     } catch (error) {
       console.error('❌ Exception beim Speichern der Qualifikationen:', error);
       setError('Unerwarteter Fehler beim Speichern');
@@ -409,19 +523,61 @@ function CaretakerDashboardPage() {
       vatId: profile?.vat_id || '',
     });
     setEditQualifications(false);
+    // Cleanup sessionStorage
+    sessionStorage.removeItem('editQualifications');
+    sessionStorage.removeItem('qualificationsDraft');
   }
 
-  // State für kurze Beschreibung im Texte-Tab
+  // State für kurze Beschreibung im Texte-Tab mit sessionStorage Persistierung
   const [shortDescription, setShortDescription] = useState(profile?.short_about_me || '');
-  const [editShortDesc, setEditShortDesc] = useState(false);
-  const [shortDescDraft, setShortDescDraft] = useState(shortDescription);
+  const [editShortDesc, setEditShortDesc] = useState(() => {
+    return sessionStorage.getItem('editShortDesc') === 'true';
+  });
+  const [shortDescDraft, setShortDescDraft] = useState(() => {
+    const saved = sessionStorage.getItem('shortDescDraft');
+    return saved !== null ? saved : (profile?.short_about_me || '');
+  });
   const maxShortDesc = 140;
 
-  // State für Über mich Box
+  // State für Über mich Box mit sessionStorage Persistierung
   const [aboutMe, setAboutMe] = useState(profile?.long_about_me || '');
-  const [editAboutMe, setEditAboutMe] = useState(false);
-  const [aboutMeDraft, setAboutMeDraft] = useState(aboutMe);
+  const [editAboutMe, setEditAboutMe] = useState(() => {
+    return sessionStorage.getItem('editAboutMe') === 'true';
+  });
+  const [aboutMeDraft, setAboutMeDraft] = useState(() => {
+    const saved = sessionStorage.getItem('aboutMeDraft');
+    return saved !== null ? saved : (profile?.long_about_me || '');
+  });
   const minAboutMe = 500;
+
+  // Text Edit-Modi in sessionStorage speichern
+  useEffect(() => {
+    sessionStorage.setItem('editShortDesc', editShortDesc.toString());
+  }, [editShortDesc]);
+
+  useEffect(() => {
+    sessionStorage.setItem('editAboutMe', editAboutMe.toString());
+  }, [editAboutMe]);
+
+  // Text Drafts in sessionStorage speichern
+  useEffect(() => {
+    sessionStorage.setItem('shortDescDraft', shortDescDraft);
+  }, [shortDescDraft]);
+
+  useEffect(() => {
+    sessionStorage.setItem('aboutMeDraft', aboutMeDraft);
+  }, [aboutMeDraft]);
+
+  // Initialisiere Text-Drafts nur beim ersten Laden des Profils (wenn keine sessionStorage-Daten vorhanden)
+  useEffect(() => {
+    if (profile && !sessionStorage.getItem('shortDescDraft') && !sessionStorage.getItem('aboutMeDraft')) {
+      // Nur initialisieren wenn keine sessionStorage-Daten vorhanden sind
+      setShortDescription(profile.short_about_me || '');
+      setShortDescDraft(profile.short_about_me || '');
+      setAboutMe(profile.long_about_me || '');
+      setAboutMeDraft(profile.long_about_me || '');
+    }
+  }, [profile]);
 
   // Handler für Speichern der kurzen Beschreibung
   const handleSaveShortDescription = async (newText: string) => {
@@ -445,6 +601,9 @@ function CaretakerDashboardPage() {
       setShortDescription(newText);
       setProfile((prev: any) => ({ ...prev, short_about_me: newText }));
       setEditShortDesc(false);
+      // Cleanup sessionStorage
+      sessionStorage.removeItem('editShortDesc');
+      sessionStorage.removeItem('shortDescDraft');
     } catch (error) {
       console.error('❌ Exception beim Speichern der kurzen Beschreibung:', error);
     }
@@ -472,6 +631,9 @@ function CaretakerDashboardPage() {
       setAboutMe(newText);
       setProfile((prev: any) => ({ ...prev, long_about_me: newText }));
       setEditAboutMe(false);
+      // Cleanup sessionStorage
+      sessionStorage.removeItem('editAboutMe');
+      sessionStorage.removeItem('aboutMeDraft');
     } catch (error) {
       console.error('❌ Exception beim Speichern der Über mich Beschreibung:', error);
     }
@@ -778,52 +940,60 @@ function CaretakerDashboardPage() {
 
         setProfile(ensuredProfile);
         
-        // Texte-States und Verfügbarkeit aktualisieren wenn Profil geladen wird
-        if (ensuredProfile) {
-          setShortDescription((ensuredProfile as any).short_about_me || '');
-          setShortDescDraft((ensuredProfile as any).short_about_me || '');
-          setAboutMe((ensuredProfile as any).long_about_me || '');
-          setAboutMeDraft((ensuredProfile as any).long_about_me || '');
+                  // Texte-States und Verfügbarkeit aktualisieren wenn Profil geladen wird (nur wenn keine sessionStorage-Daten vorhanden)
+          if (ensuredProfile) {
+            if (!sessionStorage.getItem('shortDescDraft')) {
+              setShortDescription((ensuredProfile as any).short_about_me || '');
+              setShortDescDraft((ensuredProfile as any).short_about_me || '');
+            }
+            if (!sessionStorage.getItem('aboutMeDraft')) {
+              setAboutMe((ensuredProfile as any).long_about_me || '');
+              setAboutMeDraft((ensuredProfile as any).long_about_me || '');
+            }
           
           // short_term_available wird jetzt über den Context verwaltet
           // setShortTermAvailable wird automatisch durch den Context aktualisiert
           
-          // Aktualisiere skillsDraft mit geladenen Daten
-          const loadedPrices = (ensuredProfile as any).prices || {};
-          // Stelle sicher, dass Standard-Preisfelder immer vorhanden sind
-          const mergedPrices = { ...defaultPriceFields, ...loadedPrices };
-          
-          // Rückwärtskompatibilität für Services implementieren
-          const profileServices = (ensuredProfile as any).services || [];
-          const servicesWithCategories = (ensuredProfile as any).services_with_categories;
-          
-          let normalizedServices: string[];
-          if (servicesWithCategories && Array.isArray(servicesWithCategories)) {
-            // Neue kategorisierte Services verwenden
-            normalizedServices = SupabaseServiceUtils.extractServiceNames(servicesWithCategories);
-          } else if (SupabaseServiceUtils.isLegacyFormat(profileServices)) {
-            // Legacy String-Array Services
-            normalizedServices = profileServices;
-          } else {
-            normalizedServices = [];
-          }
+          // Aktualisiere skillsDraft mit geladenen Daten (nur wenn keine sessionStorage-Daten vorhanden)
+          if (!sessionStorage.getItem('servicesDraft')) {
+            const loadedPrices = (ensuredProfile as any).prices || {};
+            // Stelle sicher, dass Standard-Preisfelder immer vorhanden sind
+            const mergedPrices = { ...loadedPrices };
+            
+            // Rückwärtskompatibilität für Services implementieren
+            const profileServices = (ensuredProfile as any).services || [];
+            const servicesWithCategories = (ensuredProfile as any).services_with_categories;
+            
+            let normalizedServices: string[];
+            if (servicesWithCategories && Array.isArray(servicesWithCategories)) {
+              // Neue kategorisierte Services verwenden
+              normalizedServices = SupabaseServiceUtils.extractServiceNames(servicesWithCategories);
+            } else if (SupabaseServiceUtils.isLegacyFormat(profileServices)) {
+              // Legacy String-Array Services
+              normalizedServices = profileServices;
+            } else {
+              normalizedServices = [];
+            }
 
-          setServicesDraft({
-            services: normalizedServices,
-            servicesWithCategories: servicesWithCategories || [],
-            animal_types: (ensuredProfile as any).animal_types || [],
-            prices: mergedPrices,
-          });
+            setServicesDraft({
+              services: normalizedServices,
+              servicesWithCategories: servicesWithCategories || [],
+              animal_types: (ensuredProfile as any).animal_types || [],
+              prices: mergedPrices,
+            });
+          }
           
-          setQualificationsDraft({
-            qualifications: (ensuredProfile as any).qualifications || [],
-            experience_description: (ensuredProfile as any).experience_description || '',
-            languages: (ensuredProfile as any).languages || [],
-            isCommercial: (ensuredProfile as any).is_commercial || false,
-            companyName: (ensuredProfile as any).company_name || '',
-            taxNumber: (ensuredProfile as any).tax_number || '',
-            vatId: (ensuredProfile as any).vat_id || '',
-          });
+          if (!sessionStorage.getItem('qualificationsDraft')) {
+            setQualificationsDraft({
+              qualifications: (ensuredProfile as any).qualifications || [],
+              experience_description: (ensuredProfile as any).experience_description || '',
+              languages: (ensuredProfile as any).languages || [],
+              isCommercial: (ensuredProfile as any).is_commercial || false,
+              companyName: (ensuredProfile as any).company_name || '',
+              taxNumber: (ensuredProfile as any).tax_number || '',
+              vatId: (ensuredProfile as any).vat_id || '',
+            });
+          }
           
           // Aktualisiere Fotos-State - filtere ungültige URLs
           const validPhotos = ((ensuredProfile as any).home_photos || [])
@@ -896,17 +1066,8 @@ function CaretakerDashboardPage() {
     fetchProfile();
   }, [user]);
 
-  useEffect(() => {
-    setCaretakerData({
-      phoneNumber: userProfile?.phone_number || '',
-      email: user?.email || '',
-      plz: userProfile?.plz || '',
-      street: userProfile?.street || '',
-      city: userProfile?.city || ''
-    });
-    
-
-  }, [userProfile, user]);
+  // useEffect entfernt - verursachte Re-Renders beim Tab-Wechsel
+  // careTakerData wird jetzt nur beim ersten Laden initialisiert
 
   // Zusätzlicher useEffect für robustes Profile-Loading nach Registrierung
   useEffect(() => {
@@ -940,7 +1101,7 @@ function CaretakerDashboardPage() {
     };
 
     ensureProfileLoaded();
-  }, [user, userProfile, authLoading, profileLoadAttempts]);
+  }, [user, userProfile, profileLoadAttempts]); // authLoading entfernt - verursacht Re-Renders beim Tab-Wechsel
 
   // Profilbild-Upload - Robuste Version wie im OwnerDashboard
   async function uploadProfilePhoto(file: File): Promise<string> {
@@ -1160,6 +1321,9 @@ function CaretakerDashboardPage() {
 
   // Tab-Navigation für Übersicht/Fotos
   const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'sicherheit' | 'mitgliedschaften'>('uebersicht');
+  
+  // Scroll-Position-Persistierung entfernt - Browser sollte das automatisch handhaben
+  // Das Problem liegt woanders - wahrscheinlich an anderen useEffect-Hooks die Re-Renders verursachen
   const [reviews, setReviews] = useState<any[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [respondingToReview, setRespondingToReview] = useState<string | null>(null);
@@ -1939,117 +2103,227 @@ function CaretakerDashboardPage() {
               )}
               {!editServices ? (
                 <>
-                  <div className="mb-2">
-                    <span className="font-semibold">Leistungen:</span>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {profile.services?.length ? profile.services.map((s: string) => {
-                        // Finde die Kategorie für diesen Service
-                        const categorizedService = profile.services_with_categories?.find((cat: any) => cat.name === s);
-                        const colorClass = categorizedService ? getServiceCategoryColor(s) : 'bg-primary-100 text-primary-700 border-primary-300';
+                  {/* Standard-Leistungen */}
+                  <div className="mb-4">
+                    <span className="font-semibold text-gray-900">Standard-Leistungen:</span>
+                    <div className="mt-2 space-y-2">
+                      {defaultServices.map((service) => {
+                        const isActive = profile.services?.includes(service);
+                        const price = profile.prices?.[service];
                         return (
-                          <span key={s} className={`px-2 py-1 rounded text-xs border ${colorClass}`}>{s}</span>
+                          <div key={service} className={`flex items-center justify-between p-3 rounded-lg border ${isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isActive ? 'bg-primary-600 border-primary-600' : 'border-gray-300'}`}>
+                                {isActive && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className={`font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>{service}</span>
+                              <span className="text-sm text-gray-500">({servicePriceLabels[service]})</span>
+                            </div>
+                            {isActive && price && (
+                              <span className="font-semibold text-primary-600">{price} €</span>
+                            )}
+                            {isActive && !price && (
+                              <span className="text-sm text-gray-400">Preis nicht angegeben</span>
+                            )}
+                          </div>
                         );
-                      }) : <span className="text-gray-400">Keine Angaben</span>}
+                      })}
                     </div>
                   </div>
+
+                  {/* Zusätzliche Leistungen */}
+                  {Object.entries(profile.prices || {}).filter(([k, _]) => !defaultServices.includes(k) && k !== 'Anfahrkosten').length > 0 && (
+                    <div className="mb-4">
+                      <span className="font-semibold text-gray-900">Zusätzliche Leistungen:</span>
+                      <div className="mt-2 space-y-2">
+                        {Object.entries(profile.prices || {}).filter(([k, _]) => !defaultServices.includes(k) && k !== 'Anfahrkosten').map(([k, v]: [string, any]) => (
+                          <div key={k} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <span className="font-medium text-gray-900">{k}</span>
+                            <span className="font-semibold text-primary-600">{v} €</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Anfahrkosten */}
+                  {profile.prices?.['Anfahrkosten'] && (
+                    <div className="mb-4">
+                      <span className="font-semibold text-gray-900">Anfahrkosten:</span>
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                          <span className="font-medium text-gray-900">Anfahrkosten</span>
+                          <span className="font-semibold text-primary-600">{profile.prices['Anfahrkosten']} €/Km</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tierarten */}
                   <div className="mb-2">
-                    <span className="font-semibold">Tierarten:</span>
+                    <span className="font-semibold text-gray-900">Tierarten:</span>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {profile.animal_types?.length ? profile.animal_types.map((a: string) => (
                         <span key={a} className="bg-primary-100 text-primary-700 border border-primary-300 px-2 py-1 rounded text-xs">{a}</span>
-                      )) : <span className="text-gray-400">Keine Angaben</span>}
-                  </div>
-                  </div>
-                  <div className="mb-2">
-                    <span className="font-semibold">Preise:</span>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {profile.prices ? Object.entries(profile.prices).map(([k, v]: [string, any]) => (
-                        <span key={k} className="bg-primary-100 text-primary-700 border border-primary-300 px-2 py-1 rounded text-xs">{k}: {v} €</span>
                       )) : <span className="text-gray-400">Keine Angaben</span>}
                     </div>
                   </div>
                 </>
               ) : (
-                <form onSubmit={e => { e.preventDefault(); handleSaveServices(); }} className="space-y-4">
+                <form onSubmit={e => { e.preventDefault(); handleSaveServices(); }} className="space-y-6">
+                  {/* Standard-Leistungen mit Checkboxen und Preisfeldern */}
                   <div>
-                    <label className="block text-sm font-medium mb-1">Leistungen</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {/* Default-Checkboxen */}
-                      {defaultServices.map((s: string) => (
-                        <label key={s} className={`px-2 py-1 rounded text-xs cursor-pointer border ${servicesDraft.services.includes(s) ? 'bg-primary-100 text-primary-700 border-primary-300' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-                          <input type="checkbox" className="mr-1" checked={servicesDraft.services.includes(s)} onChange={e => {
-                            if (e.target.checked) {
-                              handleServicesChange('services', [...servicesDraft.services, s]);
-                            } else {
-                              handleServicesChange('services', servicesDraft.services.filter((service: string) => service !== s));
-                            }
-                          }} />
-                          {s}
-                        </label>
+                    <label className="block text-sm font-medium mb-3">Standard-Leistungen</label>
+                    <div className="space-y-3">
+                      {defaultServices.map((service) => (
+                        <div key={service} className="flex items-center gap-4 p-3 border rounded-lg">
+                          <div className="flex items-center gap-3 flex-1">
+                            <input 
+                              type="checkbox" 
+                              className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                              checked={servicesDraft.services.includes(service)}
+                              onChange={e => {
+                                if (e.target.checked) {
+                                  handleServicesChange('services', [...servicesDraft.services, service]);
+                                } else {
+                                  handleServicesChange('services', servicesDraft.services.filter((s: string) => s !== service));
+                                  // Entferne auch den Preis wenn Service deaktiviert wird
+                                  const newPrices = { ...servicesDraft.prices };
+                                  delete newPrices[service];
+                                  handleServicesChange('prices', newPrices);
+                                }
+                              }}
+                            />
+                            <span className="font-medium text-gray-700">{service}</span>
+                            <span className="text-sm text-gray-500">({servicePriceLabels[service]})</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="text" 
+                              inputMode="decimal"
+                              className={`input w-24 ${!servicesDraft.services.includes(service) ? 'opacity-50 bg-gray-100' : ''}`}
+                              placeholder="€" 
+                              value={servicesDraft.prices[service] || ''} 
+                              onChange={e => handlePriceChange(service, e.target.value)}
+                              disabled={!servicesDraft.services.includes(service)}
+                            />
+                          </div>
+                        </div>
                       ))}
-                      {/* Individuelle Services als Chips */}
-                      {servicesDraft.services.filter((service: string) => !defaultServices.includes(service)).map((service: string, index: number) => (
-                        <span key={`${service}-${index}`} className={`flex items-center px-2 py-1 rounded text-xs border ${getServiceCategoryColor(service)}`}>
-                          {service}
-                          <button type="button" className="ml-1 text-gray-400 hover:text-red-500" onClick={() => {
-                            handleServicesChange('services', servicesDraft.services.filter((s: string) => s !== service));
-                            handleServicesChange('servicesWithCategories', servicesDraft.servicesWithCategories.filter((s: CategorizedService) => s.name !== service));
-                          }} title="Entfernen">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                    <div className="flex gap-2 items-center">
-                      <input className="input flex-[2]" placeholder="Neue Leistung" value={newService} onChange={e => setNewService(e.target.value)} onKeyDown={e => { 
-                        if (e.key === 'Enter' && newService.trim()) { 
-                          // Finde die ausgewählte Kategorie
-                          const selectedCategory = DEFAULT_SERVICE_CATEGORIES.find(cat => cat.id === newServiceCategory);
-                          // Erstelle ein kategorisiertes Service-Objekt
-                          const categorizedService: CategorizedService = {
-                            name: newService.trim(),
-                            category_id: newServiceCategory,
-                            category_name: selectedCategory?.name || 'Allgemein'
-                          };
-                          // Füge sowohl zum String-Array als auch zum kategorisierten Array hinzu
-                          handleServicesChange('services', [...servicesDraft.services, newService.trim()]);
-                          handleServicesChange('servicesWithCategories', [...servicesDraft.servicesWithCategories, categorizedService]);
-                          setNewService(''); 
-                        } 
-                      }} />
-                      <select className="input flex-1" value={newServiceCategory} onChange={e => setNewServiceCategory(parseInt(e.target.value))}>
-                        {DEFAULT_SERVICE_CATEGORIES.map(category => (
-                          <option key={category.id} value={category.id}>{category.name}</option>
-                        ))}
-                      </select>
-                      <button type="button" className="text-green-600 hover:bg-green-100 rounded p-1" disabled={!newService.trim()} onClick={() => { 
-                        // Finde die ausgewählte Kategorie
-                        const selectedCategory = DEFAULT_SERVICE_CATEGORIES.find(cat => cat.id === newServiceCategory);
-                        // Erstelle ein kategorisiertes Service-Objekt
-                        const categorizedService: CategorizedService = {
-                          name: newService.trim(),
-                          category_id: newServiceCategory,
-                          category_name: selectedCategory?.name || 'Allgemein'
-                        };
-                        // Füge sowohl zum String-Array als auch zum kategorisierten Array hinzu
-                        handleServicesChange('services', [...servicesDraft.services, newService.trim()]);
-                        handleServicesChange('servicesWithCategories', [...servicesDraft.servicesWithCategories, categorizedService]);
-                        setNewService(''); 
-                      }} title="Hinzufügen"><Check className="w-4 h-4" /></button>
-                      <button type="button" className="text-gray-400 hover:text-red-500 rounded p-1" onClick={() => setNewService('')} title="Abbrechen"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
                     </div>
                   </div>
+
+                  {/* Zusätzliche Leistungen */}
+                  <div>
+                    <label className="block text-sm font-medium mb-3">Zusätzliche Leistungen</label>
+                    <div className="space-y-3">
+                      {Object.entries(servicesDraft.prices).filter(([k, _]) => !defaultServices.includes(k)).map(([k, v], index) => {
+                        // Finde die Kategorie für diesen Service
+                        const serviceCategory = servicesDraft.servicesWithCategories.find(service => 
+                          service.name === k || (k.startsWith('custom_') && service.name === '')
+                        );
+                        const currentCategoryId = serviceCategory?.category_id || 8;
+                        
+                        return (
+                          <div key={`custom-price-${index}`} className="flex gap-2 items-center p-3 border rounded-lg">
+                            <input 
+                              className="input flex-1" 
+                              placeholder="Leistungsname" 
+                              defaultValue={k.startsWith('custom_') ? '' : k} 
+                              onBlur={e => {
+                                const newKey = e.target.value.trim();
+                                if (newKey === '' || newKey === k) return;
+                                const newPrices = { ...servicesDraft.prices };
+                                delete newPrices[k];
+                                newPrices[newKey] = v;
+                                handleServicesChange('prices', newPrices);
+                              }} 
+                            />
+                            <select 
+                              className="input w-32" 
+                              defaultValue={currentCategoryId}
+                            onChange={e => {
+                              const categoryId = parseInt(e.target.value);
+                              const category = serviceCategories.find(cat => cat.id === categoryId);
+                              if (category) {
+                                // Aktualisiere die servicesWithCategories
+                                const updatedServices = servicesDraft.servicesWithCategories.map(service => {
+                                  if (service.name === k || (k.startsWith('custom_') && service.name === '')) {
+                                    return {
+                                      ...service,
+                                      category_id: categoryId,
+                                      category_name: category.name
+                                    };
+                                  }
+                                  return service;
+                                });
+                                setServicesDraft(d => ({ ...d, servicesWithCategories: updatedServices }));
+                              }
+                            }}
+                          >
+                            {serviceCategories.map((category: any) => (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            ))}
+                          </select>
+                          <input 
+                            type="text" 
+                            inputMode="decimal"
+                            className="input w-24" 
+                            placeholder="€" 
+                            value={String(v)} 
+                            onChange={e => handlePriceChange(k, e.target.value)} 
+                          />
+                          <button 
+                            type="button" 
+                            className="text-red-500 hover:bg-red-50 rounded p-2" 
+                            onClick={() => handleRemovePrice(k)} 
+                            title="Entfernen"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                      <button 
+                        type="button" 
+                        className="text-primary-600 hover:bg-primary-50 rounded px-3 py-2 text-sm border border-dashed border-primary-300 w-full" 
+                        onClick={handleAddPrice}
+                      >
+                        + Zusätzliche Leistung hinzufügen
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Anfahrkosten */}
+                  <div>
+                    <label className="block text-sm font-medium mb-3">{travelCostsLabel}</label>
+                    <div className="flex items-center gap-4 p-3 border rounded-lg">
+                      <span className="font-medium text-gray-700 flex-1">Anfahrkosten</span>
+                      <input 
+                        type="text" 
+                        inputMode="decimal"
+                        className="input w-24" 
+                        placeholder="€/Km" 
+                        value={servicesDraft.prices['Anfahrkosten'] || ''} 
+                        onChange={e => handlePriceChange('Anfahrkosten', e.target.value)} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tierarten */}
                   <div>
                     <label className="block text-sm font-medium mb-1">Tierarten</label>
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {/* Default-Checkboxen */}
                       {defaultAnimals.map((a: string) => (
                         <label key={a} className={`px-2 py-1 rounded text-xs cursor-pointer border ${servicesDraft.animal_types.includes(a) ? 'bg-primary-100 text-primary-700 border-primary-300' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
                           <input type="checkbox" className="mr-1" checked={servicesDraft.animal_types.includes(a)} onChange={e => handleServicesChange('animal_types', e.target.checked ? [...servicesDraft.animal_types, a] : servicesDraft.animal_types.filter((x: string) => x !== a))} />
                           {a}
                         </label>
                       ))}
-                      {/* Individuelle Tierarten als Chips */}
                       {servicesDraft.animal_types.filter((a: string) => !defaultAnimals.includes(a)).map((a: string) => (
                         <span key={a} className="flex items-center px-2 py-1 rounded text-xs bg-primary-100 text-primary-700 border border-primary-300">
                           {a}
@@ -2059,52 +2333,90 @@ function CaretakerDashboardPage() {
                         </span>
                       ))}
                     </div>
-                    <div className="flex gap-2 items-center">
-                      <input className="input flex-1" placeholder="Neue Tierart" value={newAnimal} onChange={e => setNewAnimal(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && newAnimal.trim()) { handleServicesChange('animal_types', [...servicesDraft.animal_types, newAnimal.trim()]); setNewAnimal(''); } }} />
-                      <button type="button" className="text-green-600 hover:bg-green-100 rounded p-1" disabled={!newAnimal.trim()} onClick={() => { handleServicesChange('animal_types', [...servicesDraft.animal_types, newAnimal.trim()]); setNewAnimal(''); }} title="Hinzufügen"><Check className="w-4 h-4" /></button>
-                      <button type="button" className="text-gray-400 hover:text-red-500 rounded p-1" onClick={() => setNewAnimal('')} title="Abbrechen"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Preise</label>
                     <div className="space-y-3">
-                      {/* Standard-Preisfelder wie bei der Anmeldung */}
-                      {Object.entries(defaultPriceFields).map(([service, _]) => (
-                        <div key={service} className="flex items-center gap-4">
-                          <label className="w-56 text-gray-700">{priceFieldLabels[service as keyof typeof priceFieldLabels]}</label>
+                      {newAnimal.trim() && (
+                        <div className="flex gap-2 items-center p-3 border rounded-lg">
                           <input 
-                            type="text" 
-                            inputMode="decimal"
-                            className="input w-32" 
-                            placeholder="€" 
-                            value={servicesDraft.prices[service] || ''} 
-                            onChange={e => handlePriceChange(service, e.target.value)} 
+                            className="input flex-1" 
+                            placeholder="Neue Tierart" 
+                            value={newAnimal} 
+                            onChange={e => setNewAnimal(e.target.value)} 
+                            onKeyDown={e => { 
+                              if (e.key === 'Enter' && newAnimal.trim()) { 
+                                handleServicesChange('animal_types', [...servicesDraft.animal_types, newAnimal.trim()]); 
+                                setNewAnimal(''); 
+                              } 
+                            }} 
                           />
+                          <button 
+                            type="button" 
+                            className="text-green-600 hover:bg-green-100 rounded p-2" 
+                            disabled={!newAnimal.trim()} 
+                            onClick={() => { 
+                              handleServicesChange('animal_types', [...servicesDraft.animal_types, newAnimal.trim()]); 
+                              setNewAnimal(''); 
+                            }} 
+                            title="Hinzufügen"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button 
+                            type="button" 
+                            className="text-gray-400 hover:text-red-500 rounded p-2" 
+                            onClick={() => setNewAnimal('')} 
+                            title="Abbrechen"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
-                      ))}
-                      
-                      {/* Zusätzliche individuelle Preise */}
-                      {Object.entries(servicesDraft.prices).filter(([k, _]) => !defaultPriceFields.hasOwnProperty(k)).map(([k, v], idx) => (
-                        <div key={`price-${idx}`} className="flex gap-2 items-center">
-                          <input className="input w-32" placeholder="Leistung" value={k} onChange={e => {
-                            const newKey = e.target.value;
-                            const newPrices = { ...servicesDraft.prices };
-                            delete newPrices[k];
-                            newPrices[newKey] = v;
-                            handleServicesChange('prices', newPrices);
-                          }} />
+                      )}
+                      {newQualification.trim() && (
+                        <div className="flex gap-2 items-center p-3 border rounded-lg">
                           <input 
-                            type="text" 
-                            inputMode="decimal"
-                            className="input w-24" 
-                            placeholder="Preis (€)" 
-                            value={String(v)} 
-                            onChange={e => handlePriceChange(k, e.target.value)} 
+                            className="input flex-1" 
+                            placeholder="Neue Qualifikation" 
+                            value={newQualification} 
+                            onChange={e => setNewQualification(e.target.value)} 
+                            onKeyDown={e => { 
+                              if (e.key === 'Enter' && newQualification.trim()) { 
+                                handleQualificationsChange('qualifications', [...qualificationsDraft.qualifications, newQualification.trim()]); 
+                                setNewQualification(''); 
+                              } 
+                            }} 
                           />
-                          <button type="button" className="text-red-500 hover:bg-red-50 rounded p-1" onClick={() => handleRemovePrice(k)} title="Entfernen"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                          <button 
+                            type="button" 
+                            className="text-green-600 hover:bg-green-100 rounded p-2" 
+                            disabled={!newQualification.trim()} 
+                            onClick={() => { 
+                              handleQualificationsChange('qualifications', [...qualificationsDraft.qualifications, newQualification.trim()]); 
+                              setNewQualification(''); 
+                            }} 
+                            title="Hinzufügen"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button 
+                            type="button" 
+                            className="text-gray-400 hover:text-red-500 rounded p-2" 
+                            onClick={() => setNewQualification('')} 
+                            title="Abbrechen"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
-                      ))}
-                      <button type="button" className="text-primary-600 hover:bg-primary-50 rounded px-2 py-1 text-xs" onClick={handleAddPrice}>+ Zusätzlichen Preis hinzufügen</button>
+                      )}
+                      <button 
+                        type="button" 
+                        className="text-primary-600 hover:bg-primary-50 rounded px-3 py-2 text-sm border border-dashed border-primary-300 w-full" 
+                        onClick={() => setNewAnimal('Neue Tierart')}
+                      >
+                        + Neue Tierart hinzufügen
+                      </button>
                     </div>
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -2127,47 +2439,94 @@ function CaretakerDashboardPage() {
               )}
               {!editQualifications ? (
                 <>
-                  <div className="mb-2">
-                    <span className="font-semibold">Qualifikationen:</span>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {profile.qualifications?.length ? profile.qualifications.map((q: string) => (
-                        <span key={q} className="bg-primary-100 text-primary-700 border border-primary-300 px-2 py-1 rounded text-xs">{q}</span>
-                      )) : <span className="text-gray-400">Keine Angaben</span>}
+                  {/* Qualifikationen */}
+                  <div className="mb-4">
+                    <span className="font-semibold text-gray-900">Qualifikationen:</span>
+                    <div className="mt-2 space-y-2">
+                      {defaultQualifications.map((qualification) => {
+                        const isActive = profile.qualifications?.includes(qualification);
+                        return (
+                          <div key={qualification} className={`flex items-center p-3 rounded-lg border ${isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isActive ? 'bg-primary-600 border-primary-600' : 'border-gray-300'}`}>
+                                {isActive && <Check className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className={`font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>{qualification}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {/* Individuelle Qualifikationen */}
+                      {profile.qualifications?.filter((q: string) => !defaultQualifications.includes(q)).map((q: string) => (
+                        <div key={q} className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded border-2 border-blue-300 bg-blue-100 flex items-center justify-center">
+                              <Check className="w-3 h-3 text-blue-600" />
+                            </div>
+                            <span className="font-medium text-gray-900">{q}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="mb-2">
-                    <span className="font-semibold">Sprachen:</span>
-                    <div className="flex flex-wrap gap-2 mt-1">
+
+                  {/* Sprachen */}
+                  <div className="mb-4">
+                    <span className="font-semibold text-gray-900">Sprachen:</span>
+                    <div className="mt-2 space-y-2">
                       {profile.languages?.length ? profile.languages.map((lang: string) => (
-                        <span key={lang} className="bg-primary-100 text-primary-700 border border-primary-300 px-2 py-1 rounded text-xs">{lang}</span>
-                      )) : <span className="text-gray-400">Keine Angaben</span>}
+                        <div key={lang} className="flex items-center p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded border-2 border-purple-300 bg-purple-100 flex items-center justify-center">
+                              <Check className="w-3 h-3 text-purple-600" />
+                            </div>
+                            <span className="font-medium text-gray-900">{lang}</span>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <span className="text-gray-400">Keine Sprachen angegeben</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Beschreibung */}
+                  <div className="mb-4">
+                    <span className="font-semibold text-gray-900">Beschreibung:</span>
+                    <div className="mt-2">
+                      <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div className="text-gray-700 text-sm whitespace-pre-line">
+                          {profile.experience_description || <span className="text-gray-400">Keine Beschreibung angegeben</span>}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mb-2">
-                    <span className="font-semibold">Beschreibung:</span>
-                    <div className="mt-1 text-gray-700 text-sm whitespace-pre-line">{profile.experience_description || <span className="text-gray-400">Keine Angaben</span>}</div>
-                  </div>
+
                   {/* Commercial Information */}
                   {profile.is_commercial && (
-                    <div className="mb-2">
-                      <div className="mb-2">
-                        <span className="font-semibold">Gewerblicher Betreuer</span>
+                    <div className="mb-4">
+                      <span className="font-semibold text-gray-900">Gewerblicher Betreuer:</span>
+                      <div className="mt-2 space-y-2">
+                        {profile.company_name && (
+                          <div className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <span className="font-medium text-gray-900">Firmenname</span>
+                            <span className="font-semibold text-primary-600">{profile.company_name}</span>
+                          </div>
+                        )}
+                        {profile.tax_number && (
+                          <div className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <span className="font-medium text-gray-900">Steuernummer</span>
+                            <span className="font-semibold text-primary-600">{profile.tax_number}</span>
+                          </div>
+                        )}
+                        {profile.vat_id && (
+                          <div className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                            <span className="font-medium text-gray-900">USt-IdNr.</span>
+                            <span className="font-semibold text-primary-600">{profile.vat_id}</span>
+                          </div>
+                        )}
                       </div>
-                      {profile.company_name && (
-                        <div className="text-sm text-gray-700 mb-1">
-                          <span className="font-medium">Firmenname:</span> {profile.company_name}
-                        </div>
-                      )}
-                      {profile.tax_number && (
-                        <div className="text-sm text-gray-700 mb-1">
-                          <span className="font-medium">Steuernummer:</span> {profile.tax_number}
-                        </div>
-                      )}
-                      {profile.vat_id && (
-                        <div className="text-sm text-gray-700">
-                          <span className="font-medium">USt-IdNr.:</span> {profile.vat_id}
-                        </div>
-                      )}
                     </div>
                   )}
                 </>
@@ -2193,11 +2552,13 @@ function CaretakerDashboardPage() {
                         </span>
                       ))}
                     </div>
-                    <div className="flex gap-2 items-center">
-                      <input className="input flex-1" placeholder="Neue Qualifikation" value={newQualification} onChange={e => setNewQualification(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && newQualification.trim()) { handleQualificationsChange('qualifications', [...qualificationsDraft.qualifications, newQualification.trim()]); setNewQualification(''); } }} />
-                      <button type="button" className="text-green-600 hover:bg-green-100 rounded p-1" disabled={!newQualification.trim()} onClick={() => { handleQualificationsChange('qualifications', [...qualificationsDraft.qualifications, newQualification.trim()]); setNewQualification(''); }} title="Hinzufügen"><Check className="w-4 h-4" /></button>
-                      <button type="button" className="text-gray-400 hover:text-red-500 rounded p-1" onClick={() => setNewQualification('')} title="Abbrechen"><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>
-                    </div>
+                    <button 
+                      type="button" 
+                      className="text-primary-600 hover:bg-primary-50 rounded px-3 py-2 text-sm border border-dashed border-primary-300 w-full" 
+                      onClick={() => setNewQualification('Neue Qualifikation')}
+                    >
+                      + Neue Qualifikation hinzufügen
+                    </button>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Sprachen</label>
@@ -2224,7 +2585,7 @@ function CaretakerDashboardPage() {
                       onTaxNumberChange={(value) => handleQualificationsChange('taxNumber', value)}
                       onVatIdChange={(value) => handleQualificationsChange('vatId', value)}
                       errors={{
-                        taxNumber: qualificationsDraft.isCommercial && !qualificationsDraft.taxNumber.trim() ? 'Steuernummer ist bei gewerblichen Betreuern erforderlich' : undefined
+                        taxNumber: qualificationsDraft.isCommercial && !qualificationsDraft.taxNumber.trim() && !qualificationsDraft.vatId.trim() ? 'Steuernummer oder USt-IdNr. ist bei gewerblichen Betreuern erforderlich' : undefined
                       }}
                     />
                   </div>
@@ -2420,7 +2781,13 @@ function CaretakerDashboardPage() {
                   <span className={`text-xs ${shortDescDraft.length > maxShortDesc ? 'text-red-500' : 'text-gray-400'}`}>{shortDescDraft.length}/{maxShortDesc} Zeichen</span>
                   <div className="flex gap-2">
                     <button type="submit" className="px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-xs" disabled={shortDescDraft.length > maxShortDesc}>Speichern</button>
-                    <button type="button" className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs" onClick={() => setEditShortDesc(false)}>Abbrechen</button>
+                    <button type="button" className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs" onClick={() => {
+                      setEditShortDesc(false);
+                      setShortDescDraft(shortDescription);
+                      // Cleanup sessionStorage
+                      sessionStorage.removeItem('editShortDesc');
+                      sessionStorage.removeItem('shortDescDraft');
+                    }}>Abbrechen</button>
                   </div>
                 </div>
               </form>
@@ -2451,7 +2818,13 @@ function CaretakerDashboardPage() {
                   <span className={`text-xs ${aboutMeDraft.length < minAboutMe ? 'text-red-500' : 'text-gray-400'}`}>{aboutMeDraft.length} Zeichen (min. {minAboutMe})</span>
                   <div className="flex gap-2">
                     <button type="submit" className="px-3 py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-xs" disabled={aboutMeDraft.length < minAboutMe}>Speichern</button>
-                    <button type="button" className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs" onClick={() => setEditAboutMe(false)}>Abbrechen</button>
+                    <button type="button" className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs" onClick={() => {
+                      setEditAboutMe(false);
+                      setAboutMeDraft(aboutMe);
+                      // Cleanup sessionStorage
+                      sessionStorage.removeItem('editAboutMe');
+                      sessionStorage.removeItem('aboutMeDraft');
+                    }}>Abbrechen</button>
                   </div>
                 </div>
               </form>
@@ -3060,7 +3433,10 @@ function CaretakerDashboardPage() {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => navigate('/mitgliedschaften')}
+                    onClick={() => {
+                      console.log('Navigating to /mitgliedschaften');
+                      window.location.href = '/mitgliedschaften';
+                    }}
                     className="flex items-center gap-2"
                   >
                     <Star className="w-4 h-4" />
@@ -3160,16 +3536,22 @@ function CaretakerDashboardPage() {
                 </div>
 
                 <div className="flex gap-4">
-                  <Link
-                    to="/pricing"
+                  <button
+                    onClick={() => {
+                      console.log('Link clicked: navigating to /pricing');
+                      window.location.href = '/pricing';
+                    }}
                     className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                   >
                     <Star className="w-4 h-4 mr-2" />
                     Jetzt Premium werden
-                  </Link>
+                  </button>
                   <Button
                     variant="outline"
-                    onClick={() => navigate('/pricing')}
+                    onClick={() => {
+                      console.log('Navigating to /pricing');
+                      window.location.href = '/pricing';
+                    }}
                     className="flex items-center gap-2"
                   >
                     <Info className="w-4 h-4" />

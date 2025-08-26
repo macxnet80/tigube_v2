@@ -585,6 +585,19 @@ function BetreuerProfilePage() {
                   {isAuthenticated ? 'Nachricht senden' : 'Kontakt aufnehmen'}
                 </Button>
                 
+                {/* Zurück zum Dashboard Button - nur für eingeloggte Betreuer auf eigenem Profil */}
+                {isAuthenticated && user && caretaker.userId === user.id && userProfile?.user_type === 'caretaker' && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    leftIcon={<ArrowLeft className="h-3 w-3" />}
+                    onClick={() => navigate('/dashboard-caretaker')}
+                    className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    Dashboard
+                  </Button>
+                )}
+                
                 {/* Review Button - only for authenticated owners */}
                 {/* Review Button wurde in die Bewertungs-Sektion verschoben */}
               </div>
