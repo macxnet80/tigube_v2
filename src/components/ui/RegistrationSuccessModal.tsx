@@ -68,7 +68,7 @@ const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> = ({
   const caretakerSteps: OnboardingStep[] = [
     {
       id: 'welcome',
-      title: `Willkommen bei Tigube!`,
+      title: `Willkommen bei tigube!`,
       subtitle: `Hi ${userName}! 👋`,
       description: 'Großartig, dass du dabei bist! Als Tierbetreuer kannst du deine Leidenschaft für Tiere zum Beruf machen.',
       icon: <PawPrint className="w-12 h-12 text-primary-500" />
