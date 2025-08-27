@@ -70,14 +70,23 @@ function getBestPrice(prices: Record<string, number | string>): number {
   return bestPrice;
 }
 
+
+
+
 /**
  * Konvertiert View-Daten in ein UI-freundliches Format
  */
-interface CaretakerJoinRow {
+interface CaretakerViewRow {
   id: string;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
+  city: string | null;
+  plz: string | null;
+  profile_photo_url: string | null;
+  animal_types: string[] | null;
   services: any;
   services_with_categories: any;
-  animal_types: string[] | null;
   prices: Record<string, any> | null;
   hourly_rate: number | null;
   rating: number | null;
@@ -85,27 +94,26 @@ interface CaretakerJoinRow {
   is_verified: boolean | null;
   short_about_me: string | null;
   long_about_me: string | null;
+  experience_years: number | null;
+  experience_description: string | null;
+  qualifications: string[] | null;
+  languages: string[] | null;
+  service_radius: number | null;
+  home_photos: string[] | null;
   is_commercial: boolean | null;
-  short_term_available?: boolean | null;
-  languages?: string[] | null;
-  home_photos?: string[] | null;
-  users: {
-    id: string;
-    first_name: string | null;
-    last_name: string | null;
-    city: string | null;
-    plz: string | null;
-    profile_photo_url: string | null;
-    user_type?: string | null;
-  };
+  company_name: string | null;
+  tax_number: string | null;
+  vat_id: string | null;
+  short_term_available: boolean | null;
+  overnight_availability: any;
 }
 
-function transformCaretakerData(viewData: CaretakerJoinRow): CaretakerDisplayData {
-  console.log('🔄 Transforming joined data:', viewData);
+function transformCaretakerData(viewData: CaretakerViewRow): CaretakerDisplayData {
 
-  const firstName = viewData.users?.first_name || '';
-  const lastName = viewData.users?.last_name || '';
-  const fullName = firstName && lastName ? `${firstName} ${lastName[0]}.` : (firstName || 'Unbekannt');
+
+  const firstName = viewData.first_name || '';
+  const lastName = viewData.last_name || '';
+  const fullName = firstName && lastName ? `${firstName} ${lastName[0]}.` : (viewData.full_name || 'Unbekannt');
 
   // Services korrekt verarbeiten - kann JSON string oder Array sein
   let services: string[] = [];
@@ -166,10 +174,10 @@ function transformCaretakerData(viewData: CaretakerJoinRow): CaretakerDisplayDat
 
   const result: CaretakerDisplayData = {
     id: viewData.id || '',
-    userId: viewData.users?.id || '',
+    userId: viewData.id || '', // In der View ist die ID direkt verfügbar
     name: fullName,
-    avatar: viewData.users?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName || 'U')}&background=f3f4f6&color=374151`,
-    location: viewData.users?.city && viewData.users?.plz ? `${viewData.users.city} ${viewData.users.plz}` : (viewData.users?.city || 'Unbekannt'),
+    avatar: viewData.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName || 'U')}&background=f3f4f6&color=374151`,
+    location: viewData.city && viewData.plz ? `${viewData.city} ${viewData.plz}` : (viewData.city || 'Unbekannt'),
     rating: Number(viewData.rating) || 0,
     reviewCount: viewData.review_count || 0,
     hourlyRate: bestPrice, // Verwende den besten Preis aus service-spezifischen Preisen
@@ -183,13 +191,7 @@ function transformCaretakerData(viewData: CaretakerJoinRow): CaretakerDisplayDat
     short_term_available: viewData.short_term_available || false,
   };
 
-  console.log('✅ Transformed result:', result);
-  console.log('🎯 Prices data:', {
-    original_prices: viewData.prices,
-    parsed_prices: prices,
-    hourly_rate: viewData.hourly_rate,
-    final_hourly_rate: result.hourlyRate
-  });
+
   return result;
 }
 
@@ -198,48 +200,24 @@ function transformCaretakerData(viewData: CaretakerJoinRow): CaretakerDisplayDat
  * Der View kombiniert automatisch Daten aus users und caretaker_profiles
  */
 export async function searchCaretakers(filters?: SearchFilters): Promise<CaretakerDisplayData[]> {
-  console.log('🔍 Starting caretaker search with filters:', filters);
+
 
   try {
-    // Direkt über caretaker_profiles + Join auf users (ohne View)
+    // Verwende die caretaker_search_view direkt
     let query = supabase
-      .from('caretaker_profiles')
-      .select(`
-        id,
-        services,
-        services_with_categories,
-        animal_types,
-        prices,
-        hourly_rate,
-        rating,
-        review_count,
-        is_verified,
-        short_about_me,
-        long_about_me,
-        is_commercial,
-        short_term_available,
-        users!inner(
-          id,
-          first_name,
-          last_name,
-          city,
-          plz,
-          profile_photo_url,
-          user_type
-        )
-      `)
-      .eq('users.user_type', 'caretaker');
+      .from('caretaker_search_view')
+      .select('*');
 
     // Optional: Standort-Filter
     if (filters?.location) {
       const location = filters.location.toLowerCase();
-      console.log('📍 Adding location filter:', location);
-      query = query.or(`users.city.ilike.%${location}%,users.plz.ilike.%${location}%`);
+
+      query = query.or(`city.ilike.%${location}%,plz.ilike.%${location}%`);
     }
 
     // Optional: Tierart-Filter (animal_types)
     if (filters?.petType && filters.petType !== '') {
-      console.log('🐾 Adding pet type filter:', filters.petType);
+
       // Konvertiere deutsche Tierart-Namen zu Datenbank-Werten
       const petTypeMapping: { [key: string]: string } = {
         'Hund': 'Hunde',
@@ -255,43 +233,42 @@ export async function searchCaretakers(filters?: SearchFilters): Promise<Caretak
 
     // Optional: Service-Filter (services)
     if (filters?.service && filters.service !== '') {
-      console.log('🔧 Adding service filter:', filters.service);
+
       query = query.contains('services', [filters.service]);
     }
 
     // Service-Kategorie-Filter wird client-seitig angewendet, da JSONB-Array-Filterung komplex ist
     if (filters?.serviceCategory && filters.serviceCategory !== '') {
-      console.log('🏷️ Service category filter will be applied client-side');
+
     }
 
     // Optional: Bewertungs-Filter (rating)
     if (filters?.minRating && filters.minRating !== '') {
       const minRating = parseFloat(filters.minRating);
-      console.log('⭐ Adding min rating filter:', minRating);
+
       query = query.gte('rating', minRating);
     }
 
     // Optional: Verifizierungs-Filter
     if (filters?.verified) {
-      console.log('✅ Adding verified filter');
+
       query = query.eq('is_verified', true);
     }
 
     // Optional: Kommerzielle Betreuer-Filter
     if (filters?.commercial) {
-      console.log('🏢 Adding commercial filter');
+
       query = query.eq('is_commercial', true);
     }
 
     // Optional: Kurzfristige Verfügbarkeit
     if (filters?.shortTermAvailable) {
-      console.log('⏰ Adding short term availability filter');
+
       query = query.eq('short_term_available', true);
     }
 
     // Preis-Filter wird client-seitig angewendet, da die Preise in JSON-Format sind
     // und hourly_rate null ist
-    console.log('💰 Price filters will be applied client-side');
 
     const { data, error } = await query;
 
@@ -305,12 +282,12 @@ export async function searchCaretakers(filters?: SearchFilters): Promise<Caretak
       return [];
     }
 
-    console.log(`✅ Found ${data.length} caretakers from database`);
+
 
     // Transformiere die Daten für die UI
-    let transformedData = (data as unknown as CaretakerJoinRow[]).map(item => transformCaretakerData(item));
+          let transformedData = (data as unknown as CaretakerViewRow[]).map(item => transformCaretakerData(item));
 
-    console.log(`🎯 Final result: ${transformedData.length} caretakers`);
+
     return transformedData;
   } catch (error) {
     console.error('❌ Exception in searchCaretakers:', error);
@@ -363,7 +340,7 @@ export async function getCaretakerById(id: string): Promise<CaretakerDisplayData
     }
 
     console.log('✅ Found caretaker:', data);
-    return transformCaretakerData(data as unknown as CaretakerJoinRow);
+    return transformCaretakerData(data as unknown as CaretakerViewRow);
   } catch (error) {
     console.error('❌ Exception in getCaretakerById:', error);
     throw error;

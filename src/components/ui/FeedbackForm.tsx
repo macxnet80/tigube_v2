@@ -1,14 +1,19 @@
-import React, { useState, useRef } from 'react';
-import { Lightbulb, X, Send, Upload, Image, Trash2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Lightbulb, X, Send, Upload, Image, Trash2, Plus } from 'lucide-react';
 import Button from './Button';
 import { supabase } from '../../lib/supabase/client';
+
+interface FeedbackImage {
+  file: File;
+  preview?: string;
+  uploadedUrl?: string;
+}
 
 interface FeedbackFormData {
   name: string;
   title: string;
   description: string;
-  image?: File;
-  imageUrl?: string;
+  images: FeedbackImage[];
 }
 
 interface FeedbackMetadata {
@@ -25,16 +30,36 @@ interface FeedbackMetadata {
 function FeedbackForm() {
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [formData, setFormData] = useState<FeedbackFormData>({
     name: '',
     title: '',
     description: '',
-    image: undefined,
-    imageUrl: undefined
+    images: []
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      // Store current scroll position
+      const scrollY = window.scrollY;
+      
+      // Prevent body scroll
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      
+      // Cleanup function to restore scroll
+      return () => {
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isOpen]);
 
   const getBrowserName = (userAgent: string): string => {
     if (userAgent.includes('Chrome')) return 'Chrome';
@@ -60,12 +85,10 @@ function FeedbackForm() {
 
   const uploadImageToSupabase = async (file: File): Promise<string | null> => {
     try {
-      setIsUploadingImage(true);
-      
       // Generate unique filename
       const timestamp = Date.now();
       const fileExt = file.name.split('.').pop();
-      const fileName = `feedback_${timestamp}.${fileExt}`;
+      const fileName = `feedback_${timestamp}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
       
       // Upload to Supabase Storage
       const { data, error } = await supabase.storage
@@ -86,8 +109,6 @@ function FeedbackForm() {
     } catch (error) {
       console.error('Error uploading image:', error);
       return null;
-    } finally {
-      setIsUploadingImage(false);
     }
   };
 
@@ -99,17 +120,36 @@ function FeedbackForm() {
         return;
       }
       
-      // Store the file object for later upload
-      setFormData(prev => ({ ...prev, image: file }));
+      // Check if we already have too many images
+      if (formData.images.length >= 5) {
+        alert('Sie können maximal 5 Bilder hochladen.');
+        return;
+      }
+      
+      // Create preview URL
+      const preview = URL.createObjectURL(file);
+      
+      // Add to images array
+      const newImage: FeedbackImage = { file, preview };
+      setFormData(prev => ({ 
+        ...prev, 
+        images: [...prev.images, newImage] 
+      }));
     } else {
       alert('Bitte wählen Sie eine gültige Bilddatei aus.');
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleImageUpload(file);
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach(file => {
+        handleImageUpload(file);
+      });
+    }
+    // Reset input value to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -129,11 +169,33 @@ function FeedbackForm() {
     }
   };
 
-  const removeImage = () => {
-    setFormData(prev => ({ ...prev, image: undefined, imageUrl: undefined }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  const removeImage = (index: number) => {
+    setFormData(prev => {
+      const newImages = [...prev.images];
+      // Clean up preview URL
+      if (newImages[index].preview) {
+        URL.revokeObjectURL(newImages[index].preview);
+      }
+      newImages.splice(index, 1);
+      return { ...prev, images: newImages };
+    });
+  };
+
+  const uploadAllImages = async (): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+    
+    for (const image of formData.images) {
+      if (!image.uploadedUrl) {
+        const url = await uploadImageToSupabase(image.file);
+        if (url) {
+          uploadedUrls.push(url);
+        }
+      } else {
+        uploadedUrls.push(image.uploadedUrl);
+      }
     }
+    
+    return uploadedUrls;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -156,22 +218,17 @@ function FeedbackForm() {
     }
     
     setIsSubmitting(true);
+    setIsUploadingImages(true);
 
     try {
       const metadata = collectMetadata();
-      let imageUrl = '';
+      let imageUrls: string[] = [];
       
-      // Upload image to Supabase if exists
-      if (formData.image) {
-        console.log('📸 Lade Bild zu Supabase hoch...');
-        const uploadedUrl = await uploadImageToSupabase(formData.image);
-        if (uploadedUrl) {
-          imageUrl = uploadedUrl;
-          console.log('✅ Bild erfolgreich hochgeladen:', imageUrl);
-        } else {
-          console.error('❌ Fehler beim Hochladen des Bildes');
-          alert('Fehler beim Hochladen des Bildes. Das Feedback wird ohne Bild gesendet.');
-        }
+      // Upload all images to Supabase if they exist
+      if (formData.images.length > 0) {
+        console.log('📸 Lade Bilder zu Supabase hoch...');
+        imageUrls = await uploadAllImages();
+        console.log('✅ Bilder erfolgreich hochgeladen:', imageUrls);
       }
       
       // Format data for Notion API compatibility
@@ -190,7 +247,7 @@ function FeedbackForm() {
             rich_text: [
               {
                 text: {
-                  content: `👤 Name: ${formData.name}\n\n📝 Beschreibung:\n${formData.description}\n\n🔗 Seite: ${metadata.url}\n\n🌐 Browser: ${getBrowserName(metadata.userAgent)}\n\n📱 Auflösung: ${metadata.viewport.width}x${metadata.viewport.height}\n\n⏰ Zeitpunkt: ${new Date(metadata.timestamp).toLocaleString('de-DE')}\n\n�� Bild: ${imageUrl ? imageUrl : 'Kein Bild'}`
+                  content: `👤 Name: ${formData.name}\n\n📝 Beschreibung:\n${formData.description}\n\n🔗 Seite: ${metadata.url}\n\n🌐 Browser: ${getBrowserName(metadata.userAgent)}\n\n📱 Auflösung: ${metadata.viewport.width}x${metadata.viewport.height}\n\n⏰ Zeitpunkt: ${new Date(metadata.timestamp).toLocaleString('de-DE')}\n\n📸 Bilder: ${imageUrls.length > 0 ? imageUrls.join('\n') : 'Keine Bilder'}`
                 }
               }
             ]
@@ -238,7 +295,7 @@ function FeedbackForm() {
             rich_text: [
               {
                 text: {
-                  content: imageUrl || "Kein Bild hochgeladen"
+                  content: imageUrls.length > 0 ? imageUrls.join('\n') : "Keine Bilder hochgeladen"
                 }
               }
             ]
@@ -263,13 +320,18 @@ function FeedbackForm() {
         console.log('✅ Feedback erfolgreich gesendet!');
         setIsSuccess(true);
         
-        // Reset form
+        // Reset form and clean up preview URLs
+        formData.images.forEach(image => {
+          if (image.preview) {
+            URL.revokeObjectURL(image.preview);
+          }
+        });
+        
         setFormData({
           name: '',
           title: '',
           description: '',
-          image: undefined,
-          imageUrl: undefined
+          images: []
         });
         
         if (fileInputRef.current) {
@@ -293,17 +355,18 @@ function FeedbackForm() {
         name: formData.name,
         title: formData.title,
         description: formData.description,
-        imageUrl: formData.imageUrl,
+        imageCount: formData.images.length,
         metadata: collectMetadata()
       });
       
       alert('Es gab einen Fehler beim Senden des Feedbacks. Bitte versuchen Sie es später erneut.');
     } finally {
       setIsSubmitting(false);
+      setIsUploadingImages(false);
     }
   };
 
-  const handleInputChange = (field: keyof FeedbackFormData, value: string) => {
+  const handleInputChange = (field: keyof Omit<FeedbackFormData, 'images'>, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -403,7 +466,7 @@ function FeedbackForm() {
                   {/* Image Upload */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Screenshot oder Bild (optional)
+                      Screenshots oder Bilder (optional)
                     </label>
                     <div className="space-y-3">
                       {/* Upload Button */}
@@ -412,6 +475,7 @@ function FeedbackForm() {
                           ref={fileInputRef}
                           type="file"
                           accept="image/*"
+                          multiple
                           onChange={handleFileChange}
                           className="hidden"
                         />
@@ -421,39 +485,60 @@ function FeedbackForm() {
                           variant="outline"
                           size="sm"
                           className="flex items-center gap-2"
-                          disabled={isUploadingImage}
+                          disabled={isUploadingImages || formData.images.length >= 5}
                         >
-                          <Upload size={16} />
-                          {isUploadingImage ? 'Lädt hoch...' : 'Datei auswählen'}
+                          <Plus size={16} />
+                          {isUploadingImages ? 'Lädt hoch...' : 'Bilder auswählen'}
                         </Button>
                         <span className="text-sm text-gray-500">
                           oder Strg+V zum Einfügen
                         </span>
                       </div>
 
-                      {/* Image Preview */}
-                      {formData.image && (
-                        <div className="relative border border-gray-200 rounded-lg p-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Image size={16} className="text-gray-500" />
-                              <span className="text-sm text-gray-700">
-                                {formData.image.name} ({Math.round(formData.image.size / 1024)}KB)
-                              </span>
+                      {/* Image Counter */}
+                      {formData.images.length > 0 && (
+                        <div className="text-sm text-gray-600">
+                          {formData.images.length} von 5 Bildern ausgewählt
+                        </div>
+                      )}
+
+                      {/* Image Previews */}
+                      {formData.images.length > 0 && (
+                        <div className="space-y-2">
+                          {formData.images.map((image, index) => (
+                            <div key={index} className="relative border border-gray-200 rounded-lg p-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Image size={16} className="text-gray-500" />
+                                  <span className="text-sm text-gray-700">
+                                    {image.file.name} ({Math.round(image.file.size / 1024)}KB)
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(index)}
+                                  className="text-red-500 hover:text-red-700 transition-colors"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                              {/* Image Preview */}
+                              {image.preview && (
+                                <div className="mt-2">
+                                  <img
+                                    src={image.preview}
+                                    alt="Vorschau"
+                                    className="max-w-full h-32 object-cover rounded border"
+                                  />
+                                </div>
+                              )}
                             </div>
-                            <button
-                              type="button"
-                              onClick={removeImage}
-                              className="text-red-500 hover:text-red-700 transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
+                          ))}
                         </div>
                       )}
 
                       <p className="text-xs text-gray-500">
-                        Unterstützte Formate: JPG, PNG, GIF (max. 5MB)
+                        Unterstützte Formate: JPG, PNG, GIF (max. 5MB pro Bild, max. 5 Bilder)
                       </p>
                     </div>
                   </div>
@@ -470,7 +555,7 @@ function FeedbackForm() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={isSubmitting || isUploadingImage}
+                    disabled={isSubmitting || isUploadingImages}
                     className="flex items-center gap-2"
                   >
                     {isSubmitting ? (

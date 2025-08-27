@@ -114,18 +114,7 @@ function SearchPage() {
 
   // Search function using database with filters
   const performSearch = async () => {
-    console.log('🔍 performSearch called with filters:', {
-      location,
-      petType: selectedPetType,
-      service: selectedService,
-      availabilityDays: selectedAvailabilityDays,
-      availabilityTime: selectedAvailabilityTime,
-      minRating: selectedMinRating,
-      radius: selectedRadius,
-      maxPrice: maxPrice,
-      maxPriceType: typeof maxPrice,
-      shouldApplyPriceFilter: maxPrice < 100
-    });
+    
     
     setLoading(true);
     setError(null);
@@ -144,25 +133,15 @@ function SearchPage() {
         filters.maxPrice = maxPrice;
       }
 
-      console.log('📞 Calling searchCaretakersService with filters:', filters);
+
       let data;
       try {
         data = await searchCaretakersService(filters);
-        console.log('📊 Service returned:', data);
+
         
         // Wenn der Service erfolgreich ist, verwende die echten Daten
         if (data && Array.isArray(data)) {
           console.log('✅ Using real data from service');
-          
-          // DEBUG: Zeige alle Preise der geladenen Daten
-          console.log('🔍 DEBUG: All loaded caretakers with prices:');
-          data.forEach((caretaker, index) => {
-            console.log(`  ${index + 1}. ${caretaker.name}:`);
-            console.log(`     - hourlyRate: ${caretaker.hourlyRate}`);
-            console.log(`     - prices:`, caretaker.prices);
-            console.log(`     - location: ${caretaker.location}`);
-            console.log(`     - services:`, caretaker.services);
-          });
         } else {
           console.log('⚠️ Service returned invalid data, setting to empty array');
           data = [];
@@ -173,22 +152,11 @@ function SearchPage() {
         data = [];
       }
       
-      // Debug: Zeige alle verfügbaren Betreuer und ihre Preise
-      if (data && data.length > 0) {
-        console.log('🔍 All available caretakers with prices:');
-        data.forEach(caretaker => {
-          const prices = Object.values(caretaker.prices || {}).filter(p => p > 0);
-          const lowestPrice = prices.length > 0 ? Math.min(...prices) : caretaker.hourlyRate;
-          console.log(`  - ${caretaker.name}: hourlyRate=${caretaker.hourlyRate}, lowestPrice=${lowestPrice}, prices=`, caretaker.prices);
-          console.log(`    Raw data:`, caretaker);
-        });
-      } else {
-        console.log('📭 No caretakers found in data');
-      }
+      
       
       // Client-seitige Standort-Filterung (muss zuerst kommen)
       if (location.trim() && data) {
-        console.log('📍 Applying location filter:', location.trim());
+
         const searchLocation = location.trim().toLowerCase();
         data = data.filter(caretaker => {
           const caretakerLocation = caretaker.location?.toLowerCase() || '';
@@ -200,7 +168,7 @@ function SearchPage() {
               caretakerLocation === 'n/a' ||
               caretakerLocation === 'nicht angegeben' ||
               caretakerLocation === 'ort nicht angegeben') {
-            console.log(`📍 Filtering out caretaker with location: "${caretaker.location}"`);
+
             return false;
           }
           
@@ -208,7 +176,7 @@ function SearchPage() {
           if (/^\d{5}$/.test(location.trim())) {
             // Prüfe ob der Betreuer eine PLZ in seinem Standort hat
             if (!/\d{5}/.test(caretakerLocation)) {
-              console.log(`📍 PLZ search but caretaker has no PLZ: "${caretaker.location}"`);
+  
               return false;
             }
           }
@@ -217,25 +185,23 @@ function SearchPage() {
           const matches = caretakerLocation.includes(searchLocation) || 
                          searchLocation.includes(caretakerLocation);
           
-          if (!matches) {
-            console.log(`📍 Location mismatch: searching for "${searchLocation}", caretaker has "${caretaker.location}"`);
-          }
+
           
           return matches;
         });
-        console.log(`📍 After location filter: ${data.length} caretakers`);
+
       }
       
       // Client-seitige Verfügbarkeits-Filterung (da noch keine DB-Unterstützung)
       if ((selectedAvailabilityDays.length > 0 || selectedAvailabilityTime) && data) {
-        console.log('🕒 Applying availability filters...');
+
         data = data.filter(caretaker => {
           // Vereinfachte Verfügbarkeits-Logik - in Zukunft aus DB
           // Für jetzt nehmen wir an, dass alle Betreuer verfügbar sind
           // TODO: Implementiere echte Verfügbarkeits-Prüfung
           return true;
         });
-        console.log(`🕒 After availability filter: ${data.length} caretakers`);
+
       }
 
       // Bewertungs-Filter wird jetzt server-seitig angewendet
@@ -265,17 +231,12 @@ function SearchPage() {
 
       // Client-seitige Preis-Filterung
       if (maxPrice < 100 && data && data.length > 0) {
-        console.log('💰 Applying price filter:', maxPrice, '€/hour');
-        console.log('💰 Available caretakers before price filter:', data.length);
+
         
         const originalLength = data.length;
         const originalData = [...data]; // Backup für Debugging
         
-        // DEBUG: Zeige alle Preise vor der Filterung
-        console.log('💰 DEBUG: All prices before filtering:');
-        data.forEach(caretaker => {
-          console.log(`  - ${caretaker.name}: hourlyRate=${caretaker.hourlyRate}, prices=`, caretaker.prices);
-        });
+
         
         data = data.filter(caretaker => {
           // Preis-Ermittlung aus service-spezifischen Preisen
@@ -310,30 +271,22 @@ function SearchPage() {
           // Prüfe ob Preis unter dem Max-Preis liegt
           const isWithinBudget = lowestPrice <= maxPrice;
           
-          console.log(`💰 ${caretaker.name}: lowestPrice=${lowestPrice}, maxPrice=${maxPrice}, withinBudget=${isWithinBudget}`);
-          
-          if (!isWithinBudget) {
-            console.log(`💰 Filtering out "${caretaker.name}" - price €${lowestPrice} > max €${maxPrice}`);
-          }
+
           
           return isWithinBudget;
         });
         
-        console.log(`💰 Price filter: ${originalLength} → ${data.length} caretakers`);
+
         
         if (data.length === 0) {
-          console.log('💰 WARNING: All caretakers filtered out by price filter!');
-          console.log('💰 This might indicate a bug in the price calculation or filter logic.');
-          console.log('💰 TEMPORARY: Showing all caretakers for debugging');
-          // TEMPORARY: Zeige alle Betreuer für Debugging
-          data = originalData || [];
+          console.log('💰 No caretakers found within price range €' + maxPrice);
         }
       }
 
       // Client-seitige Umkreis-Filterung (vereinfacht)
       if (selectedRadius && data) {
         const radius = parseInt(selectedRadius);
-        console.log('📍 Applying radius filter:', radius, 'km');
+
         // TODO: Implementiere echte Geolocation-basierte Filterung
         // Für jetzt: Mock-Filterung basierend auf Radius
         data = data.filter(caretaker => {
@@ -341,10 +294,10 @@ function SearchPage() {
           const randomDistance = Math.random() * 100;
           return randomDistance <= radius;
         });
-        console.log(`📍 After radius filter: ${data.length} caretakers`);
+
       }
       
-      console.log(`✅ Setting ${data?.length || 0} caretakers to state`);
+
       setCaretakers(data || []);
       setTotalResults(data?.length || 0);
       
@@ -352,11 +305,11 @@ function SearchPage() {
       if (!data || data.length === 0) {
         setNoResults(true);
         setError(null);
-        console.log('📭 No results found, showing no results message');
+
       } else {
         setNoResults(false);
         setError(null);
-        console.log('✅ Results found, showing results');
+
       }
       
       // URL aktualisieren
@@ -392,7 +345,7 @@ function SearchPage() {
 
   // Beim Mount und bei Filter-Änderungen suchen
   useEffect(() => {
-    console.log('🚀 Component mounted, starting initial search...');
+
     performSearch();
   }, []); // Nur beim Mount ausführen
 
@@ -405,7 +358,7 @@ function SearchPage() {
     }
     
     const timeoutId = setTimeout(() => {
-      console.log('🔄 Filter changed, performing search...');
+
       performSearch();
     }, 300); // 300ms Debounce
     
