@@ -46,11 +46,11 @@ function CaretakerDashboardPage() {
   const { paymentSuccess, isValidating: paymentValidating, closeModal } = usePaymentSuccess();
   const [editData, setEditData] = useState(false);
   const [caretakerData, setCaretakerData] = useState({
-    phoneNumber: userProfile?.phone_number || '',
+    phoneNumber: '',
     email: user?.email || '',
-    plz: userProfile?.plz || '',
-    street: userProfile?.street || '',
-    city: userProfile?.city || ''
+    plz: '',
+    street: '',
+    city: ''
   });
   const [emailError, setEmailError] = useState<string | null>(null);
   
@@ -92,6 +92,29 @@ function CaretakerDashboardPage() {
       }
     }
   }, [authLoading, user, userProfile]);
+
+  // Lade Kontaktdaten wenn userProfile verfügbar ist
+  useEffect(() => {
+    if (userProfile) {
+      console.log('📞 Lade Kontaktdaten aus userProfile:', {
+        phone_number: userProfile.phone_number,
+        plz: userProfile.plz,
+        street: userProfile.street,
+        city: userProfile.city
+      });
+      
+      const newCaretakerData = {
+        phoneNumber: userProfile.phone_number || '',
+        email: user?.email || '',
+        plz: userProfile.plz || '',
+        street: userProfile.street || '',
+        city: userProfile.city || ''
+      };
+      
+      console.log('📞 Setze caretakerData:', newCaretakerData);
+      setCaretakerData(newCaretakerData);
+    }
+  }, [userProfile, user?.email]);
 
   // --- Verfügbarkeits-State ---
   type TimeSlot = { start: string; end: string };
@@ -529,25 +552,19 @@ function CaretakerDashboardPage() {
   }
 
   // State für kurze Beschreibung im Texte-Tab mit sessionStorage Persistierung
-  const [shortDescription, setShortDescription] = useState(profile?.short_about_me || '');
+  const [shortDescription, setShortDescription] = useState('');
   const [editShortDesc, setEditShortDesc] = useState(() => {
     return sessionStorage.getItem('editShortDesc') === 'true';
   });
-  const [shortDescDraft, setShortDescDraft] = useState(() => {
-    const saved = sessionStorage.getItem('shortDescDraft');
-    return saved !== null ? saved : (profile?.short_about_me || '');
-  });
+  const [shortDescDraft, setShortDescDraft] = useState('');
   const maxShortDesc = 140;
 
   // State für Über mich Box mit sessionStorage Persistierung
-  const [aboutMe, setAboutMe] = useState(profile?.long_about_me || '');
+  const [aboutMe, setAboutMe] = useState('');
   const [editAboutMe, setEditAboutMe] = useState(() => {
     return sessionStorage.getItem('editAboutMe') === 'true';
   });
-  const [aboutMeDraft, setAboutMeDraft] = useState(() => {
-    const saved = sessionStorage.getItem('aboutMeDraft');
-    return saved !== null ? saved : (profile?.long_about_me || '');
-  });
+  const [aboutMeDraft, setAboutMeDraft] = useState('');
   const minAboutMe = 500;
 
   // Text Edit-Modi in sessionStorage speichern
@@ -559,23 +576,26 @@ function CaretakerDashboardPage() {
     sessionStorage.setItem('editAboutMe', editAboutMe.toString());
   }, [editAboutMe]);
 
-  // Text Drafts in sessionStorage speichern
-  useEffect(() => {
-    sessionStorage.setItem('shortDescDraft', shortDescDraft);
-  }, [shortDescDraft]);
+  // Text Drafts werden nicht mehr in sessionStorage gespeichert
 
+  // Initialisiere Text-Drafts wenn Profil geladen wird
   useEffect(() => {
-    sessionStorage.setItem('aboutMeDraft', aboutMeDraft);
-  }, [aboutMeDraft]);
-
-  // Initialisiere Text-Drafts nur beim ersten Laden des Profils (wenn keine sessionStorage-Daten vorhanden)
-  useEffect(() => {
-    if (profile && !sessionStorage.getItem('shortDescDraft') && !sessionStorage.getItem('aboutMeDraft')) {
-      // Nur initialisieren wenn keine sessionStorage-Daten vorhanden sind
-      setShortDescription(profile.short_about_me || '');
-      setShortDescDraft(profile.short_about_me || '');
-      setAboutMe(profile.long_about_me || '');
-      setAboutMeDraft(profile.long_about_me || '');
+    if (profile) {
+      console.log('📝 Lade Texte aus Profil:', {
+        short_about_me: profile.short_about_me,
+        long_about_me: profile.long_about_me
+      });
+      
+      // Lade Texte immer aus der Datenbank, falls vorhanden
+      if (profile.short_about_me !== undefined) {
+        setShortDescription(profile.short_about_me || '');
+        setShortDescDraft(profile.short_about_me || '');
+      }
+      
+      if (profile.long_about_me !== undefined) {
+        setAboutMe(profile.long_about_me || '');
+        setAboutMeDraft(profile.long_about_me || '');
+      }
     }
   }, [profile]);
 
@@ -603,7 +623,6 @@ function CaretakerDashboardPage() {
       setEditShortDesc(false);
       // Cleanup sessionStorage
       sessionStorage.removeItem('editShortDesc');
-      sessionStorage.removeItem('shortDescDraft');
     } catch (error) {
       console.error('❌ Exception beim Speichern der kurzen Beschreibung:', error);
     }
@@ -633,7 +652,6 @@ function CaretakerDashboardPage() {
       setEditAboutMe(false);
       // Cleanup sessionStorage
       sessionStorage.removeItem('editAboutMe');
-      sessionStorage.removeItem('aboutMeDraft');
     } catch (error) {
       console.error('❌ Exception beim Speichern der Über mich Beschreibung:', error);
     }
@@ -940,16 +958,7 @@ function CaretakerDashboardPage() {
 
         setProfile(ensuredProfile);
         
-                  // Texte-States und Verfügbarkeit aktualisieren wenn Profil geladen wird (nur wenn keine sessionStorage-Daten vorhanden)
-          if (ensuredProfile) {
-            if (!sessionStorage.getItem('shortDescDraft')) {
-              setShortDescription((ensuredProfile as any).short_about_me || '');
-              setShortDescDraft((ensuredProfile as any).short_about_me || '');
-            }
-            if (!sessionStorage.getItem('aboutMeDraft')) {
-              setAboutMe((ensuredProfile as any).long_about_me || '');
-              setAboutMeDraft((ensuredProfile as any).long_about_me || '');
-            }
+        // Texte-States werden automatisch durch den useEffect oben aktualisiert
           
           // short_term_available wird jetzt über den Context verwaltet
           // setShortTermAvailable wird automatisch durch den Context aktualisiert
@@ -1054,7 +1063,6 @@ function CaretakerDashboardPage() {
         } else {
           // Falls keine Verfügbarkeit in der DB, verwende leere Verfügbarkeit
           setAvailability(defaultAvailability);
-        }
         }
       } catch (err) {
         console.error('Unexpected error loading caretaker profile:', err);
@@ -1286,6 +1294,7 @@ function CaretakerDashboardPage() {
     email: user?.email || '',
     phone_number: '',
     plz: '',
+    street: '',
     city: '',
     user_type: 'caretaker' as const,
     avatar_url: null
@@ -1927,14 +1936,14 @@ function CaretakerDashboardPage() {
                       <div className="flex items-center gap-3">
                         <MapPin className="h-4 w-4 text-gray-500" />
                         <div className="text-gray-700">
-                          {caretakerData.street && (
+                          {caretakerData.street && caretakerData.street.trim() && (
                             <div>{caretakerData.street}</div>
                           )}
                           <div>
-                            {caretakerData.plz && caretakerData.city ?
+                            {caretakerData.plz && caretakerData.city && caretakerData.plz.trim() && caretakerData.city.trim() ?
                               `${caretakerData.plz} ${caretakerData.city}` :
-                              caretakerData.plz ? caretakerData.plz :
-                              caretakerData.city ? caretakerData.city :
+                              caretakerData.plz && caretakerData.plz.trim() ? caretakerData.plz :
+                              caretakerData.city && caretakerData.city.trim() ? caretakerData.city :
                               '—'
                             }
                           </div>
@@ -1942,7 +1951,7 @@ function CaretakerDashboardPage() {
                       </div>
                       <div className="flex items-center gap-3">
                         <Phone className="h-4 w-4 text-gray-500" />
-                        <span className="text-gray-700">{caretakerData.phoneNumber || '—'}</span>
+                        <span className="text-gray-700">{caretakerData.phoneNumber && caretakerData.phoneNumber.trim() ? caretakerData.phoneNumber : '—'}</span>
                       </div>
 
                     </>
@@ -2766,7 +2775,13 @@ function CaretakerDashboardPage() {
               )}
             </div>
             {!editShortDesc ? (
-              <div className="text-gray-700 min-h-[32px]">{shortDescription || <span className="text-gray-400">Noch keine Beschreibung hinterlegt.</span>}</div>
+              <div className="text-gray-700 min-h-[32px]">
+                {shortDescription ? (
+                  <span>{shortDescription}</span>
+                ) : (
+                  <span className="text-gray-400">Noch keine Beschreibung hinterlegt.</span>
+                )}
+              </div>
             ) : (
               <form onSubmit={e => { e.preventDefault(); handleSaveShortDescription(shortDescDraft); }}>
                 <textarea
@@ -2786,7 +2801,6 @@ function CaretakerDashboardPage() {
                       setShortDescDraft(shortDescription);
                       // Cleanup sessionStorage
                       sessionStorage.removeItem('editShortDesc');
-                      sessionStorage.removeItem('shortDescDraft');
                     }}>Abbrechen</button>
                   </div>
                 </div>
@@ -2803,7 +2817,13 @@ function CaretakerDashboardPage() {
               )}
             </div>
             {!editAboutMe ? (
-              <div className="text-gray-700 min-h-[32px]">{aboutMe || <span className="text-gray-400">Noch kein Text hinterlegt.</span>}</div>
+              <div className="text-gray-700 min-h-[32px]">
+                {aboutMe ? (
+                  <span>{aboutMe}</span>
+                ) : (
+                  <span className="text-gray-400">Noch kein Text hinterlegt.</span>
+                )}
+              </div>
             ) : (
               <form onSubmit={e => { e.preventDefault(); handleSaveAboutMe(aboutMeDraft); }}>
                 <textarea
@@ -2823,7 +2843,6 @@ function CaretakerDashboardPage() {
                       setAboutMeDraft(aboutMe);
                       // Cleanup sessionStorage
                       sessionStorage.removeItem('editAboutMe');
-                      sessionStorage.removeItem('aboutMeDraft');
                     }}>Abbrechen</button>
                   </div>
                 </div>

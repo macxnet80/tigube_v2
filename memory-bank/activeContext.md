@@ -1,11 +1,39 @@
-# Active Context: Tigubes
+# Aktiver Kontext: Tigube v2
 
-## Aktueller Arbeitskontext
+## 🎯 Aktueller Fokus
 
-### Projektphase
-**Status**: Subscription System & Core Features vollständig produktionsbereit ✅
-**Version**: 0.7.0 
-**Letztes Update**: Januar 2025 - Vollständiges Subscription System mit Stripe Integration
+**Hauptaufgabe**: Werbeanzeigen-System Finalisierung  
+**Status**: Targeting-Logik in Entwicklung, Memory Bank aktualisiert  
+**Nächster Schritt**: Umkreis-Filter und Performance-Optimierung
+
+### Aktuelle Arbeiten
+- ✅ Werbeanzeigen-Database-Schema erstellt
+- ✅ AdCard-Komponente für Suchseite implementiert
+- ✅ AdBanner-Komponente für Betreuer-Profile implementiert
+- ✅ Advertisement-Service-Funktionen entwickelt
+- ✅ Admin-Dashboard für Werbeverwaltung erstellt
+- ✅ Memory Bank vollständig aktualisiert (Version 0.8.0)
+- 🔄 **IN ARBEIT**: Targeting-Logik basierend auf Owner-Eigenschaften
+- 📋 **GEPLANT**: Umkreis-Filter für geografisches Targeting
+- 📋 **GEPLANT**: Performance-Optimierung für Ad-Loading
+
+### Kürzlich behoben
+- ✅ **Storage-Migration Bug**: `relation "admin_users" does not exist` Fehler korrigiert
+  - Problem: Falsche Referenzen in RLS-Richtlinien
+  - Lösung: Korrekte Schema-Referenzen (`public.users` statt `users`)
+  - Status: Migration bereit für Production-Deployment
+
+### Memory Bank Update
+- ✅ **progress.md**: Version 0.8.0 mit Werbeanzeigen-System dokumentiert
+- ✅ **systemPatterns.md**: Advertisement System Patterns hinzugefügt
+- ✅ **techContext.md**: AdvertisementService und AdTargetingService dokumentiert
+- ✅ **activeContext.md**: Aktueller Fokus auf Targeting-Logik aktualisiert
+
+## 🎯 Aktueller Entwicklungsstand
+
+**Version**: 0.8.0  
+**Status**: Werbeanzeigen-System implementiert, Storage-Migration korrigiert  
+**Letztes Update**: 21.01.2025
 
 ### Aktuelle Implementierung
 
@@ -108,7 +136,12 @@
 5. **✅ Owner-Profile**: Sichere, datenschutzkonforme öffentliche Profile
 
 #### 🟡 Teilweise gelöst - Verbesserungen möglich
-1. **Umkreis-Filter** (Mock-Implementation)
+1. **Targeting-Logik** (Grundfunktionalität implementiert)
+   - Grundlegende Targeting-Funktionalität für Werbeanzeigen ✅
+   - Targeting basierend auf Haustierart und PLZ
+   - Erweiterte Targeting-Optionen (Alter, Verhalten) geplant
+
+2. **Umkreis-Filter** (Mock-Implementation)
    - Derzeit vereinfachte Distanz-Filterung
    - Echte GPS/Geocoding-Integration ausstehend
    - Google Maps oder OpenStreetMap-Integration erforderlich

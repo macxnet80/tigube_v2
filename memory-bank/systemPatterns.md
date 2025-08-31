@@ -236,6 +236,60 @@ const isBetaActive = new Date() < new Date('2025-10-31');
 const hasAccess = isBetaActive || subscription.hasFeature(feature);
 ```
 
+### Advertisement System Patterns
+
+#### Ad Placement Pattern
+```typescript
+// Strategische Platzierung von Werbeanzeigen
+interface AdPlacement {
+  searchPage: {
+    frequency: 'every_5_profiles';
+    position: 'between_results';
+    targeting: 'owner_based';
+  };
+  profilePage: {
+    position: 'top_banner';
+    size: '728x90';
+    targeting: 'contextual';
+  };
+}
+```
+
+#### Targeting Logic Pattern
+```typescript
+// Intelligente Werbeanzeigen-Ausrichtung
+interface TargetingCriteria {
+  petTypes: string[];
+  zipCodes: string[];
+  ageRange?: [number, number];
+  serviceTypes?: string[];
+}
+
+async function getTargetedAds(ownerProfile: OwnerProfile): Promise<Advertisement[]> {
+  return advertisementService.getAdsForCriteria({
+    petTypes: ownerProfile.pets.map(p => p.type),
+    zipCodes: [ownerProfile.zipCode],
+  });
+}
+```
+
+#### Ad Revenue Tracking Pattern
+```typescript
+// Tracking von Werbe-Performance und Einnahmen
+interface AdMetrics {
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  revenue: number;
+  conversionRate?: number;
+}
+
+async function trackAdInteraction(adId: string, action: 'impression' | 'click') {
+  await adMetricsService.increment(adId, action);
+  await updateRevenueCalculations(adId);
+}
+```
+
 ### Error Handling Patterns
 
 #### Payment Error Handling

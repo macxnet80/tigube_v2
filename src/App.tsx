@@ -41,7 +41,14 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/launch" element={<LaunchPage />} />
           <Route path="/suche" element={<SearchPage />} />
-          <Route path="/betreuer/:id" element={<BetreuerProfilePage />} />
+          <Route 
+            path="/betreuer/:id" 
+            element={
+              <ProtectedRoute>
+                <BetreuerProfilePage />
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/registrieren" element={<RegisterPage />} />
           <Route path="/anmelden" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />

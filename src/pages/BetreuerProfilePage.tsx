@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapPin, Star, Clock, Shield, Calendar, MessageCircle, Heart, HeartOff, ArrowLeft, Verified, ChevronRight, CheckCircle, Edit3, Briefcase, Globe, Moon } from 'lucide-react';
+import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { DE, GB, FR, ES, IT, PT, NL, RU, PL, TR, AE } from 'country-flag-icons/react/3x2';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -241,9 +242,8 @@ function BetreuerProfilePage() {
 
   // Kontakt-Button Handler mit Feature Gate
   const handleContactClick = async () => {
-    if (!isAuthenticated || !user) {
-      // Umleitung zur Login-Seite mit return URL
-      navigate(`/anmelden?redirect=${encodeURIComponent(`/betreuer/${id}`)}&action=contact&caretaker=${encodeURIComponent(caretaker?.name || '')}`);
+    if (!user) {
+      console.error('User nicht verfügbar');
       return;
     }
 
@@ -371,9 +371,8 @@ function BetreuerProfilePage() {
 
   // Favoriten Toggle Handler
   const handleFavoriteToggle = async () => {
-    if (!isAuthenticated || !user) {
-      // Umleitung zur Login-Seite mit return URL
-      navigate(`/anmelden?redirect=${encodeURIComponent(`/betreuer/${id}`)}&action=favorite&caretaker=${encodeURIComponent(caretaker?.name || '')}`);
+    if (!user) {
+      console.error('User nicht verfügbar');
       return;
     }
 
@@ -582,11 +581,11 @@ function BetreuerProfilePage() {
                   isLoading={isContactLoading}
                   disabled={isContactLoading}
                 >
-                  {isAuthenticated ? 'Nachricht senden' : 'Kontakt aufnehmen'}
+                  Nachricht senden
                 </Button>
                 
-                {/* Zurück zum Dashboard Button - nur für eingeloggte Betreuer auf eigenem Profil */}
-                {isAuthenticated && user && caretaker.userId === user.id && userProfile?.user_type === 'caretaker' && (
+                {/* Zurück zum Dashboard Button - nur für Betreuer auf eigenem Profil */}
+                {user && caretaker.userId === user.id && userProfile?.user_type === 'caretaker' && (
                   <Button 
                     variant="ghost" 
                     size="sm"
@@ -645,8 +644,8 @@ function BetreuerProfilePage() {
                 Bewertungen ({reviews.length})
               </h2>
 
-              {/* Review Form - Nur für eingeloggte Premium Owners */}
-              {showReviewForm && caretaker && isAuthenticated && userProfile?.user_type === 'owner' && subscription?.plan_type === 'premium' && (
+              {/* Review Form - Nur für Premium Owners */}
+              {showReviewForm && caretaker && userProfile?.user_type === 'owner' && subscription?.plan_type === 'premium' && (
                 <div className="mb-6">
                   <ReviewForm
                     caretakerId={caretaker.id || ''}
@@ -659,8 +658,8 @@ function BetreuerProfilePage() {
                 </div>
               )}
 
-              {/* Review Button - Nur für eingeloggte Premium Owners anzeigen */}
-              {!showReviewForm && isAuthenticated && userProfile?.user_type === 'owner' && subscription?.plan_type === 'premium' && (
+              {/* Review Button - Nur für Premium Owners anzeigen */}
+              {!showReviewForm && userProfile?.user_type === 'owner' && subscription?.plan_type === 'premium' && (
                 <div className="mb-6">
                   <Button
                     variant="primary"
@@ -672,17 +671,10 @@ function BetreuerProfilePage() {
                 </div>
               )}
 
-              {/* Info für nicht eingeloggte User */}
-              {!isAuthenticated && (
-                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-blue-800 text-sm">
-                    <strong>Bewertung schreiben:</strong> Du musst angemeldet sein und ein Premium-Tierbesitzer-Profil haben, um Bewertungen zu schreiben.
-                  </p>
-                </div>
-              )}
 
-              {/* Info für eingeloggte Caretaker */}
-              {isAuthenticated && userProfile?.user_type === 'caretaker' && (
+
+              {/* Info für Caretaker */}
+              {userProfile?.user_type === 'caretaker' && (
                 <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <p className="text-gray-700 text-sm">
                     <strong>Bewertung schreiben:</strong> Nur Premium-Tierbesitzer können Bewertungen für Betreuer schreiben.
@@ -690,8 +682,8 @@ function BetreuerProfilePage() {
                 </div>
               )}
 
-              {/* Info für eingeloggte Free Owners */}
-              {isAuthenticated && userProfile?.user_type === 'owner' && subscription?.plan_type !== 'premium' && (
+              {/* Info für Free Owners */}
+              {userProfile?.user_type === 'owner' && subscription?.plan_type !== 'premium' && (
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <p className="text-amber-800 text-sm">
                     <strong>Bewertung schreiben:</strong> Du benötigst ein Premium-Abo, um Bewertungen zu schreiben. 
@@ -798,6 +790,15 @@ function BetreuerProfilePage() {
                 )}
               </div>
             </div>
+
+            {/* Advertisement Banner */}
+            <AdvertisementBanner 
+              targetingOptions={{
+                petTypes: userProfile?.pet_types || [],
+                location: userProfile?.location || '',
+                subscriptionType: subscription?.plan_type || 'free'
+              }}
+            />
           </div>
         </div>
       </div>

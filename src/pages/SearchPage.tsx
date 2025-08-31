@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, MapPin, Star, Filter, X, ChevronDown, PawPrint, Briefcase, Clock } from 'lucide-react';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import AdvertisementCardContainer from '../components/ui/AdvertisementCardContainer';
 import { UsageLimitIndicator } from '../components/ui/UsageLimitIndicator';
 import { AdvancedFilters } from '../components/ui/AdvancedFilters';
 import MultiDaySelector from '../components/ui/MultiDaySelector';
@@ -13,6 +14,7 @@ import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import useCurrentUsage from '../hooks/useCurrentUsage';
 import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityContext';
 import { useAuth } from "../lib/auth/AuthContext";
+import { advertisementService } from '../lib/supabase/advertisementService';
 
 // Using the type from the service
 type Caretaker = CaretakerDisplayData;
@@ -753,9 +755,31 @@ function SearchPage() {
         {/* Results Grid */}
         {!loading && !error && caretakers.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {caretakers.map(caretaker => (
-              <CaretakerCard key={caretaker.id} caretaker={caretaker} />
-            ))}
+            {caretakers.map((caretaker, index) => {
+              const items = [];
+              
+              // Add caretaker card
+              items.push(
+                <CaretakerCard key={caretaker.id} caretaker={caretaker} />
+              );
+              
+              // Add advertisement card after every 5th caretaker (index 4, 9, 14, etc.)
+              if ((index + 1) % 5 === 0) {
+                items.push(
+                  <AdvertisementCardContainer
+                    key={`ad-${index}`}
+                    targetingOptions={{
+                      petTypes: selectedPetType ? [selectedPetType] : undefined,
+                      location: location || undefined,
+                      subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+                    }}
+                    className="md:col-span-1"
+                  />
+                );
+              }
+              
+              return items;
+            }).flat()}
           </div>
         )}</div>
         </div>

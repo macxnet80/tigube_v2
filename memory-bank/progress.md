@@ -1,5 +1,33 @@
 # Progress: Tigube v2
 
+## 🎯 Aktueller Stand
+
+**Version**: 0.8.0  
+**Status**: Werbeanzeigen-System implementiert, Storage-Migration korrigiert  
+**Letztes Update**: 21.01.2025
+
+### ✅ Version 0.8.0 - Werbeanzeigen-System Implementation
+
+#### Werbeanzeigen-System (Vollständig implementiert)
+- **Database**: Tabellen für advertisements, advertisers, ad_spots ✅
+- **Components**: AdCard für Suchseite, AdBanner für Betreuer-Profile ✅
+- **Services**: Advertisement-Management und Targeting-Logik ✅
+- **Admin-Dashboard**: Vollständige Werbeverwaltung ✅
+- **Storage**: Korrigierte Migration für advertisement-images Bucket ✅
+
+**Implementierte Features**:
+- Werbeanzeigen alle 5 Profile auf der Suchseite
+- Banner-Werbung auf Betreuer-Profilseiten
+- Targeting basierend auf Owner-Eigenschaften (Haustierart, PLZ)
+- Admin-Dashboard für Kampagnen-Management
+- Sichere Bild-Upload-Funktionalität für Werbeanzeigen
+- RLS-Policies für sichere Datenverwaltung
+
+#### Storage-Migration Korrektur
+- **Problem**: `relation "admin_users" does not exist` Fehler behoben ✅
+- **Lösung**: Referenzen von `users` zu `public.users` in RLS-Richtlinien ✅
+- **Status**: Migration bereit für Production-Deployment ✅
+
 ## Projektfortschritt
 
 ### Version 0.7.0- Subscription System & Core Features VOLLSTÄNDIG ✅

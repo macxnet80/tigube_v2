@@ -186,6 +186,68 @@ SubscriptionService     # Subscription Management
 FeatureGateService     # Feature-Zugriffskontrolle  
 UsageTrackingService   # Feature-Nutzung-Tracking
 StripeService          # Payment Processing
+AdvertisementService   # Advertisement Management
+AdTargetingService     # Advertisement Targeting
+```
+
+#### SubscriptionService
+```typescript
+class SubscriptionService {
+  async getSubscription(userId: string): Promise<Subscription>
+  async createCheckoutSession(planId: string): Promise<string>
+  async handleWebhook(event: Stripe.Event): Promise<void>
+  async cancelSubscription(subscriptionId: string): Promise<void>
+}
+```
+
+#### FeatureGateService
+```typescript
+class FeatureGateService {
+  async hasAccess(feature: string, userId: string): Promise<boolean>
+  async checkLimit(feature: string, userId: string): Promise<UsageStatus>
+  async getFeatureMatrix(planType: string): Promise<FeatureMatrix>
+}
+```
+
+#### UsageTrackingService
+```typescript
+class UsageTrackingService {
+  async increment(feature: string, userId: string): Promise<void>
+  async getCurrentUsage(feature: string, userId: string): Promise<number>
+  async resetMonthlyUsage(): Promise<void>
+}
+```
+
+#### StripeService
+```typescript
+class StripeService {
+  async createCustomer(email: string): Promise<Stripe.Customer>
+  async createCheckoutSession(params: CheckoutParams): Promise<Stripe.Checkout.Session>
+  async handleWebhook(signature: string, body: string): Promise<void>
+}
+```
+
+#### AdvertisementService
+```typescript
+class AdvertisementService {
+  async getTargetedAds(criteria: TargetingCriteria): Promise<Advertisement[]>
+  async trackImpression(adId: string, userId?: string): Promise<void>
+  async trackClick(adId: string, userId?: string): Promise<void>
+  async createAdvertisement(data: CreateAdData): Promise<Advertisement>
+  async updateAdvertisement(id: string, data: UpdateAdData): Promise<Advertisement>
+  async deleteAdvertisement(id: string): Promise<void>
+  async getAdMetrics(adId: string): Promise<AdMetrics>
+}
+```
+
+#### AdTargetingService
+```typescript
+class AdTargetingService {
+  async getAdsForOwner(ownerProfile: OwnerProfile): Promise<Advertisement[]>
+  async getAdsForCaretaker(caretakerProfile: CaretakerProfile): Promise<Advertisement[]>
+  async calculateRelevanceScore(ad: Advertisement, profile: UserProfile): Promise<number>
+  async updateTargetingCriteria(adId: string, criteria: TargetingCriteria): Promise<void>
+}
 ```
 
 ### Database Performance
