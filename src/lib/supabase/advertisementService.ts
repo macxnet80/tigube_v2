@@ -351,16 +351,16 @@ class AdvertisementService {
   async getUserLocation(userId: string): Promise<string | null> {
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
-        .select('location')
-        .eq('user_id', userId)
+        .from('users')
+        .select('city')
+        .eq('id', userId)
         .single();
 
       if (error || !data) {
         return null;
       }
 
-      return data.location;
+      return data.city;
     } catch (error) {
       console.error('Error fetching user location:', error);
       return null;

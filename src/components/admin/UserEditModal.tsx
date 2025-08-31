@@ -54,8 +54,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({
     city: user?.city || '',
     date_of_birth: user?.date_of_birth || '',
     gender: user?.gender || '',
-    emergency_contact: user?.emergency_contact || '',
-    emergency_phone: user?.emergency_phone || '',
     
     // Admin settings
     admin_role: user?.admin_role || null,
@@ -99,8 +97,6 @@ const UserEditModal: React.FC<UserEditModalProps> = ({
         city: user.city || '',
         date_of_birth: user.date_of_birth || '',
         gender: user.gender || '',
-        emergency_contact: user.emergency_contact || '',
-        emergency_phone: user.emergency_phone || '',
         admin_role: user.admin_role || null,
         is_suspended: user.is_suspended || false,
         suspension_reason: user.suspension_reason || '',
@@ -160,10 +156,8 @@ const UserEditModal: React.FC<UserEditModalProps> = ({
         street: formData.street,
         plz: formData.plz,
         city: formData.city,
-        date_of_birth: formData.date_of_birth,
-        gender: formData.gender,
-        emergency_contact: formData.emergency_contact,
-        emergency_phone: formData.emergency_phone,
+        date_of_birth: formData.date_of_birth || null,
+        gender: formData.gender || null,
       }, currentAdminId);
 
       // Update admin role
@@ -405,25 +399,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({
                      </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Notfallkontakt</label>
-                    <input
-                      type="text"
-                      value={formData.emergency_contact}
-                      onChange={(e) => handleInputChange('emergency_contact', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Notfalltelefon</label>
-                    <input
-                      type="tel"
-                      value={formData.emergency_phone}
-                      onChange={(e) => handleInputChange('emergency_phone', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    />
-                  </div>
                 </div>
               </div>
 

@@ -9,7 +9,7 @@ import type { ClientData } from '../components/ui/ClientDetailsAccordion';
 import { useAuth } from '../lib/auth/AuthContext';
 import { useEffect, useState, useRef } from 'react';
 import { caretakerProfileService, ownerCaretakerService, userService } from '../lib/supabase/db';
-import { Calendar, Check, Edit, LogOut, MapPin, Phone, Shield, Upload, Camera, Star, Info, Lock, Briefcase, Verified, Eye, EyeOff, KeyRound, Trash2, AlertTriangle, Mail, X, Clock, Crown, Settings, PawPrint, Moon, CheckCircle, User } from 'lucide-react';
+import { Calendar, Check, Edit, LogOut, MapPin, Phone, Shield, Upload, Camera, Star, Info, Lock, Briefcase, Verified, Eye, EyeOff, KeyRound, Trash2, AlertTriangle, Mail, X, Clock, Crown, Settings, PawPrint, Moon, CheckCircle, User, XCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase/client';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
@@ -23,7 +23,7 @@ import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { DEFAULT_SERVICE_CATEGORIES, type ServiceCategory, type CategorizedService } from '../lib/types/service-categories';
 import { ServiceUtils as SupabaseServiceUtils } from '../lib/supabase/service-categories';
 import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityContext';
-import { ApprovalStatusCard } from '../components/ui/ApprovalStatusCard';
+
 
 function CaretakerDashboardPage() {
   const { user, userProfile, loading: authLoading, subscription, updateProfileState } = useAuth();
@@ -61,6 +61,9 @@ function CaretakerDashboardPage() {
   // Short-term availability state (nur lokaler State, keine DB-Persistierung)
   const { shortTermAvailable, setShortTermAvailable, loading: contextLoading } = useShortTermAvailability();
   const [shortTermLoading, setShortTermLoading] = useState(false);
+
+  // Approval state
+  const [approvalLoading, setApprovalLoading] = useState(false);
 
   // Overnight availability state
   const [overnightAvailability, setOvernightAvailability] = useState<Record<string, boolean>>({
@@ -777,6 +780,35 @@ function CaretakerDashboardPage() {
     }
   };
 
+  // Handler für Profil-Freigabe anfordern
+  const handleRequestApproval = async () => {
+    if (approvalLoading || !user || !profile) return;
+    
+    setApprovalLoading(true);
+    
+    try {
+      // Import AdminApprovalService dynamisch
+      const { AdminApprovalService } = await import('../lib/services/adminApprovalService');
+      
+      // Freigabe anfordern
+      await AdminApprovalService.requestApproval(user.id);
+      
+      // Lokalen State aktualisieren
+      setProfile((prev: any) => ({ 
+        ...prev, 
+        approval_status: 'pending',
+        approval_requested_at: new Date().toISOString()
+      }));
+      
+      console.log('✅ Freigabe erfolgreich angefordert');
+    } catch (error) {
+      console.error('❌ Fehler beim Anfordern der Freigabe:', error);
+      // Hier könnte man eine Fehlermeldung anzeigen
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
+
   // Handler für Übernachtungs-Verfügbarkeit
   const handleOvernightAvailabilityChange = async (newOvernightAvailability: Record<string, boolean>) => {
     if (!user || !profile) return;
@@ -1025,6 +1057,7 @@ function CaretakerDashboardPage() {
               company_name: '',
               tax_number: '',
               vat_id: '',
+              approval_status: 'not_requested',
               overnight_availability: {
                 Mo: false,
                 Di: false,
@@ -1329,12 +1362,12 @@ function CaretakerDashboardPage() {
       }
       
       if (caretakerData.dateOfBirth !== (userProfile?.date_of_birth || '')) {
-        dataToUpdate.dateOfBirth = caretakerData.dateOfBirth;
+        dataToUpdate.dateOfBirth = caretakerData.dateOfBirth || null;
         console.log('📝 DateOfBirth geändert:', caretakerData.dateOfBirth);
       }
       
       if (caretakerData.gender !== (userProfile?.gender || '')) {
-        dataToUpdate.gender = caretakerData.gender;
+        dataToUpdate.gender = caretakerData.gender || null;
         console.log('📝 Gender geändert:', caretakerData.gender);
       }
 
@@ -1907,7 +1940,7 @@ function CaretakerDashboardPage() {
       rating: 0,
       review_count: 0,
       is_verified: false,
-      approval_status: 'pending',
+      approval_status: 'not_requested',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -1982,15 +2015,42 @@ function CaretakerDashboardPage() {
                       </div>
                     )}
                     {/* Freigabe-Icon mit Hovereffekt */}
-                    <div className="group relative">
-                      <div className="inline-flex items-center justify-center w-6 h-6 text-green-500 hover:text-green-600 transition-colors">
-                        <CheckCircle className="h-4 w-4" />
+                    {profile?.approval_status && (
+                      <div className="group relative">
+                        <div className={`inline-flex items-center justify-center w-6 h-6 transition-colors ${
+                          profile.approval_status === 'approved' 
+                            ? 'text-green-500 hover:text-green-600' 
+                            : profile.approval_status === 'pending'
+                            ? 'text-yellow-500 hover:text-yellow-600'
+                            : profile.approval_status === 'rejected'
+                            ? 'text-red-500 hover:text-red-600'
+                            : 'text-gray-400 hover:text-gray-500'
+                        }`}>
+                          {profile.approval_status === 'approved' ? (
+                            <CheckCircle className="h-4 w-4" />
+                          ) : profile.approval_status === 'pending' ? (
+                            <Clock className="h-4 w-4" />
+                          ) : profile.approval_status === 'rejected' ? (
+                            <XCircle className="h-4 w-4" />
+                          ) : (
+                            <Shield className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="absolute left-1/2 transform -translate-x-1/2 top-8 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                          <div className="text-center">
+                            {profile.approval_status === 'approved' 
+                              ? 'Profil freigegeben' 
+                              : profile.approval_status === 'pending'
+                              ? 'Freigabe ausstehend'
+                              : profile.approval_status === 'rejected'
+                              ? 'Freigabe abgelehnt'
+                              : 'Freigabe nicht angefordert'
+                            }
+                          </div>
+                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                        </div>
                       </div>
-                      <div className="absolute left-1/2 transform -translate-x-1/2 top-8 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-                        <div className="text-center">Profil freigegeben</div>
-                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
-                      </div>
-                    </div>
+                    )}
                     {/* Briefcase-Icon für Professional-Status mit Hovereffekt */}
                     {profile?.is_commercial && (
                       <div className="group relative">
@@ -2047,6 +2107,57 @@ function CaretakerDashboardPage() {
                         )}
                       </button>
                     </div>
+
+                    {/* Profil-Freigabe Button */}
+                    {profile?.approval_status !== 'approved' && (
+                      <div className="flex items-center gap-2">
+                        {profile?.approval_status === 'pending' ? (
+                          <button
+                            disabled
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-lg cursor-not-allowed"
+                          >
+                            <Clock className="h-4 w-4" />
+                            Profil wird überprüft
+                          </button>
+                        ) : profile?.approval_status === 'rejected' ? (
+                          <button
+                            onClick={handleRequestApproval}
+                            disabled={approvalLoading}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {approvalLoading ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                Wird gesendet...
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="h-4 w-4" />
+                                Erneut zur Freigabe geben
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={handleRequestApproval}
+                            disabled={approvalLoading}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-700 text-sm font-medium rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {approvalLoading ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                                Wird gesendet...
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="h-4 w-4" />
+                                Profil zur Freigabe geben
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -3497,15 +3608,7 @@ function CaretakerDashboardPage() {
             </form>
           </div>
 
-          {/* Profil-Freigabe Status */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Profil-Freigabe Status</h2>
-            </div>
-            
-            <ApprovalStatusCard />
-          </div>
+
 
           {/* Konto löschen */}
           <div className="bg-red-50 border border-red-200 rounded-xl p-6">

@@ -11,8 +11,8 @@ import {
   ChevronRight,
   AlertTriangle,
   CheckCircle,
-  XCircle,
   Clock,
+  X,
   MoreVertical,
   Download,
   RefreshCw,
@@ -42,7 +42,6 @@ import { ApprovalStatus } from '../../lib/types/database.types';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import Badge from '../ui/Badge';
 import AdminActionsButton from './AdminActionsButton';
-import UserDetailModal from './UserDetailModal';
 import UserEditModal from './UserEditModal';
 
 interface AdvancedUserManagementPanelProps {
@@ -64,8 +63,7 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<DetailedUserInfo | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
-  const [showUserDetailModal, setShowUserDetailModal] = useState(false);
-  const [selectedUserForModal, setSelectedUserForModal] = useState<AdminUserDetails | null>(null);
+
   const [showFilters, setShowFilters] = useState(false);
 
   // Search and filter states
@@ -303,14 +301,14 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
     }
   };
 
-  const openUserDetailModal = (user: AdminUserDetails) => {
-    setSelectedUserForModal(user);
-    setShowUserDetailModal(true);
+  const openUserEditModal = (user: AdminUserDetails) => {
+    setUserToEdit(user);
+    setShowEditModal(true);
   };
 
-  const closeUserDetailModal = () => {
-    setShowUserDetailModal(false);
-    setSelectedUserForModal(null);
+  const closeUserEditModal = () => {
+    setShowEditModal(false);
+    setUserToEdit(null);
   };
 
 
@@ -369,8 +367,8 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
     <div className="space-y-6">
       {/* Statistics Overview */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border p-4">
+        <div className="grid grid-cols-5 gap-3">
+          <div className="bg-white rounded-lg border p-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Gesamt Benutzer</p>
@@ -384,7 +382,7 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white rounded-lg border p-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Aktive Nutzer</p>
@@ -398,7 +396,7 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white rounded-lg border p-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Verifizierte Betreuer</p>
@@ -412,7 +410,7 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border p-4">
+          <div className="bg-white rounded-lg border p-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Premium Abos</p>
@@ -428,7 +426,7 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
 
           {/* Freigabe-Statistik */}
           {approvalStats && (
-            <div className="bg-white rounded-lg border p-4">
+            <div className="bg-white rounded-lg border p-3">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Freigaben</p>
@@ -608,14 +606,6 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
                            {user.approval_status === 'approved' && (
                              <div className="flex items-center gap-2">
                                <Badge variant="success">Freigegeben</Badge>
-                               <button
-                                 onClick={() => handleUserAction('reject', user.id)}
-                                 className="text-red-600 hover:text-red-800"
-                                 title="Ablehnen"
-                                 disabled={actionLoading === 'reject'}
-                               >
-                                 <XCircle className="h-4 w-4" />
-                               </button>
                              </div>
                            )}
                            {user.approval_status === 'pending' && (
@@ -629,14 +619,7 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
                                >
                                  <CheckCircle className="h-4 w-4" />
                                </button>
-                               <button
-                                 onClick={() => setShowActionModal({ type: 'reject', userId: user.id })}
-                                 className="text-red-600 hover:text-red-800"
-                                 title="Ablehnen"
-                                 disabled={actionLoading === 'reject'}
-                               >
-                                 <XCircle className="h-4 w-4" />
-                               </button>
+
                              </>
                            )}
                            {user.approval_status === 'rejected' && (
@@ -655,14 +638,6 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
                            {!user.approval_status && (
                              <div className="flex items-center gap-2">
                                <Badge variant="secondary">Nicht angefordert</Badge>
-                               <button
-                                 onClick={() => handleUserAction('approve', user.id)}
-                                 className="text-green-600 hover:text-green-800"
-                                 title="Direkt freigeben"
-                                 disabled={actionLoading === 'approve'}
-                               >
-                                 <CheckCircle className="h-4 w-4" />
-                               </button>
                              </div>
                            )}
                          </div>
@@ -677,11 +652,11 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <button
-                          onClick={() => openUserDetailModal(user)}
+                          onClick={() => openUserEditModal(user)}
                           className="text-blue-600 hover:text-blue-800"
-                          title="Details anzeigen"
+                          title="Benutzer bearbeiten"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Edit3 className="h-4 w-4" />
                         </button>
 
                         <button
@@ -747,16 +722,7 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
         />
       )}
 
-      {/* User Detail Modal */}
-      <UserDetailModal
-        user={selectedUserForModal}
-        isOpen={showUserDetailModal}
-        onClose={closeUserDetailModal}
-        onAction={handleUserAction}
-        actionLoading={actionLoading}
-        onShowActionModal={setShowActionModal}
-        onEditUser={handleEditUser}
-      />
+
 
       {/* User Edit Modal */}
       {showEditModal && userToEdit && (
@@ -849,7 +815,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
           >
-            <XCircle className="h-6 w-6" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 

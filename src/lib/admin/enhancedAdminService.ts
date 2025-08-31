@@ -791,7 +791,7 @@ export class EnhancedAdminService {
       
       await AdminApprovalService.setApprovalStatus(userId, approvalStatus, adminId, notes);
 
-      await this.logAction('caretaker_approval_updated', 'users', userId, adminId, { 
+      await this.logAction('caretaker_approval_updated', 'caretaker_profiles', userId, adminId, { 
         approvalStatus, 
         notes 
       });
@@ -917,7 +917,11 @@ export class EnhancedAdminService {
         .from('users')
         .select(`
           *,
-          caretaker_profile (*),
+          caretaker_profile (
+            *,
+            approval_status,
+            approval_notes
+          ),
           owner_profile (
             *,
             pets (*),
@@ -967,7 +971,7 @@ export class EnhancedAdminService {
           ...updates,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', userId);
+        .eq('id', userId);
 
       if (error) throw error;
 
@@ -1006,7 +1010,7 @@ export class EnhancedAdminService {
             ...updates.preferences,
             updated_at: new Date().toISOString()
           })
-          .eq('user_id', userId);
+          .eq('owner_id', userId);
 
         if (error) throw error;
       }

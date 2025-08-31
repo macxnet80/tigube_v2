@@ -1004,6 +1004,238 @@ export type Database = {
           }
         ]
       }
+      advertisements: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          image_url: string | null
+          link_url: string | null
+          cta_text: string | null
+          ad_type: string
+          format_id: string | null
+          target_pet_types: string[] | null
+          target_locations: string[] | null
+          target_subscription_types: string[] | null
+          start_date: string | null
+          end_date: string | null
+          is_active: boolean | null
+          priority: number | null
+          max_impressions: number | null
+          current_impressions: number | null
+          max_clicks: number | null
+          current_clicks: number | null
+          created_at: string | null
+          updated_at: string | null
+          created_by: string | null
+          custom_width: number | null
+          custom_height: number | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          image_url?: string | null
+          link_url?: string | null
+          cta_text?: string | null
+          ad_type: string
+          format_id?: string | null
+          target_pet_types?: string[] | null
+          target_locations?: string[] | null
+          target_subscription_types?: string[] | null
+          start_date?: string | null
+          end_date?: string | null
+          is_active?: boolean | null
+          priority?: number | null
+          max_impressions?: number | null
+          current_impressions?: number | null
+          max_clicks?: number | null
+          current_clicks?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+          created_by?: string | null
+          custom_width?: number | null
+          custom_height?: number | null
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          image_url?: string | null
+          link_url?: string | null
+          cta_text?: string | null
+          ad_type?: string
+          format_id?: string | null
+          target_pet_types?: string[] | null
+          target_locations?: string[] | null
+          target_subscription_types?: string[] | null
+          start_date?: string | null
+          end_date?: string | null
+          is_active?: boolean | null
+          priority?: number | null
+          max_impressions?: number | null
+          current_impressions?: number | null
+          max_clicks?: number | null
+          current_clicks?: number | null
+          created_at?: string | null
+          updated_at?: string | null
+          created_by?: string | null
+          custom_width?: number | null
+          custom_height?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisements_format_id_fkey"
+            columns: ["format_id"]
+            isOneToOne: false
+            referencedRelation: "advertisement_formats"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      advertisement_impressions: {
+        Row: {
+          id: string
+          advertisement_id: string | null
+          user_id: string | null
+          page_type: string
+          user_pet_types: string[] | null
+          user_location: string | null
+          user_subscription_type: string | null
+          ip_address: unknown | null
+          user_agent: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          advertisement_id?: string | null
+          user_id?: string | null
+          page_type: string
+          user_pet_types?: string[] | null
+          user_location?: string | null
+          user_subscription_type?: string | null
+          ip_address?: unknown | null
+          user_agent?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          advertisement_id?: string | null
+          user_id?: string | null
+          page_type?: string
+          user_pet_types?: string[] | null
+          user_location?: string | null
+          user_subscription_type?: string | null
+          ip_address?: unknown | null
+          user_agent?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisement_impressions_advertisement_id_fkey"
+            columns: ["advertisement_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      advertisement_clicks: {
+        Row: {
+          id: string
+          advertisement_id: string | null
+          impression_id: string | null
+          user_id: string | null
+          page_type: string
+          user_pet_types: string[] | null
+          user_location: string | null
+          user_subscription_type: string | null
+          ip_address: unknown | null
+          user_agent: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          advertisement_id?: string | null
+          impression_id?: string | null
+          user_id?: string | null
+          page_type: string
+          user_pet_types?: string[] | null
+          user_location?: string | null
+          user_subscription_type?: string | null
+          ip_address?: unknown | null
+          user_agent?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          advertisement_id?: string | null
+          impression_id?: string | null
+          user_id?: string | null
+          page_type?: string
+          user_pet_types?: string[] | null
+          user_location?: string | null
+          user_subscription_type?: string | null
+          ip_address?: unknown | null
+          user_agent?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisement_clicks_advertisement_id_fkey"
+            columns: ["advertisement_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advertisement_clicks_impression_id_fkey"
+            columns: ["impression_id"]
+            isOneToOne: false
+            referencedRelation: "advertisement_impressions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      advertisement_formats: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          width: number
+          height: number
+          ad_type: string
+          placement: string
+          function_description: string | null
+          is_active: boolean | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          width: number
+          height: number
+          ad_type: string
+          placement: string
+          function_description?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          width?: number
+          height?: number
+          ad_type?: string
+          placement?: string
+          function_description?: string | null
+          is_active?: boolean | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           id: string
@@ -1025,6 +1257,13 @@ export type Database = {
           date_of_birth: string | null
           gender: string | null
           street: string | null
+          is_suspended: boolean | null
+          suspension_reason: string | null
+          subscription_status: string | null
+          suspended_at: string | null
+          suspended_by: string | null
+          approval_status: string | null
+          approval_notes: string | null
         }
         Insert: {
           id: string
@@ -1046,6 +1285,13 @@ export type Database = {
           date_of_birth?: string | null
           gender?: string | null
           street?: string | null
+          is_suspended?: boolean | null
+          suspension_reason?: string | null
+          subscription_status?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          approval_status?: string | null
+          approval_notes?: string | null
         }
         Update: {
           id?: string
@@ -1067,6 +1313,13 @@ export type Database = {
           date_of_birth?: string | null
           gender?: string | null
           street?: string | null
+          is_suspended?: boolean | null
+          suspension_reason?: string | null
+          subscription_status?: string | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          approval_status?: string | null
+          approval_notes?: string | null
         }
         Relationships: []
       }
@@ -1119,6 +1372,49 @@ export type Database = {
       }
     }
     Views: {
+      advertisements_with_formats: {
+        Row: {
+          id: string | null
+          title: string | null
+          description: string | null
+          image_url: string | null
+          link_url: string | null
+          cta_text: string | null
+          ad_type: string | null
+          format_id: string | null
+          format_name: string | null
+          format_description: string | null
+          display_width: number | null
+          display_height: number | null
+          placement: string | null
+          function_description: string | null
+          target_pet_types: string[] | null
+          target_locations: string[] | null
+          target_subscription_types: string[] | null
+          start_date: string | null
+          end_date: string | null
+          is_active: boolean | null
+          priority: number | null
+          max_impressions: number | null
+          current_impressions: number | null
+          max_clicks: number | null
+          current_clicks: number | null
+          created_at: string | null
+          updated_at: string | null
+          created_by: string | null
+          custom_width: number | null
+          custom_height: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advertisements_format_id_fkey"
+            columns: ["format_id"]
+            isOneToOne: false
+            referencedRelation: "advertisement_formats"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       caretaker_search_view: {
         Row: {
           animal_types: string[] | null
@@ -1264,6 +1560,40 @@ export type Database = {
       }
       track_user_action: {
         Args: { user_uuid: string; action: string; target_uuid?: string }
+        Returns: undefined
+      }
+      get_targeted_advertisements: {
+        Args: {
+          p_ad_type: string
+          p_limit?: number
+          p_user_location?: string
+          p_user_pet_types?: string[]
+          p_user_subscription_type?: string
+        }
+        Returns: {
+          ad_type: string
+          cta_text: string
+          current_clicks: number
+          current_impressions: number
+          description: string
+          display_height: number
+          display_width: number
+          format_name: string
+          function_description: string
+          id: string
+          image_url: string
+          link_url: string
+          placement: string
+          priority: number
+          title: string
+        }[]
+      }
+      increment_advertisement_impressions: {
+        Args: { ad_id: string }
+        Returns: undefined
+      }
+      increment_advertisement_clicks: {
+        Args: { ad_id: string }
         Returns: undefined
       }
     }

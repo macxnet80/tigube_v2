@@ -982,8 +982,8 @@ function OwnerDashboardPage() {
       // Only include fields that have changed
       if (ownerData.phoneNumber !== (userProfile?.phone_number || '')) dataToUpdate.phoneNumber = ownerData.phoneNumber;
       if (ownerData.street !== (userProfile?.street || '')) dataToUpdate.street = ownerData.street;
-      if (ownerData.dateOfBirth !== (userProfile?.date_of_birth || '')) dataToUpdate.dateOfBirth = ownerData.dateOfBirth;
-      if (ownerData.gender !== (userProfile?.gender || '')) dataToUpdate.gender = ownerData.gender;
+      if (ownerData.dateOfBirth !== (userProfile?.date_of_birth || '')) dataToUpdate.dateOfBirth = ownerData.dateOfBirth || null;
+      if (ownerData.gender !== (userProfile?.gender || '')) dataToUpdate.gender = ownerData.gender || null;
 
       // Handle PLZ and City logic
       const plzChanged = ownerData.plz !== (userProfile?.plz || '');

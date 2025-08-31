@@ -8,7 +8,8 @@ import SubscriptionSyncPanel from '../../components/admin/SubscriptionSyncPanel'
 import AdvertisementManagementPanel from '../../components/admin/AdvertisementManagementPanel';
 
 import { EnhancedAdminService, AdminDashboardStats } from '../../lib/admin/enhancedAdminService';
-import { Users, DollarSign, MessageCircle, CreditCard, TrendingUp, Calendar, Database, PieChart, Shield, AlertTriangle, FileText } from 'lucide-react';
+import { AdminApprovalService } from '../../lib/services/adminApprovalService';
+import { Users, DollarSign, MessageCircle, CreditCard, TrendingUp, Calendar, Database, PieChart, Shield, AlertTriangle, FileText, Clock, UserCheck, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import StripeStatusIndicator from '../../components/ui/StripeStatusIndicator';
 import { supabase } from '../../lib/supabase/client';
 import { useAuth } from '../../lib/auth/AuthContext';
@@ -20,10 +21,13 @@ const AdminDashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'moderation' | 'analytics' | 'subscriptions' | 'content' | 'advertisements'>('dashboard');
   const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [pendingApprovalsLoading, setPendingApprovalsLoading] = useState(false);
 
   useEffect(() => {
     loadDashboardStats();
     loadCurrentAdmin();
+    loadPendingApprovals();
   }, []);
 
   const loadCurrentAdmin = async () => {
@@ -50,6 +54,36 @@ const AdminDashboardPage: React.FC = () => {
       setError('Fehler beim Laden der Dashboard-Statistiken');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPendingApprovals = async () => {
+    try {
+      setPendingApprovalsLoading(true);
+      const approvals = await AdminApprovalService.getPendingApprovals();
+      setPendingApprovals(approvals);
+    } catch (err) {
+      console.error('Error loading pending approvals:', err);
+    } finally {
+      setPendingApprovalsLoading(false);
+    }
+  };
+
+  const handleApprovalAction = async (caretakerId: string, action: 'approve' | 'reject') => {
+    try {
+      if (!currentAdminId) return;
+      
+      await AdminApprovalService.setApprovalStatus(
+        caretakerId,
+        action === 'approve' ? 'approved' : 'rejected',
+        currentAdminId,
+        action === 'approve' ? 'Freigabe genehmigt' : 'Freigabe abgelehnt'
+      );
+      
+      // Reload pending approvals
+      await loadPendingApprovals();
+    } catch (err) {
+      console.error('Error handling approval action:', err);
     }
   };
 
@@ -367,6 +401,76 @@ const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
             )}
+
+            {/* Offene Tasks */}
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Offene Tasks</h3>
+                <button
+                  onClick={loadPendingApprovals}
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                  disabled={pendingApprovalsLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 ${pendingApprovalsLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+              
+              {pendingApprovalsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Lade wartende Freigaben...</span>
+                </div>
+              ) : pendingApprovals.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-600">Keine wartenden Freigaben</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingApprovals.map((approval) => (
+                    <div key={approval.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <UserCheck className="h-5 w-5 text-orange-500" />
+                            <div>
+                              <h4 className="font-medium text-gray-900">
+                                {approval.users?.first_name} {approval.users?.last_name}
+                              </h4>
+                              <p className="text-sm text-gray-600">{approval.users?.email}</p>
+                              <p className="text-xs text-gray-500">
+                                Angefordert: {new Date(approval.approval_requested_at).toLocaleDateString('de-DE')}
+                              </p>
+                            </div>
+                          </div>
+                          {approval.short_about_me && (
+                            <p className="text-sm text-gray-700 mt-2 line-clamp-2">
+                              {approval.short_about_me}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleApprovalAction(approval.id, 'approve')}
+                            className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg"
+                            title="Freigeben"
+                          >
+                            <CheckCircle className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => handleApprovalAction(approval.id, 'reject')}
+                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg"
+                            title="Ablehnen"
+                          >
+                            <XCircle className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

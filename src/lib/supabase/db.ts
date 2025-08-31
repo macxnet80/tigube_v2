@@ -18,6 +18,8 @@ export type UserProfileUpdate = {
   plz?: string;
   city?: string;
   street?: string;
+  dateOfBirth?: string | null;
+  gender?: string | null;
   profileCompleted?: boolean;
   userType?: 'owner' | 'caretaker';
   profilePhotoUrl?: string;
@@ -103,6 +105,8 @@ export const userService = {
     if (profileData.plz !== undefined) updateData.plz = profileData.plz;
     if (profileData.city !== undefined) updateData.city = profileData.city;
     if (profileData.street !== undefined) updateData.street = profileData.street;
+    if (profileData.dateOfBirth !== undefined) updateData.date_of_birth = profileData.dateOfBirth;
+    if (profileData.gender !== undefined) updateData.gender = profileData.gender || null;
     if (profileData.profileCompleted !== undefined) updateData.profile_completed = profileData.profileCompleted;
     if (profileData.userType !== undefined) updateData.user_type = profileData.userType;
     if (profileData.profilePhotoUrl !== undefined) updateData.profile_photo_url = profileData.profilePhotoUrl;

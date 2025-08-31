@@ -16,7 +16,7 @@ export class AdminApprovalService {
       console.log('[AdminApprovalService] Deciding approval:', decision);
       
       const { error } = await adminSupabase
-        .from('users')
+        .from('caretaker_profiles')
         .update({
           approval_status: decision.approval_status,
           approval_approved_at: decision.approval_approved_at,
@@ -65,7 +65,7 @@ export class AdminApprovalService {
       }
 
       const { error } = await adminSupabase
-        .from('users')
+        .from('caretaker_profiles')
         .update(updateData)
         .eq('id', caretakerId);
 
@@ -89,34 +89,33 @@ export class AdminApprovalService {
       console.log('[AdminApprovalService] Getting pending approvals');
       
       const { data, error } = await adminSupabase
-        .from('users')
+        .from('caretaker_profiles')
         .select(`
           id,
-          first_name,
-          last_name,
-          email,
           approval_status,
           approval_requested_at,
           approval_approved_at,
           approval_approved_by,
           approval_notes,
-          created_at,
-          caretaker_profile (
+          short_about_me,
+          long_about_me,
+          experience_years,
+          hourly_rate,
+          service_radius,
+          languages,
+          animal_types,
+          qualifications,
+          is_commercial,
+          company_name,
+          short_term_available,
+          users!caretaker_profiles_id_fkey (
             id,
-            short_about_me,
-            long_about_me,
-            experience_years,
-            hourly_rate,
-            service_radius,
-            languages,
-            animal_types,
-            qualifications,
-            is_commercial,
-            company_name,
-            short_term_available
+            first_name,
+            last_name,
+            email,
+            created_at
           )
         `)
-        .eq('user_type', 'caretaker')
         .eq('approval_status', 'pending')
         .order('approval_requested_at', { ascending: true });
 
@@ -146,9 +145,8 @@ export class AdminApprovalService {
       console.log('[AdminApprovalService] Getting approval stats');
       
       const { data, error } = await adminSupabase
-        .from('users')
-        .select('approval_status')
-        .eq('user_type', 'caretaker');
+        .from('caretaker_profiles')
+        .select('approval_status');
 
       if (error) {
         console.error('[AdminApprovalService] Error getting approval stats:', error);
