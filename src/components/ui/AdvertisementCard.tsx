@@ -78,62 +78,62 @@ export function AdvertisementCard({
     <div 
       ref={cardRef}
       className={cn(
-        "bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group relative overflow-hidden",
+        "card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 cursor-pointer relative overflow-hidden",
         className
       )}
       onClick={handleClick}
     >
-      {/* Sponsored Label */}
-      <div className="absolute top-3 right-3 bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1">
-        <Eye className="h-3 w-3" />
-        Gesponsert
-      </div>
-
-      <div className="flex flex-col h-full">
-        {/* Image Section */}
+      <div className="relative">
+        {/* Image Section - passt sich an Bildproportionen an */}
         {advertisement.image_url && !imageError && (
-          <div className="mb-4 rounded-lg overflow-hidden bg-gray-100">
+          <div className="relative w-full h-64">
             <img
               src={advertisement.image_url}
               alt={advertisement.title}
               className={cn(
-                "w-full h-48 object-cover transition-opacity duration-300",
+                "w-full h-full object-contain object-center rounded-t-xl transition-opacity duration-300",
                 imageLoaded ? "opacity-100" : "opacity-0"
               )}
               onLoad={handleImageLoad}
               onError={handleImageError}
             />
             {!imageLoaded && (
-              <div className="w-full h-48 bg-gray-200 animate-pulse flex items-center justify-center">
+              <div className="w-full h-full bg-gray-200 animate-pulse flex items-center justify-center rounded-t-xl">
                 <div className="text-gray-400 text-sm">Lädt...</div>
               </div>
             )}
+            
+            {/* Sponsored Badge - wie bei Profilkarten */}
+            <div className="absolute top-2 right-2 bg-blue-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              Gesponsert
+            </div>
           </div>
         )}
 
-        {/* Content Section */}
-        <div className="flex-1 flex flex-col">
-          <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+        {/* Content Section - unter dem Bild wie Profilkarten */}
+        <div className="p-5 bg-white rounded-b-xl">
+          {/* Title */}
+          <h3 className="font-semibold text-base group-hover:text-primary-600 transition-colors mb-3">
             {advertisement.title}
           </h3>
           
+          {/* Description */}
           {advertisement.description && (
-            <p className="text-gray-600 text-sm mb-4 flex-1 line-clamp-3">
+            <p className="text-gray-700 text-sm mb-4 line-clamp-3 leading-relaxed">
               {advertisement.description}
             </p>
           )}
 
           {/* CTA Button */}
-          <div className="mt-auto">
-            <Button
-              variant="primary"
-              size="sm"
-              className="w-full group-hover:bg-blue-600 transition-colors"
-              rightIcon={<ExternalLink className="h-4 w-4" />}
-            >
-              {advertisement.cta_text}
-            </Button>
-          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full group-hover:bg-primary-600 transition-colors"
+            rightIcon={<ExternalLink className="h-4 w-4" />}
+          >
+            {advertisement.cta_text}
+          </Button>
         </div>
       </div>
 

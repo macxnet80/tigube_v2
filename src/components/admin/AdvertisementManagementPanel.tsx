@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Eye, EyeOff, Target, BarChart3, Calendar, Monitor, Smartphone } from 'lucide-react';
+import { Plus, Edit, Trash2, Eye, EyeOff, Target, BarChart3, Calendar, Monitor, Smartphone, Copy } from 'lucide-react';
 import { advertisementService, Advertisement, AdvertisementFormat } from '../../lib/supabase/advertisementService';
 import ImageUploader from '../ui/ImageUploader';
 
@@ -23,11 +23,11 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
     image_url: '',
     link_url: '',
     cta_text: 'Mehr erfahren',
-    ad_type: 'search_card' as 'search_card' | 'profile_banner' | 'homepage_banner' | 'category_banner',
+          ad_type: 'search_card' as 'search_card' | 'search_filter' | 'search_card_filter' | 'profile_banner' | 'dashboard_banner',
     format_id: '',
     target_pet_types: [] as string[],
     target_locations: [] as string[],
-    target_subscription_types: [] as string[],
+    target_subscription_types: ['free'] as string[], // Standardmäßig "Kostenlos" ausgewählt
     start_date: '',
     end_date: '',
     is_active: true,
@@ -186,6 +186,53 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
     }
   };
 
+  const duplicateAdvertisement = (ad: Advertisement) => {
+    // Erstelle eine Kopie der Werbung mit angepasstem Titel
+    const duplicatedAd = {
+      title: `${ad.title} (Kopie)`,
+      description: ad.description || '',
+      image_url: ad.image_url || '',
+      link_url: ad.link_url || '',
+      cta_text: ad.cta_text || 'Mehr erfahren',
+      ad_type: ad.ad_type,
+      format_id: ad.format_id || '',
+      target_pet_types: ad.target_pet_types || [],
+      target_locations: ad.target_locations || [],
+      target_subscription_types: ad.target_subscription_types && ad.target_subscription_types.length > 0 ? ad.target_subscription_types : ['free'],
+      start_date: ad.start_date || '',
+      end_date: ad.end_date || '',
+      is_active: false, // Neue Kopie ist standardmäßig inaktiv
+      priority: ad.priority,
+      max_impressions: ad.max_impressions,
+      max_clicks: ad.max_clicks,
+      created_by: currentAdminId
+    };
+
+    // Setze die Formulardaten und öffne das Bearbeitungsformular
+    setFormData({
+      title: duplicatedAd.title,
+      description: duplicatedAd.description,
+      image_url: duplicatedAd.image_url,
+      link_url: duplicatedAd.link_url,
+      cta_text: duplicatedAd.cta_text,
+      ad_type: duplicatedAd.ad_type,
+      format_id: duplicatedAd.format_id,
+      target_pet_types: duplicatedAd.target_pet_types,
+      target_locations: duplicatedAd.target_locations,
+      target_subscription_types: duplicatedAd.target_subscription_types,
+      start_date: duplicatedAd.start_date,
+      end_date: duplicatedAd.end_date,
+      is_active: duplicatedAd.is_active,
+      priority: duplicatedAd.priority,
+      max_impressions: duplicatedAd.max_impressions,
+      max_clicks: duplicatedAd.max_clicks
+    });
+
+    setEditingAd(null); // Keine Bearbeitung, sondern neue Werbung
+    setShowCreateForm(true);
+    setActiveTab('list'); // Wechsle zum List-Tab
+  };
+
   const toggleActive = async (ad: Advertisement) => {
     try {
       const { error } = await advertisementService.updateAdvertisement(ad.id, {
@@ -212,11 +259,11 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
       image_url: '',
       link_url: '',
       cta_text: 'Mehr erfahren',
-      ad_type: 'search_card' as 'search_card' | 'profile_banner' | 'homepage_banner' | 'category_banner',
+      ad_type: 'search_card' as 'search_card' | 'search_filter' | 'search_card_filter' | 'profile_banner' | 'dashboard_banner',
       format_id: '',
       target_pet_types: [],
       target_locations: [],
-      target_subscription_types: [],
+      target_subscription_types: ['free'], // Standardmäßig "Kostenlos" ausgewählt
       start_date: '',
       end_date: '',
       is_active: true,
@@ -239,7 +286,7 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
       format_id: ad.format_id || '',
       target_pet_types: ad.target_pet_types || [],
       target_locations: ad.target_locations || [],
-      target_subscription_types: ad.target_subscription_types || [],
+      target_subscription_types: ad.target_subscription_types && ad.target_subscription_types.length > 0 ? ad.target_subscription_types : ['free'],
       start_date: ad.start_date ? new Date(ad.start_date).toISOString().split('T')[0] : '',
       end_date: ad.end_date ? new Date(ad.end_date).toISOString().split('T')[0] : '',
       is_active: ad.is_active,
@@ -436,7 +483,7 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
                       setFormData({ 
                         ...formData, 
                         format_id: e.target.value,
-                        ad_type: selectedFormat?.ad_type as 'search_card' | 'profile_banner' | 'homepage_banner' | 'category_banner' || 'search_card'
+                        ad_type: selectedFormat?.ad_type as 'search_card' | 'search_filter' | 'search_card_filter' | 'profile_banner' | 'dashboard_banner' || 'search_card'
                       });
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -541,7 +588,7 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
                       ))}
                     </div>
                     <div className="text-xs text-gray-500 mt-2">
-                      Leer lassen für alle Abonnements. Mehrfachauswahl möglich.
+                      Standardmäßig werden nur kostenlose Abonnements ausgewählt. Mehrfachauswahl möglich.
                     </div>
                   </div>
                   <div>
@@ -715,13 +762,22 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
                       Format
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Targeting
+                      Zielgruppe
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Zeitraum
+                      Abonnements
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Orte
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Priorität
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Limits
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Zeitraum
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
@@ -764,55 +820,79 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 space-y-1">
+                        <div className="text-sm text-gray-900">
                           {ad.target_pet_types?.length > 0 ? (
-                            <div>
-                              <span className="font-medium">Haustiere:</span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {ad.target_pet_types.map((petType) => (
-                                  <span
-                                    key={petType}
-                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                  >
-                                    {petType}
-                                  </span>
-                                ))}
-                              </div>
+                            <div className="flex flex-wrap gap-1">
+                              {ad.target_pet_types.map((petType) => (
+                                <span
+                                  key={petType}
+                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {petType}
+                                </span>
+                              ))}
                             </div>
                           ) : (
-                            <div className="text-gray-500">Alle Haustiertypen</div>
+                            <div className="text-gray-500 text-xs">Alle Haustiertypen</div>
                           )}
-                          {ad.target_locations?.length > 0 && (
-                            <div>
-                              <span className="font-medium">Orte:</span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {ad.target_locations.map((location) => (
-                                  <span
-                                    key={location}
-                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                                  >
-                                    {location}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
                           {ad.target_subscription_types?.length > 0 ? (
-                            <div>
-                              <span className="font-medium">Abos:</span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {ad.target_subscription_types.map((subscriptionType) => (
-                                  <span
-                                    key={subscriptionType}
-                                    className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                                  >
-                                    {subscriptionType === 'free' ? 'Kostenlos' : 'Premium'}
-                                  </span>
-                                ))}
-                              </div>
+                            <div className="flex flex-wrap gap-1">
+                              {ad.target_subscription_types.map((subscriptionType) => (
+                                <span
+                                  key={subscriptionType}
+                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                >
+                                  {subscriptionType === 'free' ? 'Kostenlos' : 'Premium'}
+                                </span>
+                              ))}
                             </div>
                           ) : (
-                            <div className="text-gray-500">Alle Abonnements</div>
+                            <div className="text-gray-500 text-xs">Alle Abonnements</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {ad.target_locations?.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {ad.target_locations.map((location) => (
+                                <span
+                                  key={location}
+                                  className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                                >
+                                  {location}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-gray-500 text-xs">Alle Orte</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="font-medium text-lg">{ad.priority}</div>
+                        <div className="text-xs text-gray-500">Priorität</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="space-y-1">
+                          {ad.max_impressions && (
+                            <div className="flex items-center">
+                              <span className="text-xs text-gray-500 w-12">Imp.:</span>
+                              <span className="font-medium">{ad.max_impressions.toLocaleString('de-DE')}</span>
+                            </div>
+                          )}
+                          {ad.max_clicks && (
+                            <div className="flex items-center">
+                              <span className="text-xs text-gray-500 w-12">Klicks:</span>
+                              <span className="font-medium">{ad.max_clicks.toLocaleString('de-DE')}</span>
+                            </div>
+                          )}
+                          {!ad.max_impressions && !ad.max_clicks && (
+                            <div className="text-gray-500 text-xs">Keine Limits</div>
                           )}
                         </div>
                       </td>
@@ -823,11 +903,9 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
                         {ad.end_date && (
                           <div>Bis: {formatDate(ad.end_date)}</div>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div className="font-medium">Priorität: {ad.priority}</div>
-                        {ad.max_impressions && <div>Max. Imp.: {ad.max_impressions}</div>}
-                        {ad.max_clicks && <div>Max. Klicks: {ad.max_clicks}</div>}
+                        {!ad.start_date && !ad.end_date && (
+                          <div className="text-gray-500 text-xs">Unbegrenzt</div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -848,6 +926,13 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
                             title={ad.is_active ? 'Deaktivieren' : 'Aktivieren'}
                           >
                             {ad.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={() => duplicateAdvertisement(ad)}
+                            className="p-1 rounded hover:bg-gray-100 text-purple-600"
+                            title="Duplizieren"
+                          >
+                            <Copy className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => startEdit(ad)}

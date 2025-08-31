@@ -605,6 +605,18 @@ function BetreuerProfilePage() {
         </div>
       </div>
 
+      {/* Profile Banner Top */}
+      <div className="container-custom py-4">
+        <AdvertisementBanner 
+          placement="profile_top"
+          targetingOptions={{
+            petTypes: userProfile?.pet_types || [],
+            location: userProfile?.location || '',
+            subscriptionType: subscription?.plan_type || 'free'
+          }}
+        />
+      </div>
+
       {/* Details Tabs */}
       <div className="container-custom py-12">
         <div className="grid lg:grid-cols-3 gap-8">
@@ -793,6 +805,7 @@ function BetreuerProfilePage() {
 
             {/* Advertisement Banner */}
             <AdvertisementBanner 
+              placement="profile_sidebar"
               targetingOptions={{
                 petTypes: userProfile?.pet_types || [],
                 location: userProfile?.location || '',

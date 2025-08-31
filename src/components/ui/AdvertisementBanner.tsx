@@ -6,11 +6,13 @@ import { ExternalLink } from 'lucide-react';
 interface AdvertisementBannerProps {
   className?: string;
   targetingOptions?: TargetingOptions;
+  placement?: 'profile_sidebar' | 'profile_top' | 'search_results' | 'search_filters' | 'search_filter_box' | 'owner_dashboard' | 'caretaker_dashboard';
 }
 
 const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
   className = '',
-  targetingOptions = {}
+  targetingOptions = {},
+  placement = 'profile_sidebar'
 }) => {
   const [advertisement, setAdvertisement] = useState<Advertisement | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,7 +24,7 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
   // Load advertisement on component mount
   useEffect(() => {
     loadAdvertisement();
-  }, [targetingOptions]);
+  }, [targetingOptions, placement]);
 
   // Set up intersection observer for impression tracking
   useEffect(() => {
@@ -53,7 +55,7 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
     };
   }, [advertisement, impressionTracked]);
 
-  const loadAdvertisement = async () => {
+    const loadAdvertisement = async () => {
     try {
       setIsLoading(true);
       
@@ -71,34 +73,99 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
         }
       }
 
-             // Verwende die übergebenen Targeting-Optionen oder Standard-Werte
-       const finalTargetingOptions: TargetingOptions = {
-         petTypes: targetingOptions.petTypes || ['Hund', 'Katze'], // Fallback zu häufigen Haustieren
-         location: targetingOptions.location || 'Deutschland', // Fallback zu Deutschland
-         subscriptionType: targetingOptions.subscriptionType || 'free'
-       };
+      // Verwende die übergebenen Targeting-Optionen oder Standard-Werte
+      const finalTargetingOptions: TargetingOptions = {
+        petTypes: targetingOptions.petTypes || ['Hund', 'Katze'], // Fallback zu häufigen Haustieren
+        location: targetingOptions.location || 'Deutschland', // Fallback zu Deutschland
+        subscriptionType: targetingOptions.subscriptionType || 'free'
+      };
 
-             const { data, error } = await advertisementService.getTargetedAdvertisements(
-         'profile_banner',
-         finalTargetingOptions,
-         1
-       );
+      // Bestimme den korrekten ad_type basierend auf der Platzierung
+      let adType: 'search_card' | 'search_filter' | 'search_card_filter' | 'profile_banner' | 'dashboard_banner';
+      
+      switch (placement) {
+        case 'profile_sidebar':
+        case 'profile_top':
+          adType = 'profile_banner';
+          break;
+        case 'search_results':
+          adType = 'search_card';
+          break;
+        case 'search_filters':
+          adType = 'search_filter';
+          break;
+        case 'search_filter_box':
+          adType = 'search_card_filter';
+          break;
+        case 'owner_dashboard':
+        case 'caretaker_dashboard':
+          adType = 'dashboard_banner';
+          break;
+        default:
+          adType = 'profile_banner';
+      }
 
-       if (error) {
-         console.warn('No advertisements available or database function missing:', error);
-         // Silently fail - this is expected when no ads are configured
-         return;
-       }
+      // Lade alle passenden Werbungen und filtere nach der spezifischen Platzierung
+      console.log('Loading advertisements for placement:', placement, 'with adType:', adType, 'and targeting:', finalTargetingOptions);
+      const { data, error } = await advertisementService.getTargetedAdvertisements(
+        adType,
+        finalTargetingOptions,
+        10 // Lade mehr Werbungen, um nach Platzierung zu filtern
+      );
 
+      if (error) {
+        console.warn('No advertisements available or database function missing:', error);
+        setAdvertisement(null); // Explizit null setzen
+        return;
+      }
+
+      console.log('Raw advertisement data:', data);
+
+      // Filtere nach der spezifischen Platzierung basierend auf dem Format
+      let filteredData = data;
       if (data && data.length > 0) {
-        console.log('Found advertisement:', data[0]);
-        setAdvertisement(data[0]);
+        // Versuche, eine Werbung mit der passenden Platzierung zu finden
+        const placementSpecificAd = data.find(ad => {
+          // Prüfe, ob das Format zur Platzierung passt
+          if (placement === 'profile_sidebar' && ad.display_width === 300 && ad.display_height === 600) {
+            return true; // Profile Banner Sidebar Format
+          }
+          if (placement === 'profile_top' && ad.display_width === 728 && ad.display_height === 90) {
+            return true; // Profile Banner Top Format
+          }
+          if (placement === 'search_filters' && ad.display_width === 970 && ad.display_height === 90) {
+            return true; // Search Filter Banner Format
+          }
+          if (placement === 'search_filter_box' && ad.display_width === 384 && ad.display_height === 480) {
+            return true; // Search Card Filter Box Format
+          }
+          if (placement === 'owner_dashboard' && ad.display_width === 970 && ad.display_height === 90) {
+            return true; // Owner Dashboard Banner Format
+          }
+          if (placement === 'caretaker_dashboard' && ad.display_width === 970 && ad.display_height === 90) {
+            return true; // Caretaker Dashboard Banner Format
+          }
+          return false;
+        });
+        
+        if (placementSpecificAd) {
+          filteredData = [placementSpecificAd];
+        } else {
+          // Kein Fallback mehr - zeige keine Werbung, wenn keine passende gefunden wird
+          filteredData = [];
+        }
+      }
+
+      if (filteredData && filteredData.length > 0) {
+        console.log('Found advertisement for placement', placement, ':', filteredData[0]);
+        setAdvertisement(filteredData[0]);
       } else {
-        console.log('No targeted advertisements found for profile banner with targeting options:', finalTargetingOptions);
+        console.log('No targeted advertisements found for placement', placement, 'with targeting options:', finalTargetingOptions);
+        setAdvertisement(null); // Explizit null setzen
       }
     } catch (error) {
       console.warn('Advertisement loading failed (this is normal if no ads are configured):', error);
-      // Don't throw error - just silently fail
+      setAdvertisement(null); // Explizit null setzen bei Fehlern
     } finally {
       setIsLoading(false);
     }
@@ -208,11 +275,11 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
       >
         {/* Image */}
         {advertisement.image_url && (
-          <div className="relative w-full h-48 bg-gray-100">
+          <div className="relative w-full h-56 bg-gray-100">
             <img
               src={advertisement.image_url}
               alt={advertisement.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain object-center"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';

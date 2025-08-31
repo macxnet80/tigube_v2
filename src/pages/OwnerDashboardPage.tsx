@@ -18,6 +18,7 @@ import { PremiumBadge } from '../components/ui/PremiumBadge';
 import { useSubscription } from '../lib/auth/useSubscription';
 import RegistrationSuccessModal from '../components/ui/RegistrationSuccessModal';
 import ProfileImageCropper from '../components/ui/ProfileImageCropper';
+import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 
 
 const ALL_SERVICES = [
@@ -1582,6 +1583,18 @@ function OwnerDashboardPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Owner Dashboard Banner */}
+        <div className="mb-6">
+          <AdvertisementBanner 
+            placement="owner_dashboard"
+            targetingOptions={{
+              petTypes: userProfile?.pet_types || [],
+              location: userProfile?.location || '',
+              subscriptionType: subscription?.plan_type || 'free'
+            }}
+          />
         </div>
 
         {/* Tab Navigation */}

@@ -41,7 +41,7 @@ export function AdvertisementCardContainer({
 
       const finalTargetingOptions: TargetingOptions = {
         petTypes: targetingOptions.petTypes || userPetTypes,
-        location: targetingOptions.location || userLocation || undefined,
+        location: targetingOptions.location || userLocation || 'Deutschland', // Fallback zu Deutschland
         subscriptionType: targetingOptions.subscriptionType || 'free'
       };
 
@@ -53,7 +53,7 @@ export function AdvertisementCardContainer({
 
       if (error) {
         console.warn('No advertisements available or database function missing:', error);
-        // Silently fail - this is expected when no ads are configured
+        setAdvertisement(null); // Explizit null setzen
         return;
       }
 
@@ -61,10 +61,11 @@ export function AdvertisementCardContainer({
         setAdvertisement(data[0]);
       } else {
         console.log('No targeted advertisements found for search card');
+        setAdvertisement(null); // Explizit null setzen
       }
     } catch (error) {
       console.warn('Advertisement loading failed (this is normal if no ads are configured):', error);
-      // Don't throw error - just silently fail
+      setAdvertisement(null); // Explizit null setzen bei Fehlern
     } finally {
       setIsLoading(false);
     }
@@ -72,9 +73,13 @@ export function AdvertisementCardContainer({
 
   const handleImpression = async (adId: string) => {
     try {
-      const result = await advertisementService.trackImpression(adId, user?.id);
-      if (result.impressionId) {
-        setImpressionId(result.impressionId);
+      const result = await advertisementService.trackImpression(adId, 'search_results', {
+        petTypes: targetingOptions.petTypes || [],
+        location: targetingOptions.location || 'Deutschland',
+        subscriptionType: targetingOptions.subscriptionType || 'free'
+      });
+      if (result.data?.id) {
+        setImpressionId(result.data.id);
       }
     } catch (error) {
       console.warn('Could not track advertisement impression:', error);
@@ -84,7 +89,11 @@ export function AdvertisementCardContainer({
 
   const handleClick = async (adId: string) => {
     try {
-      await advertisementService.trackClick(adId, impressionId, user?.id);
+      await advertisementService.trackClick(adId, 'search_results', impressionId, {
+        petTypes: targetingOptions.petTypes || [],
+        location: targetingOptions.location || 'Deutschland',
+        subscriptionType: targetingOptions.subscriptionType || 'free'
+      });
     } catch (error) {
       console.warn('Could not track advertisement click:', error);
       // Silently fail - tracking is not critical for page functionality

@@ -20,7 +20,7 @@ export interface Advertisement {
   image_url?: string;
   link_url?: string;
   cta_text: string;
-  ad_type: 'search_card' | 'profile_banner' | 'homepage_banner' | 'category_banner';
+  ad_type: 'search_card' | 'search_filter' | 'search_card_filter' | 'profile_banner' | 'dashboard_banner';
   format_id?: string;
   target_pet_types?: string[];
   target_locations?: string[];
@@ -82,7 +82,7 @@ class AdvertisementService {
    * Get targeted advertisements for a specific ad type and user context
    */
   async getTargetedAdvertisements(
-    adType: 'search_card' | 'profile_banner',
+    adType: 'search_card' | 'search_filter' | 'search_card_filter' | 'profile_banner' | 'dashboard_banner',
     targetingOptions: TargetingOptions = {},
     limit: number = 10
   ): Promise<{ data: Advertisement[] | null; error: any }> {

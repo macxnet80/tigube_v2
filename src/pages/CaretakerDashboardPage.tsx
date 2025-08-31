@@ -19,6 +19,7 @@ import { PremiumBadge } from '../components/ui/PremiumBadge';
 import { useSubscription } from '../lib/auth/useSubscription';
 import RegistrationSuccessModal from '../components/ui/RegistrationSuccessModal';
 import ProfileImageCropper from '../components/ui/ProfileImageCropper';
+import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { DEFAULT_SERVICE_CATEGORIES, ServiceUtils, type ServiceCategory, type CategorizedService } from '../lib/types/service-categories';
 import { ServiceUtils as SupabaseServiceUtils } from '../lib/supabase/service-categories';
 import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityContext';
@@ -2021,6 +2022,19 @@ function CaretakerDashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Caretaker Dashboard Banner */}
+      <div className="mb-6">
+        <AdvertisementBanner 
+          placement="caretaker_dashboard"
+          targetingOptions={{
+            petTypes: userProfile?.pet_types || [],
+            location: userProfile?.location || '',
+            subscriptionType: subscription?.plan_type || 'free'
+          }}
+        />
+      </div>
+
       {/* Tab-Navigation (jetzt unter der Profilkarte) */}
       <div className="mb-8">
         <div className="border-b border-gray-200">

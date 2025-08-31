@@ -4,6 +4,7 @@ import { Search, MapPin, Star, Filter, X, ChevronDown, PawPrint, Briefcase, Cloc
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AdvertisementCardContainer from '../components/ui/AdvertisementCardContainer';
+import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { UsageLimitIndicator } from '../components/ui/UsageLimitIndicator';
 import { AdvancedFilters } from '../components/ui/AdvancedFilters';
 import MultiDaySelector from '../components/ui/MultiDaySelector';
@@ -390,6 +391,18 @@ function SearchPage() {
         <div className="flex gap-8">
           {/* Filter Sidebar */}
           <div className="w-80 flex-shrink-0">
+            {/* Search Card Filter Box - Oberhalb der Filterbox */}
+            <div className="mb-6">
+              <AdvertisementBanner
+                placement="search_filter_box"
+                targetingOptions={{
+                  petTypes: selectedPetType ? [selectedPetType] : undefined,
+                  location: location || undefined,
+                  subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+                }}
+              />
+            </div>
+
             <div className="bg-white rounded-xl p-6 shadow-sm sticky top-8">
               <h2 className="text-lg font-semibold mb-6">Filter</h2>
               
@@ -685,6 +698,18 @@ function SearchPage() {
           </div>
         )}
 
+        {/* Search Filter Banner */}
+        <div className="mb-6">
+          <AdvertisementBanner 
+            placement="search_filters"
+            targetingOptions={{
+              petTypes: selectedPetType ? [selectedPetType] : undefined,
+              location: location || undefined,
+              subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+            }}
+          />
+        </div>
+
         {/* Results Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -755,31 +780,46 @@ function SearchPage() {
         {/* Results Grid */}
         {!loading && !error && caretakers.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {caretakers.map((caretaker, index) => {
+            {(() => {
               const items = [];
               
-              // Add caretaker card
-              items.push(
-                <CaretakerCard key={caretaker.id} caretaker={caretaker} />
-              );
+              caretakers.forEach((caretaker, index) => {
+                // Add caretaker card
+                items.push(
+                  <CaretakerCard key={caretaker.id} caretaker={caretaker} />
+                );
+                
+                // Add advertisement card after every 5th caretaker (index 4, 9, 14, etc.)
+                if ((index + 1) % 5 === 0) {
+                  items.push(
+                    <AdvertisementCardContainer
+                      key={`ad-${index}`}
+                      targetingOptions={{
+                        petTypes: selectedPetType ? [selectedPetType] : undefined,
+                        location: location || undefined,
+                        subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+                      }}
+                    />
+                  );
+                }
+              });
               
-              // Add advertisement card after every 5th caretaker (index 4, 9, 14, etc.)
-              if ((index + 1) % 5 === 0) {
+              // Add advertisement at the end if we have fewer than 5 caretakers or if the last caretaker wasn't at a 5th position
+              if (caretakers.length < 5 || (caretakers.length % 5 !== 0)) {
                 items.push(
                   <AdvertisementCardContainer
-                    key={`ad-${index}`}
+                    key="ad-end"
                     targetingOptions={{
                       petTypes: selectedPetType ? [selectedPetType] : undefined,
                       location: location || undefined,
                       subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
                     }}
-                    className="md:col-span-1"
                   />
                 );
               }
               
               return items;
-            }).flat()}
+            })()}
           </div>
         )}</div>
         </div>
