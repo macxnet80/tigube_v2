@@ -54,7 +54,8 @@ export class UserManagementService {
       
       // Try to get basic stats from users table directly
       console.log('[UserManagementService] Attempting direct users table query...');
-      const { data: usersData, error: usersError } = await adminSupabase
+      const { supabase } = await import('../supabase/client');
+      const { data: usersData, error: usersError } = await supabase
         .from('users')
         .select('user_type, created_at');
           
@@ -103,20 +104,20 @@ export class UserManagementService {
         const newThisMonth = usersData?.filter((u: any) => new Date(u.created_at) >= monthStart).length || 0;
         
         // Get caretaker profile verification stats
-        const { data: caretakerProfiles } = await adminSupabase
+        const { data: caretakerProfiles } = await supabase
           .from('caretaker_profiles')
           .select('is_verified');
           
         const verifiedCaretakers = caretakerProfiles?.filter((p: any) => p.is_verified === true).length || 0;
         const unverifiedCaretakers = caretakerProfiles?.filter((p: any) => p.is_verified === false).length || 0;
         
-        // Get subscription stats
-        const { data: subscriptions } = await adminSupabase
-          .from('subscriptions')
-          .select('status, plan_type');
+        // Get subscription stats from users table
+        const { data: usersWithPlans } = await supabase
+          .from('users')
+          .select('plan_type');
           
-        const premiumSubscribers = subscriptions?.filter((s: any) => s.status === 'active' && s.plan_type === 'premium').length || 0;
-        const trialUsers = subscriptions?.filter((s: any) => s.status === 'trial').length || 0;
+        const premiumSubscribers = usersWithPlans?.filter((u: any) => u.plan_type === 'premium').length || 0;
+        const trialUsers = 0; // Keine Trial-User in der aktuellen Struktur
         
         console.log('[UserManagementService] Calculated stats from real database:', {
           totalUsers, owners, caretakers, admins, newToday, newThisWeek, newThisMonth,
@@ -172,25 +173,13 @@ export class UserManagementService {
       
       const offset = (page - 1) * pageSize;
       
-      let query = adminSupabase
+      // Verwende die reguläre Supabase-Client für Lese-Operationen
+      const { supabase } = await import('../supabase/client');
+      
+      // Vollständige Abfrage mit ALLEN Feldern
+      let query = supabase
         .from('users')
-        .select(`
-          id,
-          email,
-          first_name,
-          last_name,
-          phone_number,
-          user_type,
-          city,
-          plz,
-          created_at,
-          updated_at,
-          profile_completed,
-          subscription_id,
-          is_admin,
-          admin_role,
-          last_admin_login
-        `, { count: 'exact' });
+        .select('*', { count: 'exact' });
 
       // Apply filters
       if (filters.searchTerm) {
@@ -244,56 +233,114 @@ export class UserManagementService {
         };
       }
 
-      // Get subscription status for each user
-      const usersWithSubscriptions = await Promise.all(
-        (users || []).map(async (user: any) => {
-          let subscriptionStatus = 'none';
-          let subscriptionPlan = null;
-          let subscriptionExpiresAt = null;
+                      // Erweiterte Benutzer-Verarbeitung mit allen verfügbaren Daten
+      const usersWithFullData = await Promise.all((users || []).map(async (user: any) => {
+        let subscriptionStatus = 'none';
+        if (user.plan_type === 'premium') {
+          subscriptionStatus = 'active';
+        }
 
-          if (user.subscription_id) {
-            const { data: subscription } = await adminSupabase
-              .from('subscriptions')
-              .select('status, plan_type, billing_end_date')
-              .eq('id', user.subscription_id)
-              .single();
+        // Freigabe-Status und vollständige Caretaker-Daten laden
+        let approvalStatus = null;
+        let caretakerProfile = null;
+        let ownerProfile = null;
 
-            if (subscription) {
-              subscriptionStatus = subscription.status;
-              subscriptionPlan = subscription.plan_type;
-              subscriptionExpiresAt = subscription.billing_end_date;
-            }
+        if (user.user_type === 'caretaker') {
+          // Lade vollständige Caretaker-Daten
+          const { data: caretakerData } = await supabase
+            .from('caretaker_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          if (caretakerData) {
+            approvalStatus = caretakerData.approval_status || null;
+            caretakerProfile = {
+              bio: caretakerData.bio,
+              services: caretakerData.services,
+              hourly_rate: caretakerData.hourly_rate,
+              availability: caretakerData.availability,
+              experience_years: caretakerData.experience_years,
+              is_verified: caretakerData.is_verified,
+              rating: caretakerData.rating,
+              review_count: caretakerData.review_count,
+              animal_types: caretakerData.animal_types,
+              prices: caretakerData.prices,
+              service_radius: caretakerData.service_radius,
+              home_photos: caretakerData.home_photos,
+              qualifications: caretakerData.qualifications,
+              experience_description: caretakerData.experience_description,
+              short_about_me: caretakerData.short_about_me,
+              long_about_me: caretakerData.long_about_me,
+              languages: caretakerData.languages,
+              is_commercial: caretakerData.is_commercial,
+              company_name: caretakerData.company_name,
+              tax_number: caretakerData.tax_number,
+              vat_id: caretakerData.vat_id,
+              short_term_available: caretakerData.short_term_available,
+              overnight_availability: caretakerData.overnight_availability,
+              services_with_categories: caretakerData.services_with_categories
+            };
           }
-
-          return {
-            id: user.id,
-            email: user.email,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            phone_number: user.phone_number,
-            user_type: user.user_type,
-            city: user.city,
-            plz: user.plz,
-            created_at: user.created_at,
-            updated_at: user.updated_at,
-            is_suspended: false, // Not tracked in current schema
-            suspension_reason: undefined,
-            last_login_at: user.last_admin_login, // Use admin login for now
-            login_count: 0, // Not tracked in current schema
-            profile_completed: user.profile_completed,
-            subscription_status: subscriptionStatus as 'none' | 'trial' | 'active' | 'cancelled' | 'expired',
-            subscription_plan: subscriptionPlan,
-            subscription_expires_at: subscriptionExpiresAt,
-            is_admin: user.is_admin || false,
-            admin_role: user.admin_role || null
-          } as AdminUserDetails;
-        })
-      );
+        } else if (user.user_type === 'owner') {
+          // Lade Owner-Daten aus separaten Tabellen
+          const [petsResult, preferencesResult] = await Promise.all([
+            supabase
+              .from('pets')
+              .select('*')
+              .eq('owner_id', user.id),
+            supabase
+              .from('owner_preferences')
+              .select('*')
+              .eq('owner_id', user.id)
+              .maybeSingle()
+          ]);
+          
+          ownerProfile = {
+            pets: petsResult.data || [],
+            preferences: preferencesResult.data || null
+          };
+        }
+        
+        return {
+          id: user.id,
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          phone_number: user.phone_number,
+          user_type: user.user_type,
+          city: user.city,
+          plz: user.plz,
+          street: user.street || null,
+          created_at: user.created_at,
+          updated_at: user.updated_at,
+          is_suspended: false,
+          suspension_reason: undefined,
+          last_login_at: user.last_admin_login,
+          login_count: 0,
+          profile_completed: user.profile_completed,
+          subscription_status: subscriptionStatus as 'none' | 'trial' | 'active' | 'cancelled' | 'expired',
+          subscription_plan: user.plan_type,
+          subscription_expires_at: null,
+          is_admin: user.is_admin || false,
+          admin_role: user.admin_role || null,
+          approval_status: approvalStatus,
+                  // Erweiterte Felder
+        profile_picture: user.profile_photo_url,
+        date_of_birth: user.date_of_birth,
+        gender: user.gender,
+        emergency_contact: user.emergency_contact,
+        emergency_phone: user.emergency_phone,
+          // Profil-Daten
+          caretaker_profile: caretakerProfile,
+          owner_profile: ownerProfile
+        } as AdminUserDetails;
+      }));
 
       console.log(`[UserManagementService] Found ${count} users, returning page ${page}`);
 
       return {
-        users: usersWithSubscriptions,
+        users: usersWithFullData,
         total_count: count || 0,
         page,
         page_size: pageSize,

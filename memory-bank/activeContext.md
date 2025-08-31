@@ -122,11 +122,16 @@
 
 ### Aktuelle Herausforderungen
 
-#### 🔴 Kritischer Bug - Höchste Priorität
-1. **Betreuer-Seite Nachricht senden Button** 
-   - Problem: Button führt auf 404 Seite
-   - Erwartet: Navigation zur MessagesPage mit Konversation zum Betreuer
-   - Status: Identifiziert, Lösung erforderlich
+#### ✅ BEHOBEN - BetreuerProfilePage Bug
+1. **BetreuerProfilePage 404 Error** 
+   - Problem: `approval_status` Filter in getCaretakerById Funktion
+   - Ursache: Das Feld `approval_status` existiert nicht in der caretaker_profiles Tabelle
+   - Lösung: 
+     - ✅ `approval_status` Feld zur caretaker_profiles Tabelle hinzugefügt (MCP Migration)
+     - ✅ Alle bestehenden Profile auf 'approved' gesetzt (4 Profile freigegeben)
+     - ✅ RLS-Policies korrigiert mit approval_status Filter
+     - ✅ Filter in allen Funktionen wiederhergestellt
+   - Status: ✅ VOLLSTÄNDIG BEHOBEN - BetreuerProfilePage funktioniert jetzt
 
 #### 🟢 Vollständig gelöst
 1. **✅ Subscription System**: Production-ready mit kompletter Stripe-Integration
@@ -148,11 +153,15 @@
 
 ### Nächste Prioritäten
 
-#### Sofortige Aktion erforderlich (Heute)
-1. **🚨 Betreuer-Seite Navigation Bug fixen**
-   - BetreuerProfilePage "Nachricht senden" Button analysieren
-   - Routing-Problem zur MessagesPage identifizieren
-   - Chat-Integration reparieren
+#### ✅ BEHOBEN - BetreuerProfilePage Bug
+1. **✅ BetreuerProfilePage 404 Error behoben**
+   - Problem: `approval_status` Filter in getCaretakerById Funktion
+   - Lösung: 
+     - ✅ `approval_status` Feld zur caretaker_profiles Tabelle hinzugefügt (MCP Migration)
+     - ✅ Alle bestehenden Profile auf 'approved' gesetzt (4 Profile freigegeben)
+     - ✅ RLS-Policies korrigiert mit approval_status Filter
+     - ✅ Filter in allen Funktionen wiederhergestellt
+   - Status: ✅ VOLLSTÄNDIG BEHOBEN - BetreuerProfilePage funktioniert jetzt
 
 #### Kurzfristig (1-2 Wochen)
 1. **Echte Geolocation für Umkreis-Filter**

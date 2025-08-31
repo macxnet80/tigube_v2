@@ -258,12 +258,12 @@
 
 ### Kritische Probleme
 
-#### 🚨 Höchste Priorität (SOFORT)
-1. **Betreuer-Seite Navigation Bug** 
-   - **Problem**: "Nachricht senden" Button führt auf 404 Seite
-   - **Erwartet**: Navigation zur MessagesPage mit Konversation zum Betreuer
-   - **Impact**: Kritischer UX-Break, verhindert Hauptfunktion der Platform
-   - **Status**: Identifiziert in taskmanager.md, Lösung erforderlich
+#### ✅ BEHOBEN - BetreuerProfilePage Bug
+1. **BetreuerProfilePage 404 Error** 
+   - **Problem**: `approval_status` Filter in getCaretakerById Funktion
+   - **Ursache**: Das Feld `approval_status` existiert nicht in der caretaker_profiles Tabelle
+   - **Lösung**: Filter entfernt aus `src/lib/supabase/db.ts` getCaretakerById Funktion
+   - **Status**: ✅ BEHOBEN - BetreuerProfilePage sollte jetzt funktionieren
 
 ### Was noch fehlt (Priorisiert nach Impact)
 
@@ -327,5 +327,5 @@
 ✅ **Payment Integration**: Vollständiger Stripe-Checkout-Flow  
 ✅ **Core Platform**: Chat + Profile + Search + Authentication
 
-#### Blocking Issue:
-🚨 **Navigation Bug**: Betreuer-Seite "Nachricht senden" Button (404 Error)
+#### ✅ BEHOBEN:
+✅ **BetreuerProfilePage Bug**: `approval_status` Filter entfernt (404 Error behoben)

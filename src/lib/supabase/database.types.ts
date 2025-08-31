@@ -1022,6 +1022,9 @@ export type Database = {
           admin_role: string | null
           totp_secret: string | null
           last_admin_login: string | null
+          date_of_birth: string | null
+          gender: string | null
+          street: string | null
         }
         Insert: {
           id: string
@@ -1040,6 +1043,9 @@ export type Database = {
           admin_role?: string | null
           totp_secret?: string | null
           last_admin_login?: string | null
+          date_of_birth?: string | null
+          gender?: string | null
+          street?: string | null
         }
         Update: {
           id?: string
@@ -1058,6 +1064,9 @@ export type Database = {
           admin_role?: string | null
           totp_secret?: string | null
           last_admin_login?: string | null
+          date_of_birth?: string | null
+          gender?: string | null
+          street?: string | null
         }
         Relationships: []
       }
@@ -1115,10 +1124,12 @@ export type Database = {
           animal_types: string[] | null
           city: string | null
           company_name: string | null
+          date_of_birth: string | null
           experience_description: string | null
           experience_years: number | null
           first_name: string | null
           full_name: string | null
+          gender: string | null
           home_photos: string[] | null
           hourly_rate: number | null
           id: string | null

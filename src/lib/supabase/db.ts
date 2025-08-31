@@ -578,9 +578,7 @@ export const plzService = {
 export const caretakerProfileService = {
   // Profil anlegen oder aktualisieren
   saveProfile: async (userId: string, profile: {
-    services?: string[];
     animalTypes?: string[];
-    prices?: Record<string, number | string>;
     serviceRadius?: number;
     availability?: Record<string, string[]>;
     homePhotos?: string[];
@@ -600,22 +598,7 @@ export const caretakerProfileService = {
     // Nur die übergebenen Felder aktualisieren
     const updateData: any = { id: userId };
     
-    if (profile.services !== undefined) {
-      updateData.services = profile.services;
-      // Automatisch kategorisierte Services erstellen, falls nicht explizit übergeben
-      try {
-        const categorizedServices = profile.servicesWithCategories || 
-          ServiceUtils.migrateStringArrayToCategories(profile.services);
-        updateData.services_with_categories = categorizedServices;
-      } catch (error) {
-        console.error('❌ Fehler beim Konvertieren der Services:', error);
-        // Fallback: Leeres Array für services_with_categories
-        updateData.services_with_categories = [];
-      }
-    }
-    
     if (profile.animalTypes !== undefined) updateData.animal_types = profile.animalTypes;
-    if (profile.prices !== undefined) updateData.prices = profile.prices;
     if (profile.serviceRadius !== undefined) updateData.service_radius = profile.serviceRadius;
     if (profile.availability !== undefined) updateData.availability = profile.availability;
     if (profile.homePhotos !== undefined) updateData.home_photos = profile.homePhotos;
@@ -643,7 +626,32 @@ export const caretakerProfileService = {
   getProfile: async (userId: string) => {
     const { data, error } = await supabase
       .from('caretaker_profiles')
-      .select('*')
+      .select(`
+        id,
+        services_with_categories,
+        animal_types,
+        service_radius,
+        availability,
+        home_photos,
+        qualifications,
+        experience_description,
+        short_about_me,
+        long_about_me,
+        languages,
+        is_commercial,
+        company_name,
+        tax_number,
+        vat_id,
+        short_term_available,
+        overnight_availability,
+        hourly_rate,
+        rating,
+        review_count,
+        is_verified,
+        approval_status,
+        created_at,
+        updated_at
+      `)
       .eq('id', userId)
       .maybeSingle();
     return { data, error };
@@ -672,8 +680,7 @@ export const caretakerSearchService = {
         .from('caretaker_profiles')
         .select(`
           id,
-          services,
-          prices,
+          services_with_categories,
           hourly_rate,
           rating,
           review_count,
@@ -693,7 +700,8 @@ export const caretakerSearchService = {
             user_type
           )
         `)
-        .eq('users.user_type', 'caretaker');
+        .eq('users.user_type', 'caretaker')
+        .eq('approval_status', 'approved');
 
       if (filters.location) {
         const locationLower = filters.location.toLowerCase();
@@ -731,14 +739,23 @@ export const caretakerSearchService = {
           ? `${row.users.city} ${row.users.plz}`
           : (row.users?.city || 'Unbekannt');
 
-        const services = Array.isArray(row.services) ? row.services : [];
+        // Services und Preise aus der neuen services_with_categories Struktur extrahieren
+        let services: string[] = [];
+        let prices: Record<string, number> = {};
+        
+        if (row.services_with_categories && Array.isArray(row.services_with_categories)) {
+          services = row.services_with_categories.map((service: any) => service.name).filter(Boolean);
+          // Extrahiere Preise aus services_with_categories
+          row.services_with_categories.forEach((service: any) => {
+            if (service.name && service.price) {
+              prices[service.name] = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
+            }
+          });
+        }
 
-        // Bestpreis aus prices ermitteln, fallback hourly_rate
-        const prices = (row.prices && typeof row.prices === 'object') ? row.prices : {};
+        // Bestpreis aus den extrahierten Preisen ermitteln, fallback hourly_rate
         const numericPrices = Object.values(prices || {})
-          .filter((p: any) => p !== '' && p !== null && p !== undefined)
-          .map((p: any) => typeof p === 'string' ? parseFloat(p) : p)
-          .filter((p: any) => typeof p === 'number' && !isNaN(p) && p > 0);
+          .filter((p: any) => p !== '' && p !== null && p !== undefined && !isNaN(p) && p > 0);
         const bestPrice = numericPrices.length > 0 ? Math.min(...numericPrices as number[]) : Number(row.hourly_rate) || 0;
 
         return {
@@ -797,60 +814,40 @@ export const caretakerSearchService = {
     
     try {
       // Hole die Daten direkt aus caretaker_profiles + Join users und zusätzlich availability/home_photos
+      console.log('🔍 Executing database query...');
+      // Use caretaker_search_view for basic data, then supplement with availability
       const { data: profileRow, error: profileJoinError } = await supabase
-        .from('caretaker_profiles')
-        .select(`
-          id,
-          services,
-          prices,
-          hourly_rate,
-          rating,
-          review_count,
-          is_verified,
-          short_about_me,
-          long_about_me,
-          qualifications,
-          experience_description,
-          experience_years,
-          languages,
-          availability,
-          home_photos,
-          is_commercial,
-          short_term_available,
-          overnight_availability,
-          users!inner(
-            id,
-            first_name,
-            last_name,
-            city,
-            plz,
-            profile_photo_url,
-            user_type
-          )
-        `)
+        .from('caretaker_search_view')
+        .select('*')
         .eq('id', id)
-        .eq('users.user_type', 'caretaker')
         .single();
 
       if (profileJoinError) {
+        console.error('❌ Database error:', profileJoinError);
         return { data: null, error: profileJoinError };
       }
 
       if (!profileRow) {
+        console.error('❌ No data returned from database');
         return { data: null, error: new Error('Caretaker not found') };
       }
 
+      console.log('✅ Database query successful, data:', profileRow);
+
       const result = profileRow as any;
 
-      // Preise verarbeiten - kann JSON object sein
+      // Services und Preise aus services_with_categories extrahieren
+      let services: string[] = [];
       let prices: Record<string, number | string> = {};
-      try {
-        if (result.prices && typeof result.prices === 'object') {
-          prices = result.prices as Record<string, number | string>;
-        }
-      } catch (error) {
-        console.warn('⚠️ Error parsing prices:', error, 'Original value:', result.prices);
-        prices = {};
+      
+      if (result.services_with_categories && Array.isArray(result.services_with_categories)) {
+        services = result.services_with_categories.map((service: any) => service.name).filter(Boolean);
+        // Extrahiere Preise aus services_with_categories
+        result.services_with_categories.forEach((service: any) => {
+          if (service.name && service.price) {
+            prices[service.name] = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
+          }
+        });
       }
 
       // Bestpreis ermitteln - verwende Preis-Object falls verfügbar, sonst hourly_rate
@@ -879,21 +876,22 @@ export const caretakerSearchService = {
       
       const bestPrice = getBestPrice(prices) || Number(result.hourly_rate) || 0;
 
-      const firstName = result.users?.first_name || '';
-      const lastName = result.users?.last_name || '';
+      // Use the data from the view directly
+      const firstName = result.first_name || '';
+      const lastName = result.last_name || '';
       const name = firstName && lastName ? `${firstName} ${lastName[0]}.` : (firstName || 'Unbekannt');
 
       const transformedData = {
         id: result.id,
-        userId: result.users?.id,
+        userId: result.id, // Use the same ID for userId
         name,
-        avatar: result.users?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName || 'U')}&background=f3f4f6&color=374151`,
-        location: result.users?.city && result.users?.plz ? `${result.users.city} ${result.users.plz}` : (result.users?.city || 'Unbekannt'),
+        avatar: result.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName || 'U')}&background=f3f4f6&color=374151`,
+        location: result.city && result.plz ? `${result.city} ${result.plz}` : (result.city || 'Unbekannt'),
         rating: Number(result.rating) || 0,
         reviewCount: result.review_count || 0,
         hourlyRate: bestPrice,
         prices: prices,
-        services: Array.isArray(result.services) ? result.services : [],
+        services: services,
         bio: result.short_about_me || 'Keine Beschreibung verfügbar.',
         responseTime: 'unter 1 Stunde',
         verified: result.is_verified || false,
@@ -908,7 +906,7 @@ export const caretakerSearchService = {
         phone: null,
         email: null,
         short_term_available: result.short_term_available || false,
-        overnight_availability: result.overnight_availability || null,
+        overnight_availability: result.overnight_availability || {},
       };
 
       console.log('✅ Transformed single caretaker:', transformedData);
@@ -922,8 +920,8 @@ export const caretakerSearchService = {
   getAvailableServices: async () => {
     const { data, error } = await supabase
       .from('caretaker_profiles')
-      .select('services')
-      .not('services', 'is', null);
+      .select('services_with_categories')
+      .not('services_with_categories', 'is', null);
 
     if (error) {
       return { data: [], error };
@@ -931,10 +929,10 @@ export const caretakerSearchService = {
 
     const allServices = new Set<string>();
     data?.forEach(profile => {
-      if (Array.isArray(profile.services)) {
-        profile.services.forEach(service => {
-          if (typeof service === 'string') {
-            allServices.add(service);
+      if (Array.isArray(profile.services_with_categories)) {
+        profile.services_with_categories.forEach((service: any) => {
+          if (service.name && typeof service.name === 'string') {
+            allServices.add(service.name);
           }
         });
       }
@@ -1143,6 +1141,7 @@ export const ownerCaretakerService = {
         `)
         .in('id', caretakerIds)
         .eq('users.user_type', 'caretaker')
+        .eq('approval_status', 'approved')
       
       if (careteakersError) throw careteakersError
       
@@ -1179,7 +1178,7 @@ export const ownerCaretakerService = {
     }
   },
 
-  // Lade nur die echten Betreuer für einen Owner (die aus Chat gespeichert wurden)
+        // Lade nur die echten Betreuer für einen Owner (die aus Chat gespeichert wurden)
   async getSavedCaretakers(ownerId: string) {
     try {
       // Erst die Betreuer-Verbindungen laden (nur echte Betreuer, keine Favoriten)
@@ -1222,6 +1221,7 @@ export const ownerCaretakerService = {
         `)
         .in('id', caretakerIds)
         .eq('users.user_type', 'caretaker')
+        .eq('approval_status', 'approved')
       
       if (careteakersError) throw careteakersError
       

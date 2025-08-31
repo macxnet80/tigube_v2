@@ -36,10 +36,14 @@ import {
   BadgeCheck
 } from 'lucide-react';
 import { UserManagementService, UserManagementStats, DetailedUserInfo } from '../../lib/admin/userManagementService';
-import { UserSearchFilters, UserSearchResult } from '../../lib/supabase/adminClient';
+import { UserSearchFilters, UserSearchResult, AdminUserDetails } from '../../lib/supabase/adminClient';
+import { AdminApprovalService } from '../../lib/services/adminApprovalService';
+import { ApprovalStatus } from '../../lib/types/database.types';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import Badge from '../ui/Badge';
 import AdminActionsButton from './AdminActionsButton';
+import UserDetailModal from './UserDetailModal';
+import UserEditModal from './UserEditModal';
 
 interface AdvancedUserManagementPanelProps {
   currentAdminId: string;
@@ -49,11 +53,19 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
   currentAdminId 
 }) => {
   const [stats, setStats] = useState<UserManagementStats | null>(null);
+  const [approvalStats, setApprovalStats] = useState<{
+    pending: number;
+    approved: number;
+    rejected: number;
+    total: number;
+  } | null>(null);
   const [searchResult, setSearchResult] = useState<UserSearchResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedUser, setSelectedUser] = useState<DetailedUserInfo | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
+  const [showUserDetailModal, setShowUserDetailModal] = useState(false);
+  const [selectedUserForModal, setSelectedUserForModal] = useState<AdminUserDetails | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   // Search and filter states
@@ -65,9 +77,13 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
   // Action states
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showActionModal, setShowActionModal] = useState<{
-    type: 'suspend' | 'delete' | 'verify' | 'note' | null;
+    type: 'suspend' | 'delete' | 'verify' | 'note' | 'reject' | null;
     userId: string | null;
   }>({ type: null, userId: null });
+
+  // Edit modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<AdminUserDetails | null>(null);
 
   useEffect(() => {
     loadInitialData();
@@ -80,10 +96,12 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
   const loadInitialData = async () => {
     try {
       setLoading(true);
-      const [statsData] = await Promise.all([
-        UserManagementService.getUserManagementStats()
+      const [statsData, approvalStatsData] = await Promise.all([
+        UserManagementService.getUserManagementStats(),
+        AdminApprovalService.getApprovalStats()
       ]);
       setStats(statsData);
+      setApprovalStats(approvalStatsData);
     } catch (error) {
       console.error('Error loading initial data:', error);
     } finally {
@@ -112,8 +130,120 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
     }
   };
 
+  const handleUserTypeChange = async (userId: string, newUserType: string) => {
+    try {
+      setActionLoading('userTypeChange');
+      
+             // Update user type in database
+       const { supabase } = await import('../../lib/supabase/client');
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          user_type: newUserType,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      // Refresh data
+      await searchUsers();
+    } catch (error) {
+      console.error('Error updating user type:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleStatusChange = async (userId: string, newStatus: string) => {
+    try {
+      setActionLoading('statusChange');
+      
+      // Map status to plan_type
+      let planType = null;
+      if (newStatus === 'active') planType = 'premium';
+      else if (newStatus === 'trial') planType = 'trial';
+      
+             // Update subscription status in database
+       const { supabase } = await import('../../lib/supabase/client');
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          plan_type: planType,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      // Refresh data
+      await searchUsers();
+    } catch (error) {
+      console.error('Error updating subscription status:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApprovalChange = async (userId: string, newApprovalStatus: string) => {
+    try {
+      setActionLoading('approvalChange');
+      
+      if (newApprovalStatus === 'not_requested') {
+                 // Reset approval status
+         const { supabase } = await import('../../lib/supabase/client');
+        const { error } = await supabase
+          .from('caretaker_profiles')
+          .update({ 
+            approval_status: null,
+            approval_requested_at: null,
+            approval_approved_at: null,
+            approval_approved_by: null,
+            approval_notes: null
+          })
+          .eq('id', userId);
+
+        if (error) throw error;
+      } else {
+        // Use admin approval service
+        await AdminApprovalService.setApprovalStatus(
+          userId, 
+          newApprovalStatus as 'pending' | 'approved' | 'rejected', 
+          currentAdminId, 
+          `Status geändert zu: ${newApprovalStatus}`
+        );
+      }
+      
+      // Refresh data
+      await searchUsers();
+    } catch (error) {
+      console.error('Error updating approval status:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleEditUser = (user: AdminUserDetails) => {
+    setUserToEdit(user);
+    setShowEditModal(true);
+  };
+
+  const handleEditModalClose = () => {
+    setShowEditModal(false);
+    setUserToEdit(null);
+  };
+
+  const handleEditModalSave = async () => {
+    // Refresh user data after edit
+    await searchUsers();
+    if (selectedUser && userToEdit && selectedUser.user_info.id === userToEdit.id) {
+      await loadUserDetails(userToEdit.id);
+    }
+    handleEditModalClose();
+  };
+
   const handleUserAction = async (
-    action: 'suspend' | 'unsuspend' | 'delete' | 'verify' | 'unverify',
+    action: 'suspend' | 'unsuspend' | 'delete' | 'verify' | 'unverify' | 'approve' | 'reject',
     userId: string,
     reason?: string
   ) => {
@@ -142,6 +272,12 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
             await UserManagementService.unverifyCaretaker(userId, currentAdminId, reason);
           }
           break;
+        case 'approve':
+          await AdminApprovalService.setApprovalStatus(userId, 'approved', currentAdminId, reason);
+          break;
+        case 'reject':
+          await AdminApprovalService.setApprovalStatus(userId, 'rejected', currentAdminId, reason);
+          break;
       }
       
       // Refresh data
@@ -165,6 +301,16 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
     } catch (error) {
       console.error('Error loading user details:', error);
     }
+  };
+
+  const openUserDetailModal = (user: AdminUserDetails) => {
+    setSelectedUserForModal(user);
+    setShowUserDetailModal(true);
+  };
+
+  const closeUserDetailModal = () => {
+    setShowUserDetailModal(false);
+    setSelectedUserForModal(null);
   };
 
 
@@ -279,6 +425,23 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
               {stats.trial_users} im Trial
             </div>
           </div>
+
+          {/* Freigabe-Statistik */}
+          {approvalStats && (
+            <div className="bg-white rounded-lg border p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Freigaben</p>
+                  <p className="text-2xl font-bold text-gray-900">{approvalStats.pending}</p>
+                </div>
+                <Shield className="h-8 w-8 text-orange-600" />
+              </div>
+              <div className="mt-2 flex items-center text-xs text-gray-500">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                {approvalStats.approved} freigegeben
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -398,6 +561,9 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
                     Status
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Freigabe
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Registriert
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -428,14 +594,80 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {getUserTypeBadge(user.user_type, user.is_admin, user.admin_role || undefined)}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {getStatusBadge(user)}
-                    </td>
+                                         <td className="px-4 py-3">
+                       <div className="flex items-center gap-2">
+                         {getUserTypeBadge(user.user_type, user.is_admin, user.admin_role || undefined)}
+                       </div>
+                     </td>
+                     <td className="px-4 py-3">
+                       {getStatusBadge(user)}
+                     </td>
+                     <td className="px-4 py-3">
+                       {user.user_type === 'caretaker' && (
+                         <div className="flex items-center gap-2">
+                           {user.approval_status === 'approved' && (
+                             <div className="flex items-center gap-2">
+                               <Badge variant="success">Freigegeben</Badge>
+                               <button
+                                 onClick={() => handleUserAction('reject', user.id)}
+                                 className="text-red-600 hover:text-red-800"
+                                 title="Ablehnen"
+                                 disabled={actionLoading === 'reject'}
+                               >
+                                 <XCircle className="h-4 w-4" />
+                               </button>
+                             </div>
+                           )}
+                           {user.approval_status === 'pending' && (
+                             <>
+                               <Badge variant="warning">Wartend</Badge>
+                               <button
+                                 onClick={() => handleUserAction('approve', user.id)}
+                                 className="text-green-600 hover:text-green-800"
+                                 title="Freigeben"
+                                 disabled={actionLoading === 'approve'}
+                               >
+                                 <CheckCircle className="h-4 w-4" />
+                               </button>
+                               <button
+                                 onClick={() => setShowActionModal({ type: 'reject', userId: user.id })}
+                                 className="text-red-600 hover:text-red-800"
+                                 title="Ablehnen"
+                                 disabled={actionLoading === 'reject'}
+                               >
+                                 <XCircle className="h-4 w-4" />
+                               </button>
+                             </>
+                           )}
+                           {user.approval_status === 'rejected' && (
+                             <div className="flex items-center gap-2">
+                               <Badge variant="danger">Abgelehnt</Badge>
+                               <button
+                                 onClick={() => handleUserAction('approve', user.id)}
+                                 className="text-green-600 hover:text-green-800"
+                                 title="Freigeben"
+                                 disabled={actionLoading === 'approve'}
+                               >
+                                 <CheckCircle className="h-4 w-4" />
+                               </button>
+                             </div>
+                           )}
+                           {!user.approval_status && (
+                             <div className="flex items-center gap-2">
+                               <Badge variant="secondary">Nicht angefordert</Badge>
+                               <button
+                                 onClick={() => handleUserAction('approve', user.id)}
+                                 className="text-green-600 hover:text-green-800"
+                                 title="Direkt freigeben"
+                                 disabled={actionLoading === 'approve'}
+                               >
+                                 <CheckCircle className="h-4 w-4" />
+                               </button>
+                             </div>
+                           )}
+                         </div>
+                       )}
+                     </td>
                     <td className="px-4 py-3 text-sm text-gray-500">
                       {formatDate(user.created_at)}
                     </td>
@@ -445,23 +677,12 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <button
-                          onClick={() => loadUserDetails(user.id)}
+                          onClick={() => openUserDetailModal(user)}
                           className="text-blue-600 hover:text-blue-800"
                           title="Details anzeigen"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        
-                        {user.user_type === 'caretaker' && (
-                          <button
-                            onClick={() => handleUserAction('verify', user.id)}
-                            className="text-green-600 hover:text-green-800"
-                            title="Verifizieren"
-                            disabled={actionLoading === 'verify'}
-                          >
-                            <BadgeCheck className="h-4 w-4" />
-                          </button>
-                        )}
 
                         <button
                           onClick={() => setShowActionModal({ type: 'suspend', userId: user.id })}
@@ -478,14 +699,6 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
                           currentAdminId={currentAdminId}
                           onActionComplete={searchUsers}
                         />
-
-                        <button
-                          onClick={() => setShowActionModal({ type: 'delete', userId: user.id })}
-                          className="text-red-600 hover:text-red-800"
-                          title="Löschen"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -531,6 +744,28 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
           onAction={handleUserAction}
           currentAdminId={currentAdminId}
           actionLoading={actionLoading}
+        />
+      )}
+
+      {/* User Detail Modal */}
+      <UserDetailModal
+        user={selectedUserForModal}
+        isOpen={showUserDetailModal}
+        onClose={closeUserDetailModal}
+        onAction={handleUserAction}
+        actionLoading={actionLoading}
+        onShowActionModal={setShowActionModal}
+        onEditUser={handleEditUser}
+      />
+
+      {/* User Edit Modal */}
+      {showEditModal && userToEdit && (
+        <UserEditModal
+          user={userToEdit}
+          isOpen={showEditModal}
+          onClose={handleEditModalClose}
+          onSave={handleEditModalSave}
+          currentAdminId={currentAdminId}
         />
       )}
 

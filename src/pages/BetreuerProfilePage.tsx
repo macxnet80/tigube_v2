@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AvailabilityDisplay from '../components/ui/AvailabilityDisplay';
 import { ReviewForm } from '../components/ui/ReviewForm';
 import { caretakerSearchService, ownerCaretakerService } from '../lib/supabase/db';
+
 import { formatCurrency } from '../lib/utils';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase/client';
@@ -93,15 +94,26 @@ function BetreuerProfilePage() {
       setError(null);
 
       try {
+        // Use the getCaretakerById function from db.ts
         const { data, error: fetchError } = await caretakerSearchService.getCaretakerById(id);
         
+        console.log('🔍 Fetch result:', { data, error: fetchError });
+        
         if (fetchError) {
-          setError('Fehler beim Laden des Betreuer-Profils');
+          console.error('❌ Fetch error:', fetchError);
+          // Prüfe ob es ein Freigabe-Problem ist
+          if (fetchError.message?.includes('not found') || fetchError.message?.includes('No rows returned')) {
+            setError('Dieses Betreuer-Profil ist nicht verfügbar oder noch nicht freigegeben');
+          } else {
+            setError('Fehler beim Laden des Betreuer-Profils');
+          }
           setCaretaker(null);
         } else if (!data) {
-          setError('Betreuer nicht gefunden');
+          console.error('❌ No data returned');
+          setError('Betreuer nicht gefunden oder noch nicht freigegeben');
           setCaretaker(null);
         } else {
+          console.log('✅ Caretaker data loaded successfully:', data);
           // Override short_term_available with context value if this is the current user's profile
           const updatedData = {
             ...data,
@@ -466,7 +478,7 @@ function BetreuerProfilePage() {
         <div className="container-custom py-8">
           <div className="flex flex-col md:flex-row items-start gap-8">
             {/* Profile Image */}
-            <div className="md:w-1/3 lg:w-1/4">
+            <div className="md:w-1/4 lg:w-1/5">
               <div className="relative rounded-xl overflow-hidden shadow-md">
                 <img 
                   src={caretaker.avatar} 
@@ -605,17 +617,17 @@ function BetreuerProfilePage() {
         </div>
       </div>
 
-      {/* Profile Banner Top */}
-      <div className="container-custom py-4">
-        <AdvertisementBanner 
-          placement="profile_top"
-          targetingOptions={{
-            petTypes: userProfile?.pet_types || [],
-            location: userProfile?.location || '',
-            subscriptionType: subscription?.plan_type || 'free'
-          }}
-        />
-      </div>
+              {/* Profile Banner Top */}
+        <div className="container-custom py-4">
+          <AdvertisementBanner 
+            placement="profile_top"
+            targetingOptions={{
+              petTypes: userProfile?.pet_types || [],
+              location: userProfile?.location || '',
+              subscriptionType: subscription?.plan_type || 'free'
+            }}
+          />
+        </div>
 
       {/* Details Tabs */}
       <div className="container-custom py-12">
@@ -803,15 +815,15 @@ function BetreuerProfilePage() {
               </div>
             </div>
 
-            {/* Advertisement Banner */}
-            <AdvertisementBanner 
-              placement="profile_sidebar"
-              targetingOptions={{
-                petTypes: userProfile?.pet_types || [],
-                location: userProfile?.location || '',
-                subscriptionType: subscription?.plan_type || 'free'
-              }}
-            />
+                          {/* Advertisement Banner */}
+              <AdvertisementBanner 
+                placement="profile_sidebar"
+                targetingOptions={{
+                  petTypes: userProfile?.pet_types || [],
+                  location: userProfile?.location || '',
+                  subscriptionType: subscription?.plan_type || 'free'
+                }}
+              />
           </div>
         </div>
       </div>

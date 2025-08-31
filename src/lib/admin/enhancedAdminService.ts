@@ -699,4 +699,323 @@ export class EnhancedAdminService {
       };
     }
   }
+
+  // ===== USER MANAGEMENT FUNCTIONS =====
+
+  /**
+   * Update user profile information
+   */
+  static async updateUserProfile(
+    userId: string,
+    updates: {
+      first_name?: string;
+      last_name?: string;
+      email?: string;
+      phone_number?: string;
+      street?: string;
+      plz?: string;
+      city?: string;
+      date_of_birth?: string;
+      gender?: string;
+      emergency_contact?: string;
+      emergency_phone?: string;
+    },
+    adminId: string
+  ): Promise<void> {
+    try {
+      console.log('[EnhancedAdminService] Updating user profile:', { userId, updates });
+      
+      const { error } = await adminSupabase
+        .from('users')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      await this.logAction('user_profile_updated', 'users', userId, adminId, updates);
+      console.log('[EnhancedAdminService] User profile updated successfully');
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user role and admin privileges
+   */
+  static async updateUserRole(
+    userId: string,
+    role: AdminRole | null,
+    adminId: string,
+    reason?: string
+  ): Promise<void> {
+    try {
+      console.log('[EnhancedAdminService] Updating user role:', { userId, role });
+      
+      const { error } = await adminSupabase
+        .from('users')
+        .update({
+          is_admin: role !== null,
+          admin_role: role,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      await this.logAction('user_role_updated', 'users', userId, adminId, { role, reason });
+      console.log('[EnhancedAdminService] User role updated successfully');
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update caretaker approval status
+   */
+  static async updateCaretakerApproval(
+    userId: string,
+    approvalStatus: 'approved' | 'rejected' | 'pending',
+    adminId: string,
+    notes?: string
+  ): Promise<void> {
+    try {
+      console.log('[EnhancedAdminService] Updating caretaker approval:', { userId, approvalStatus });
+      
+      // Import AdminApprovalService dynamically to avoid circular dependencies
+      const { AdminApprovalService } = await import('../services/adminApprovalService');
+      
+      await AdminApprovalService.setApprovalStatus(userId, approvalStatus, adminId, notes);
+
+      await this.logAction('caretaker_approval_updated', 'users', userId, adminId, { 
+        approvalStatus, 
+        notes 
+      });
+      console.log('[EnhancedAdminService] Caretaker approval updated successfully');
+    } catch (error) {
+      console.error('Error updating caretaker approval:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update user subscription status
+   */
+  static async updateUserSubscription(
+    userId: string,
+    subscriptionStatus: 'active' | 'trial' | 'cancelled' | 'expired' | null,
+    adminId: string,
+    reason?: string
+  ): Promise<void> {
+    try {
+      console.log('[EnhancedAdminService] Updating user subscription:', { userId, subscriptionStatus });
+      
+      const { error } = await adminSupabase
+        .from('users')
+        .update({
+          subscription_status: subscriptionStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      await this.logAction('user_subscription_updated', 'users', userId, adminId, { 
+        subscriptionStatus, 
+        reason 
+      });
+      console.log('[EnhancedAdminService] User subscription updated successfully');
+    } catch (error) {
+      console.error('Error updating user subscription:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Suspend or unsuspend user
+   */
+  static async updateUserSuspension(
+    userId: string,
+    isSuspended: boolean,
+    adminId: string,
+    reason?: string
+  ): Promise<void> {
+    try {
+      console.log('[EnhancedAdminService] Updating user suspension:', { userId, isSuspended });
+      
+      const { error } = await adminSupabase
+        .from('users')
+        .update({
+          is_suspended: isSuspended,
+          suspension_reason: isSuspended ? reason : null,
+          suspended_at: isSuspended ? new Date().toISOString() : null,
+          suspended_by: isSuspended ? adminId : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      await this.logAction('user_suspension_updated', 'users', userId, adminId, { 
+        isSuspended, 
+        reason 
+      });
+      console.log('[EnhancedAdminService] User suspension updated successfully');
+    } catch (error) {
+      console.error('Error updating user suspension:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete user completely
+   */
+  static async deleteUser(
+    userId: string,
+    adminId: string,
+    reason?: string
+  ): Promise<void> {
+    try {
+      console.log('[EnhancedAdminService] Deleting user:', { userId });
+      
+      // First, log the action before deletion
+      await this.logAction('user_deleted', 'users', userId, adminId, { reason });
+      
+      // Delete user from auth
+      const { error: authError } = await adminSupabase.auth.admin.deleteUser(userId);
+      if (authError) {
+        console.warn('Error deleting user from auth:', authError);
+      }
+
+      // Delete user from users table
+      const { error } = await adminSupabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      console.log('[EnhancedAdminService] User deleted successfully');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get detailed user information for editing
+   */
+  static async getUserForEditing(userId: string): Promise<any> {
+    try {
+      console.log('[EnhancedAdminService] Getting user for editing:', { userId });
+      
+      const { data, error } = await adminSupabase
+        .from('users')
+        .select(`
+          *,
+          caretaker_profile (*),
+          owner_profile (
+            *,
+            pets (*),
+            preferences (*)
+          )
+        `)
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+
+      console.log('[EnhancedAdminService] User data retrieved successfully');
+      return data;
+    } catch (error) {
+      console.error('Error getting user for editing:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update caretaker profile
+   */
+  static async updateCaretakerProfile(
+    userId: string,
+    updates: {
+      short_about_me?: string;
+      long_about_me?: string;
+      experience_years?: number;
+      hourly_rate?: number;
+      service_radius?: number;
+      languages?: string[];
+      animal_types?: string[];
+      qualifications?: string[];
+      is_commercial?: boolean;
+      company_name?: string;
+      home_photos?: string[];
+      short_term_available?: boolean;
+    },
+    adminId: string
+  ): Promise<void> {
+    try {
+      console.log('[EnhancedAdminService] Updating caretaker profile:', { userId, updates });
+      
+      const { error } = await adminSupabase
+        .from('caretaker_profiles')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      await this.logAction('caretaker_profile_updated', 'caretaker_profiles', userId, adminId, updates);
+      console.log('[EnhancedAdminService] Caretaker profile updated successfully');
+    } catch (error) {
+      console.error('Error updating caretaker profile:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update owner profile
+   */
+  static async updateOwnerProfile(
+    userId: string,
+    updates: {
+      preferences?: {
+        services?: string[];
+        other_services?: string;
+        care_instructions?: string;
+        vet_info?: string;
+        emergency_contact_name?: string;
+        emergency_contact_phone?: string;
+      };
+    },
+    adminId: string
+  ): Promise<void> {
+    try {
+      console.log('[EnhancedAdminService] Updating owner profile:', { userId, updates });
+      
+      if (updates.preferences) {
+        const { error } = await adminSupabase
+          .from('owner_preferences')
+          .update({
+            ...updates.preferences,
+            updated_at: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+
+        if (error) throw error;
+      }
+
+      await this.logAction('owner_profile_updated', 'owner_preferences', userId, adminId, updates);
+      console.log('[EnhancedAdminService] Owner profile updated successfully');
+    } catch (error) {
+      console.error('Error updating owner profile:', error);
+      throw error;
+    }
+  }
 } 

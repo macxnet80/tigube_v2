@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { advertisementService, Advertisement, TargetingOptions } from '../../lib/supabase/advertisementService';
 import { useAuth } from '../../lib/auth/AuthContext';
 import { ExternalLink } from 'lucide-react';
@@ -21,10 +21,19 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
   const bannerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
-  // Load advertisement on component mount
+  // Memoize targeting options to prevent unnecessary re-renders
+  const memoizedTargetingOptions = useMemo(() => {
+    return {
+      petTypes: targetingOptions.petTypes || [],
+      location: targetingOptions.location || '',
+      subscriptionType: targetingOptions.subscriptionType || 'free'
+    };
+  }, [targetingOptions.petTypes, targetingOptions.location, targetingOptions.subscriptionType]);
+
+  // Load advertisement on component mount and when placement changes
   useEffect(() => {
     loadAdvertisement();
-  }, [targetingOptions, placement]);
+  }, [placement]); // Only reload when placement changes, not targeting options
 
   // Set up intersection observer for impression tracking
   useEffect(() => {
@@ -73,11 +82,11 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
         }
       }
 
-      // Verwende die übergebenen Targeting-Optionen oder Standard-Werte
+      // Verwende die memoized Targeting-Optionen oder Standard-Werte
       const finalTargetingOptions: TargetingOptions = {
-        petTypes: targetingOptions.petTypes || ['Hund', 'Katze'], // Fallback zu häufigen Haustieren
-        location: targetingOptions.location || 'Deutschland', // Fallback zu Deutschland
-        subscriptionType: targetingOptions.subscriptionType || 'free'
+        petTypes: memoizedTargetingOptions.petTypes.length > 0 ? memoizedTargetingOptions.petTypes : ['Hund', 'Katze'], // Fallback zu häufigen Haustieren
+        location: memoizedTargetingOptions.location || 'Deutschland', // Fallback zu Deutschland
+        subscriptionType: memoizedTargetingOptions.subscriptionType || 'free'
       };
 
       // Bestimme den korrekten ad_type basierend auf der Platzierung

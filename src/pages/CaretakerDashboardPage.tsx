@@ -9,7 +9,7 @@ import type { ClientData } from '../components/ui/ClientDetailsAccordion';
 import { useAuth } from '../lib/auth/AuthContext';
 import { useEffect, useState, useRef } from 'react';
 import { caretakerProfileService, ownerCaretakerService, userService } from '../lib/supabase/db';
-import { Calendar, Check, Edit, LogOut, MapPin, Phone, Shield, Upload, Camera, Star, Info, Lock, Briefcase, Verified, Eye, EyeOff, KeyRound, Trash2, AlertTriangle, Mail, X, Clock, Crown, Settings, PawPrint, Moon } from 'lucide-react';
+import { Calendar, Check, Edit, LogOut, MapPin, Phone, Shield, Upload, Camera, Star, Info, Lock, Briefcase, Verified, Eye, EyeOff, KeyRound, Trash2, AlertTriangle, Mail, X, Clock, Crown, Settings, PawPrint, Moon, CheckCircle, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase/client';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
@@ -20,9 +20,10 @@ import { useSubscription } from '../lib/auth/useSubscription';
 import RegistrationSuccessModal from '../components/ui/RegistrationSuccessModal';
 import ProfileImageCropper from '../components/ui/ProfileImageCropper';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
-import { DEFAULT_SERVICE_CATEGORIES, ServiceUtils, type ServiceCategory, type CategorizedService } from '../lib/types/service-categories';
+import { DEFAULT_SERVICE_CATEGORIES, type ServiceCategory, type CategorizedService } from '../lib/types/service-categories';
 import { ServiceUtils as SupabaseServiceUtils } from '../lib/supabase/service-categories';
 import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityContext';
+import { ApprovalStatusCard } from '../components/ui/ApprovalStatusCard';
 
 function CaretakerDashboardPage() {
   const { user, userProfile, loading: authLoading, subscription, updateProfileState } = useAuth();
@@ -51,7 +52,9 @@ function CaretakerDashboardPage() {
     email: user?.email || '',
     plz: '',
     street: '',
-    city: ''
+    city: '',
+    dateOfBirth: '',
+    gender: ''
   });
   const [emailError, setEmailError] = useState<string | null>(null);
   
@@ -109,7 +112,9 @@ function CaretakerDashboardPage() {
         email: user?.email || '',
         plz: userProfile.plz || '',
         street: userProfile.street || '',
-        city: userProfile.city || ''
+        city: userProfile.city || '',
+        dateOfBirth: userProfile.date_of_birth || '',
+        gender: userProfile.gender || ''
       };
       
       console.log('📞 Setze caretakerData:', newCaretakerData);
@@ -181,11 +186,13 @@ function CaretakerDashboardPage() {
     if (saved) {
       return JSON.parse(saved);
     }
+    
+    // Fallback-Werte für initiale Initialisierung
     return {
-      services: profile?.services || [],
-      servicesWithCategories: profile?.services_with_categories || [],
-      animal_types: profile?.animal_types || [],
-      prices: profile?.prices || {},
+      services: [],
+      servicesWithCategories: [],
+      animal_types: [],
+      prices: {},
     };
   });
 
@@ -203,25 +210,34 @@ function CaretakerDashboardPage() {
   useEffect(() => {
     if (profile && !sessionStorage.getItem('servicesDraft')) {
       // Nur initialisieren wenn keine sessionStorage-Daten vorhanden sind
-      const profileServices = profile.services || [];
-      const servicesWithCategories = profile.services_with_categories;
+      const servicesWithCategories = profile.services_with_categories || [];
       
-      let normalizedServices: string[];
-      if (servicesWithCategories && Array.isArray(servicesWithCategories)) {
-        // Neue kategorisierte Services verwenden
-        normalizedServices = SupabaseServiceUtils.extractServiceNames(servicesWithCategories);
-      } else if (SupabaseServiceUtils.isLegacyFormat(profileServices)) {
-        // Legacy String-Array Services
-        normalizedServices = profileServices;
-      } else {
-        normalizedServices = [];
+      // Extrahiere Service-Namen und Preise aus der neuen Struktur
+      const normalizedServices: string[] = [];
+      const prices: Record<string, string> = {};
+      
+      if (Array.isArray(servicesWithCategories)) {
+        servicesWithCategories.forEach((service: any) => {
+          if (service.name && service.name !== 'Anfahrkosten') {
+            // Prüfe, ob es ein Standard-Service ist
+            if (defaultServices.includes(service.name)) {
+              normalizedServices.push(service.name);
+            }
+            if (service.price) {
+              prices[service.name] = service.price.toString();
+            }
+          } else if (service.name === 'Anfahrkosten' && service.price) {
+            // Anfahrkosten separat behandeln
+            prices['Anfahrkosten'] = service.price.toString();
+          }
+        });
       }
 
       setServicesDraft({
         services: normalizedServices,
-        servicesWithCategories: servicesWithCategories || [],
+        servicesWithCategories: servicesWithCategories,
         animal_types: profile.animal_types || [],
-        prices: profile.prices || {},
+        prices: prices,
       });
     }
   }, [profile]);
@@ -244,14 +260,15 @@ function CaretakerDashboardPage() {
     if (saved) {
       return JSON.parse(saved);
     }
+    // Fallback-Werte für initiale Initialisierung
     return {
-      qualifications: profile?.qualifications || [],
-      experience_description: profile?.experience_description || '',
-      languages: profile?.languages || [],
-      isCommercial: profile?.is_commercial || false,
-      companyName: profile?.company_name || '',
-      taxNumber: profile?.tax_number || '',
-      vatId: profile?.vat_id || '',
+      qualifications: [],
+      experience_description: '',
+      languages: [],
+      isCommercial: false,
+      companyName: '',
+      taxNumber: '',
+      vatId: '',
     };
   });
 
@@ -429,12 +446,62 @@ function CaretakerDashboardPage() {
       console.log('🔄 Speichere Leistungen...');
       console.log('📊 Services Draft:', servicesDraft);
       
-      // Nur die Leistungs-Felder speichern
+      // Sammle alle aktiven Services (Standard + Custom)
+      const allActiveServices: CategorizedService[] = [];
+      
+      // 1. Standard-Services hinzufügen
+      servicesDraft.services.forEach(serviceName => {
+        const price = servicesDraft.prices[serviceName];
+        const service: CategorizedService = {
+          name: serviceName,
+          category_id: 8, // Default: Allgemein
+          category_name: 'Allgemein',
+          ...(price && price.trim() !== '' && { 
+            price: parseFloat(price), 
+            price_type: 'per_hour' 
+          })
+        };
+        allActiveServices.push(service);
+      });
+      
+      // 2. Custom-Services hinzufügen (aus prices, aber nicht in services)
+      Object.keys(servicesDraft.prices).forEach(serviceName => {
+        if (!servicesDraft.services.includes(serviceName) && serviceName !== 'Anfahrkosten') {
+          const price = servicesDraft.prices[serviceName];
+          if (price && price.trim() !== '') {
+            // Finde die Kategorie für diesen Service
+            const existingService = servicesDraft.servicesWithCategories.find(s => s.name === serviceName);
+            const service: CategorizedService = {
+              name: serviceName,
+              category_id: existingService?.category_id || 8,
+              category_name: existingService?.category_name || 'Allgemein',
+              price: parseFloat(price),
+              price_type: 'per_hour'
+            };
+            allActiveServices.push(service);
+          }
+        }
+      });
+      
+      // 3. Anfahrkosten als separaten Service hinzufügen
+      const travelCosts = servicesDraft.prices['Anfahrkosten'];
+      if (travelCosts && travelCosts.trim() !== '') {
+        const travelService: CategorizedService = {
+          name: 'Anfahrkosten',
+          category_id: 8,
+          category_name: 'Allgemein',
+          price: parseFloat(travelCosts),
+          price_type: 'per_visit'
+        };
+        allActiveServices.push(travelService);
+      }
+      
+      console.log('📊 Konvertierte Services:', allActiveServices);
+      
+      // Nur die Leistungs-Felder speichern (neue Struktur)
       const { data, error } = await caretakerProfileService.saveProfile(user.id, {
-        services: servicesDraft.services,
-        servicesWithCategories: servicesDraft.servicesWithCategories,
+        servicesWithCategories: allActiveServices,
         animalTypes: servicesDraft.animal_types,
-        prices: servicesDraft.prices,
       });
       
       if (error) {
@@ -448,9 +515,8 @@ function CaretakerDashboardPage() {
       // Aktualisiere das Profil mit den neuen Daten
       setProfile((prev: any) => ({
         ...prev,
-        services: servicesDraft.services,
+        services_with_categories: allActiveServices,
         animal_types: servicesDraft.animal_types,
-        prices: servicesDraft.prices,
       }));
       
       setEditServices(false);
@@ -466,11 +532,34 @@ function CaretakerDashboardPage() {
 
   // Abbrechen der Leistungen
   function handleCancelServices() {
+    const servicesWithCategories = profile?.services_with_categories || [];
+    
+    // Extrahiere Service-Namen und Preise aus der neuen Struktur
+    const normalizedServices: string[] = [];
+    const prices: Record<string, string> = {};
+    
+    if (Array.isArray(servicesWithCategories)) {
+      servicesWithCategories.forEach((service: any) => {
+        if (service.name && service.name !== 'Anfahrkosten') {
+          // Prüfe, ob es ein Standard-Service ist
+          if (defaultServices.includes(service.name)) {
+            normalizedServices.push(service.name);
+          }
+          if (service.price) {
+            prices[service.name] = service.price.toString();
+          }
+        } else if (service.name === 'Anfahrkosten' && service.price) {
+          // Anfahrkosten separat behandeln
+          prices['Anfahrkosten'] = service.price.toString();
+        }
+      });
+    }
+
     setServicesDraft({
-      services: profile?.services || [],
-      servicesWithCategories: profile?.services_with_categories || [],
+      services: normalizedServices,
+      servicesWithCategories: servicesWithCategories,
       animal_types: profile?.animal_types || [],
-      prices: profile?.prices || {},
+      prices: prices,
     });
     setEditServices(false);
     // Cleanup sessionStorage
@@ -891,9 +980,8 @@ function CaretakerDashboardPage() {
             dbDefaultAvailability[day] = slots.map(slot => `${slot.start}-${slot.end}`);
           }
           const { data: created, error: createError } = await caretakerProfileService.saveProfile(user.id, {
-            services: [],
+            servicesWithCategories: [],
             animalTypes: [],
-            prices: {},
             serviceRadius: 0,
             availability: dbDefaultAvailability,
             homePhotos: [],
@@ -923,9 +1011,8 @@ function CaretakerDashboardPage() {
             const fallbackProfile = {
               id: user.id,
               user_id: user.id,
-              services: [],
+              services_with_categories: [],
               animal_types: [],
-              prices: {},
               service_radius: 0,
               availability: dbDefaultAvailability,
               home_photos: [],
@@ -966,30 +1053,34 @@ function CaretakerDashboardPage() {
           
           // Aktualisiere skillsDraft mit geladenen Daten (nur wenn keine sessionStorage-Daten vorhanden)
           if (!sessionStorage.getItem('servicesDraft')) {
-            const loadedPrices = (ensuredProfile as any).prices || {};
-            // Stelle sicher, dass Standard-Preisfelder immer vorhanden sind
-            const mergedPrices = { ...loadedPrices };
+            const servicesWithCategories = (ensuredProfile as any).services_with_categories || [];
             
-            // Rückwärtskompatibilität für Services implementieren
-            const profileServices = (ensuredProfile as any).services || [];
-            const servicesWithCategories = (ensuredProfile as any).services_with_categories;
+            // Extrahiere Service-Namen und Preise aus der neuen Struktur
+            const normalizedServices: string[] = [];
+            const prices: Record<string, string> = {};
             
-            let normalizedServices: string[];
-            if (servicesWithCategories && Array.isArray(servicesWithCategories)) {
-              // Neue kategorisierte Services verwenden
-              normalizedServices = SupabaseServiceUtils.extractServiceNames(servicesWithCategories);
-            } else if (SupabaseServiceUtils.isLegacyFormat(profileServices)) {
-              // Legacy String-Array Services
-              normalizedServices = profileServices;
-            } else {
-              normalizedServices = [];
+            if (Array.isArray(servicesWithCategories)) {
+              servicesWithCategories.forEach((service: any) => {
+                if (service.name && service.name !== 'Anfahrkosten') {
+                  // Prüfe, ob es ein Standard-Service ist
+                  if (defaultServices.includes(service.name)) {
+                    normalizedServices.push(service.name);
+                  }
+                  if (service.price) {
+                    prices[service.name] = service.price.toString();
+                  }
+                } else if (service.name === 'Anfahrkosten' && service.price) {
+                  // Anfahrkosten separat behandeln
+                  prices['Anfahrkosten'] = service.price.toString();
+                }
+              });
             }
 
             setServicesDraft({
               services: normalizedServices,
-              servicesWithCategories: servicesWithCategories || [],
+              servicesWithCategories: servicesWithCategories,
               animal_types: (ensuredProfile as any).animal_types || [],
-              prices: mergedPrices,
+              prices: prices,
             });
           }
           
@@ -1033,38 +1124,44 @@ function CaretakerDashboardPage() {
           
           // Verfügbarkeit aus der Datenbank laden und validieren
           const dbAvailability = (ensuredProfile as any).availability;
-        if (dbAvailability && typeof dbAvailability === 'object') {
-          // Konvertiere String-Array-Daten zu TimeSlot-Objekten
-          const validatedAvailability: AvailabilityState = {};
+          console.log('📥 Lade Verfügbarkeit aus DB:', dbAvailability);
           
-          for (const day of ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']) {
-            const daySlots = dbAvailability[day];
-            if (Array.isArray(daySlots)) {
-              validatedAvailability[day] = daySlots
-                .map((timeItem: any) => {
-                  if (typeof timeItem === 'string' && timeItem.includes('-')) {
-                    const [start, end] = timeItem.split('-');
-                    return { start: start.trim(), end: end.trim() };
-                  }
-                  // Für Rückwärtskompatibilität: Falls bereits TimeSlot-Objekte
-                  if (typeof timeItem === 'object' && timeItem?.start && timeItem?.end) {
-                    return { start: timeItem.start, end: timeItem.end };
-                  }
-                  return null;
-                })
-                .filter((slot): slot is { start: string; end: string } => 
-                  slot !== null && slot.start && slot.end
-                );
-            } else {
-              validatedAvailability[day] = [];
+          if (dbAvailability && typeof dbAvailability === 'object') {
+            // Konvertiere String-Array-Daten zu TimeSlot-Objekten
+            const validatedAvailability: AvailabilityState = {};
+            
+            for (const day of ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']) {
+              const daySlots = dbAvailability[day];
+              console.log(`📅 ${day} Slots:`, daySlots);
+              
+              if (Array.isArray(daySlots)) {
+                validatedAvailability[day] = daySlots
+                  .map((timeItem: any) => {
+                    if (typeof timeItem === 'string' && timeItem.includes('-')) {
+                      const [start, end] = timeItem.split('-');
+                      return { start: start.trim(), end: end.trim() };
+                    }
+                    // Für Rückwärtskompatibilität: Falls bereits TimeSlot-Objekte
+                    if (typeof timeItem === 'object' && timeItem?.start && timeItem?.end) {
+                      return { start: timeItem.start, end: timeItem.end };
+                    }
+                    return null;
+                  })
+                  .filter((slot): slot is { start: string; end: string } => 
+                    slot !== null && slot.start && slot.end
+                  );
+              } else {
+                validatedAvailability[day] = [];
+              }
             }
+            
+            console.log('✅ Validierte Verfügbarkeit:', validatedAvailability);
+            setAvailability(validatedAvailability);
+          } else {
+            // Falls keine Verfügbarkeit in der DB, verwende leere Verfügbarkeit
+            console.log('⚠️ Keine Verfügbarkeit in DB gefunden, verwende Default');
+            setAvailability(defaultAvailability);
           }
-          
-          setAvailability(validatedAvailability);
-        } else {
-          // Falls keine Verfügbarkeit in der DB, verwende leere Verfügbarkeit
-          setAvailability(defaultAvailability);
-        }
       } catch (err) {
         console.error('Unexpected error loading caretaker profile:', err);
         setError('Unerwarteter Fehler beim Laden des Profils');
@@ -1100,7 +1197,9 @@ function CaretakerDashboardPage() {
                email: user.email || '',
                plz: freshProfile.plz || '',
                street: (freshProfile as any).street || '',
-               city: freshProfile.city || ''
+               city: freshProfile.city || '',
+               dateOfBirth: freshProfile.date_of_birth || '',
+               gender: freshProfile.gender || ''
              });
           }
         } catch (error) {
@@ -1228,6 +1327,16 @@ function CaretakerDashboardPage() {
         dataToUpdate.street = caretakerData.street;
         console.log('📝 Street geändert:', caretakerData.street);
       }
+      
+      if (caretakerData.dateOfBirth !== (userProfile?.date_of_birth || '')) {
+        dataToUpdate.dateOfBirth = caretakerData.dateOfBirth;
+        console.log('📝 DateOfBirth geändert:', caretakerData.dateOfBirth);
+      }
+      
+      if (caretakerData.gender !== (userProfile?.gender || '')) {
+        dataToUpdate.gender = caretakerData.gender;
+        console.log('📝 Gender geändert:', caretakerData.gender);
+      }
 
       // Handle PLZ and City logic
       const plzChanged = caretakerData.plz !== (userProfile?.plz || '');
@@ -1283,7 +1392,9 @@ function CaretakerDashboardPage() {
       email: user?.email || '',
       plz: userProfile?.plz || '',
       street: userProfile?.street || '',
-      city: userProfile?.city || ''
+      city: userProfile?.city || '',
+      dateOfBirth: userProfile?.date_of_birth || '',
+      gender: userProfile?.gender || ''
     });
     setEditData(false);
   };
@@ -1705,14 +1816,14 @@ function CaretakerDashboardPage() {
   };
 
   // Robusteres Loading mit Profile-Check
-  const isReallyLoading = authLoading || loading || (user && !userProfile && profileLoadAttempts < 3);
+  const isReallyLoading = authLoading || loading || (user && !profile && profileLoadAttempts < 3);
   
   if (isReallyLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="text-center">
           <LoadingSpinner />
-          {user && !userProfile && profileLoadAttempts > 0 && (
+          {user && !profile && profileLoadAttempts > 0 && (
             <p className="mt-4 text-gray-600">Lade Profil-Daten... (Versuch {profileLoadAttempts}/3)</p>
           )}
         </div>
@@ -1761,38 +1872,49 @@ function CaretakerDashboardPage() {
     );
   }
   
-  // Wenn kein Caretaker-Profil existiert und kein Onboarding, zeige Setup-Guide
-  // ABER: Wenn der User gerade registriert wurde (onboardingData war vorhanden), zeige normales Dashboard
+  // Wenn kein Caretaker-Profil existiert, zeige trotzdem das Dashboard
+  // Das Profil wird automatisch erstellt, wenn der User das erste Mal speichert
   if (!profile && !loading && !showOnboarding) {
-    // Prüfe, ob der User gerade registriert wurde (onboardingData war vorhanden)
-    const wasJustRegistered = sessionStorage.getItem('wasJustRegistered') === 'true';
+    console.log('⚠️ No profile found, showing dashboard with empty state');
+    // Erstelle ein leeres Profil-Objekt für das Dashboard
+    const emptyProfile = {
+      id: user?.id || '',
+      services_with_categories: [],
+      animal_types: [],
+      service_radius: 0,
+      availability: {},
+      home_photos: [],
+      qualifications: [],
+      experience_description: '',
+      short_about_me: '',
+      long_about_me: '',
+      languages: [],
+      is_commercial: false,
+      company_name: '',
+      tax_number: '',
+      vat_id: '',
+      short_term_available: false,
+      overnight_availability: {
+        Mo: false,
+        Di: false,
+        Mi: false,
+        Do: false,
+        Fr: false,
+        Sa: false,
+        So: false,
+      },
+      hourly_rate: 0,
+      rating: 0,
+      review_count: 0,
+      is_verified: false,
+      approval_status: 'pending',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
     
-    if (wasJustRegistered) {
-      // User wurde gerade registriert, zeige normales Dashboard
-      sessionStorage.removeItem('wasJustRegistered');
-      console.log('✅ User was just registered, showing normal dashboard');
-    } else {
-      // User hat kein Profil und wurde nicht gerade registriert
-      // ABER: Zeige trotzdem das normale Dashboard für neue User
-      console.log('⚠️ No profile found, but showing normal dashboard anyway');
-    }
-  }
-  
-  // Fallback: Wenn Loading zu lange dauert, zeige Dashboard trotzdem
-  if (loading && !profile && !showOnboarding) {
-    const loadingTimeout = setTimeout(() => {
-      console.log('⏰ Loading timeout, showing dashboard anyway');
-      setLoading(false);
-    }, 5000); // 5 Sekunden Timeout
-    
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Dashboard wird geladen...</p>
-        </div>
-      </div>
-    );
+    // Setze das leere Profil und zeige das Dashboard
+    setProfile(emptyProfile);
+    setLoading(false);
   }
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
@@ -1859,6 +1981,16 @@ function CaretakerDashboardPage() {
                         </div>
                       </div>
                     )}
+                    {/* Freigabe-Icon mit Hovereffekt */}
+                    <div className="group relative">
+                      <div className="inline-flex items-center justify-center w-6 h-6 text-green-500 hover:text-green-600 transition-colors">
+                        <CheckCircle className="h-4 w-4" />
+                      </div>
+                      <div className="absolute left-1/2 transform -translate-x-1/2 top-8 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                        <div className="text-center">Profil freigegeben</div>
+                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                      </div>
+                    </div>
                     {/* Briefcase-Icon für Professional-Status mit Hovereffekt */}
                     {profile?.is_commercial && (
                       <div className="group relative">
@@ -1954,6 +2086,25 @@ function CaretakerDashboardPage() {
                         <Phone className="h-4 w-4 text-gray-500" />
                         <span className="text-gray-700">{caretakerData.phoneNumber && caretakerData.phoneNumber.trim() ? caretakerData.phoneNumber : '—'}</span>
                       </div>
+                      {caretakerData.dateOfBirth && (
+                        <div className="flex items-center gap-3">
+                          <Calendar className="h-4 w-4 text-gray-500" />
+                          <span className="text-gray-700">
+                            {new Date(caretakerData.dateOfBirth).toLocaleDateString('de-DE')}
+                          </span>
+                        </div>
+                      )}
+                      {caretakerData.gender && (
+                        <div className="flex items-center gap-3">
+                          <User className="h-4 w-4 text-gray-500" />
+                          <span className="text-gray-700">
+                            {caretakerData.gender === 'male' ? 'Männlich' : 
+                             caretakerData.gender === 'female' ? 'Weiblich' : 
+                             caretakerData.gender === 'other' ? 'Divers' : 
+                             caretakerData.gender === 'prefer_not_to_say' ? 'Keine Angabe' : caretakerData.gender}
+                          </span>
+                        </div>
+                      )}
 
                     </>
                   ) : (
@@ -1999,6 +2150,32 @@ function CaretakerDashboardPage() {
                           onChange={e => handlePhoneNumberChange(e.target.value)}
                           placeholder="+49 123 456789"
                         />
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Geburtsdatum</label>
+                          <input
+                            type="date"
+                            className="input w-full"
+                            value={caretakerData.dateOfBirth}
+                            onChange={e => setCaretakerData(d => ({ ...d, dateOfBirth: e.target.value }))}
+                            max={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Geschlecht</label>
+                          <select
+                            className="input w-full"
+                            value={caretakerData.gender}
+                            onChange={e => setCaretakerData(d => ({ ...d, gender: e.target.value }))}
+                          >
+                            <option value="">Bitte wählen</option>
+                            <option value="male">Männlich</option>
+                            <option value="female">Weiblich</option>
+                            <option value="other">Divers</option>
+                            <option value="prefer_not_to_say">Keine Angabe</option>
+                          </select>
+                        </div>
                       </div>
                       <div className="flex gap-2 pt-2">
                                                   <button
@@ -2126,61 +2303,54 @@ function CaretakerDashboardPage() {
               )}
               {!editServices ? (
                 <>
-                  {/* Standard-Leistungen */}
+                  {/* Alle Leistungen aus services_with_categories */}
                   <div className="mb-4">
-                    <span className="font-semibold text-gray-900">Standard-Leistungen:</span>
+                    <span className="font-semibold text-gray-900">Leistungen:</span>
                     <div className="mt-2 space-y-2">
-                      {defaultServices.map((service) => {
-                        const isActive = profile.services?.includes(service);
-                        const price = profile.prices?.[service];
-                        return (
-                          <div key={service} className={`flex items-center justify-between p-3 rounded-lg border ${isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                            <div className="flex items-center gap-3">
-                              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isActive ? 'bg-primary-600 border-primary-600' : 'border-gray-300'}`}>
-                                {isActive && <Check className="w-3 h-3 text-white" />}
+                      {profile.services_with_categories && Array.isArray(profile.services_with_categories) && profile.services_with_categories.length > 0 ? (
+                        profile.services_with_categories.map((service: any, index: number) => {
+                          const isStandardService = defaultServices.includes(service.name);
+                          const isTravelCosts = service.name === 'Anfahrkosten';
+                          
+                          return (
+                            <div key={index} className={`flex items-center justify-between p-3 rounded-lg border ${
+                              isTravelCosts ? 'bg-orange-50 border-orange-200' :
+                              isStandardService ? 'bg-green-50 border-green-200' : 
+                              'bg-blue-50 border-blue-200'
+                            }`}>
+                              <div className="flex items-center gap-3">
+                                <div className="w-4 h-4 rounded border-2 border-primary-300 bg-primary-100 flex items-center justify-center">
+                                  <Check className="w-3 h-3 text-primary-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-gray-900">{service.name}</span>
+                                  {service.category_name && service.category_name !== 'Allgemein' && (
+                                    <span className="text-xs text-gray-500">{service.category_name}</span>
+                                  )}
+                                </div>
                               </div>
-                              <span className={`font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>{service}</span>
-                              <span className="text-sm text-gray-500">({servicePriceLabels[service]})</span>
+                              <div className="text-right">
+                                {service.price ? (
+                                  <span className="font-semibold text-primary-600">
+                                    {service.price} €
+                                    {service.price_type === 'per_hour' ? '/h' : 
+                                     service.price_type === 'per_visit' ? '/Besuch' : 
+                                     service.price_type === 'per_day' ? '/Tag' : ''}
+                                  </span>
+                                ) : (
+                                  <span className="text-sm text-gray-400">Kein Preis</span>
+                                )}
+                              </div>
                             </div>
-                            {isActive && price && (
-                              <span className="font-semibold text-primary-600">{price} €</span>
-                            )}
-                            {isActive && !price && (
-                              <span className="text-sm text-gray-400">Preis nicht angegeben</span>
-                            )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      ) : (
+                        <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                          <span className="text-gray-400">Keine Leistungen angegeben</span>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {/* Zusätzliche Leistungen */}
-                  {Object.entries(profile.prices || {}).filter(([k, _]) => !defaultServices.includes(k) && k !== 'Anfahrkosten').length > 0 && (
-                    <div className="mb-4">
-                      <span className="font-semibold text-gray-900">Zusätzliche Leistungen:</span>
-                      <div className="mt-2 space-y-2">
-                        {Object.entries(profile.prices || {}).filter(([k, _]) => !defaultServices.includes(k) && k !== 'Anfahrkosten').map(([k, v]: [string, any]) => (
-                          <div key={k} className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <span className="font-medium text-gray-900">{k}</span>
-                            <span className="font-semibold text-primary-600">{v} €</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Anfahrkosten */}
-                  {profile.prices?.['Anfahrkosten'] && (
-                    <div className="mb-4">
-                      <span className="font-semibold text-gray-900">Anfahrkosten:</span>
-                      <div className="mt-2">
-                        <div className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                          <span className="font-medium text-gray-900">Anfahrkosten</span>
-                          <span className="font-semibold text-primary-600">{profile.prices['Anfahrkosten']} €/Km</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Tierarten */}
                   <div className="mb-2">
@@ -3325,6 +3495,16 @@ function CaretakerDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+
+          {/* Profil-Freigabe Status */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Profil-Freigabe Status</h2>
+            </div>
+            
+            <ApprovalStatusCard />
           </div>
 
           {/* Konto löschen */}

@@ -2,26 +2,27 @@
 export interface ServiceCategory {
   id: number;
   name: string;
-  description?: string;
-  icon?: string;
+  description: string;
   sort_order: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-// Service with Category Information
+// Service with Category Information and Price
 export interface CategorizedService {
   name: string;
   category_id: number;
   category_name: string;
+  price?: number; // Optional price for the service
+  price_type?: 'per_hour' | 'per_visit' | 'per_day'; // Type of pricing
 }
 
 // Extended Caretaker Profile Types
 export interface CaretakerProfileWithCategories {
-  id: string;
-  services: string[] | null; // Legacy field for backward compatibility
-  services_with_categories: CategorizedService[] | null; // New categorized services
+  id: string
+  services: string[] | null; // Legacy field for backward compatibility (DEPRECATED)
+  services_with_categories: CategorizedService[] | null; // Unified services with categories and prices
   animal_types: string[] | null;
   availability: any | null;
   bio: string | null;
@@ -36,7 +37,7 @@ export interface CaretakerProfileWithCategories {
   short_term_available: boolean | null;
   languages: string[] | null;
   long_about_me: string | null;
-  prices: any | null;
+  prices: any | null; // Legacy field for backward compatibility (DEPRECATED)
   qualifications: string[] | null;
   rating: number | null;
   review_count: number | null;
@@ -49,14 +50,19 @@ export interface CaretakerProfileWithCategories {
 
 // Service Management Types for UI
 export interface ServiceWithCategory {
-  name: string;
+  name: string
   categoryId: number;
   categoryName: string;
+  price?: number;
+  priceType?: 'per_hour' | 'per_visit' | 'per_day';
 }
 
+// Form data for service management
 export interface ServiceFormData {
   name: string;
   categoryId: number;
+  price?: number;
+  priceType?: 'per_hour' | 'per_visit' | 'per_day';
 }
 
 // Default Service Categories (matching database)
@@ -71,51 +77,37 @@ export const DEFAULT_SERVICE_CATEGORIES = [
   { id: 8, name: 'Allgemein', description: 'Grundlegende Betreuungsleistungen' }
 ] as const;
 
-// Helper functions for service management
-export const ServiceUtils = {
-  // Convert legacy string array to categorized services
-  convertLegacyServices: (services: string[]): CategorizedService[] => {
-    const generalCategory = DEFAULT_SERVICE_CATEGORIES.find(cat => cat.name === 'Allgemein')!;
-    return services.map(service => ({
-      name: service,
-      category_id: generalCategory.id,
-      category_name: generalCategory.name
-    }));
-  },
-
-  // Extract service names from categorized services
-  getServiceNames: (categorizedServices: CategorizedService[]): string[] => {
-    return categorizedServices.map(service => service.name);
-  },
-
-  // Group services by category
-  groupByCategory: (categorizedServices: CategorizedService[]): Record<string, CategorizedService[]> => {
-    return categorizedServices.reduce((acc, service) => {
-      const categoryName = service.category_name;
-      if (!acc[categoryName]) {
-        acc[categoryName] = [];
-      }
-      acc[categoryName].push(service);
-      return acc;
-    }, {} as Record<string, CategorizedService[]>);
-  },
-
-  // Get services for a specific category
-  getServicesByCategory: (categorizedServices: CategorizedService[], categoryName: string): CategorizedService[] => {
-    return categorizedServices.filter(service => service.category_name === categoryName);
+// Helper function to extract services as strings from categorized services
+export function getServicesAsStrings(servicesWithCategories: CategorizedService[] | null): string[] {
+  if (!servicesWithCategories || !Array.isArray(servicesWithCategories)) {
+    return [];
   }
-};
+  return servicesWithCategories.map(service => service.name).filter(Boolean);
+}
 
-// Type guards
-export const isLegacyServices = (services: any): services is string[] => {
-  return Array.isArray(services) && services.every(item => typeof item === 'string');
-};
+// Helper function to extract prices from categorized services
+export function getServicesPrices(servicesWithCategories: CategorizedService[] | null): Record<string, number> {
+  if (!servicesWithCategories || !Array.isArray(servicesWithCategories)) {
+    return {};
+  }
+  
+  const prices: Record<string, number> = {};
+  servicesWithCategories.forEach(service => {
+    if (service.name && service.price !== undefined) {
+      prices[service.name] = service.price;
+    }
+  });
+  
+  return prices;
+}
 
-export const isCategorizedServices = (services: any): services is CategorizedService[] => {
-  return Array.isArray(services) && services.every(item => 
-    typeof item === 'object' && 
-    'name' in item && 
-    'category_id' in item && 
-    'category_name' in item
-  );
-};
+// Helper function to get services by category
+export function getServicesByCategory(
+  servicesWithCategories: CategorizedService[] | null, 
+  categoryName: string
+): CategorizedService[] {
+  if (!servicesWithCategories || !Array.isArray(servicesWithCategories)) {
+    return [];
+  }
+  return servicesWithCategories.filter(service => service.category_name === categoryName);
+}

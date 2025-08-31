@@ -6,6 +6,7 @@ import AnalyticsPanel from '../../components/admin/AnalyticsPanel';
 import BlogCmsPanel from '../../components/admin/BlogCmsPanel';
 import SubscriptionSyncPanel from '../../components/admin/SubscriptionSyncPanel';
 import AdvertisementManagementPanel from '../../components/admin/AdvertisementManagementPanel';
+
 import { EnhancedAdminService, AdminDashboardStats } from '../../lib/admin/enhancedAdminService';
 import { Users, DollarSign, MessageCircle, CreditCard, TrendingUp, Calendar, Database, PieChart, Shield, AlertTriangle, FileText } from 'lucide-react';
 import StripeStatusIndicator from '../../components/ui/StripeStatusIndicator';
@@ -219,6 +220,7 @@ const AdminDashboardPage: React.FC = () => {
                 Werbeverwaltung
               </div>
             </button>
+
           </nav>
         </div>
 
@@ -390,6 +392,8 @@ const AdminDashboardPage: React.FC = () => {
         {activeTab === 'advertisements' && currentAdminId && (
           <AdvertisementManagementPanel currentAdminId={currentAdminId} />
         )}
+
+
 
         {/* System Status */}
         <div className="bg-white rounded-lg shadow p-6">

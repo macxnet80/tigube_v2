@@ -267,6 +267,9 @@ export async function searchCaretakers(filters?: SearchFilters): Promise<Caretak
       query = query.eq('short_term_available', true);
     }
 
+    // Nur freigegebene Caretaker anzeigen
+    query = query.eq('approval_status', 'approved');
+
     // Preis-Filter wird client-seitig angewendet, da die Preise in JSON-Format sind
     // und hourly_rate null ist
 
@@ -298,7 +301,7 @@ export async function searchCaretakers(filters?: SearchFilters): Promise<Caretak
 /**
  * Holt einen spezifischen Tierbetreuer nach ID
  */
-export async function getCaretakerById(id: string): Promise<CaretakerDisplayData | null> {
+export async function getCaretakerById(id: string): Promise<{ data: CaretakerDisplayData | null; error: Error | null }> {
   console.log('🔍 Getting caretaker by ID:', id);
 
   try {
@@ -326,24 +329,26 @@ export async function getCaretakerById(id: string): Promise<CaretakerDisplayData
           user_type
         )
       `)
-      .eq('id', id)
-      .eq('users.user_type', 'caretaker')
-      .single();
+              .eq('id', id)
+        .eq('users.user_type', 'caretaker')
+        .eq('approval_status', 'approved')
+        .single();
 
     if (error) {
       console.error('❌ Error getting caretaker:', error);
-      throw error;
+      return { data: null, error: error as Error };
     }
 
     if (!data) {
-      return null;
+      return { data: null, error: new Error('Caretaker not found') };
     }
 
     console.log('✅ Found caretaker:', data);
-    return transformCaretakerData(data as unknown as CaretakerViewRow);
+    const transformedData = transformCaretakerData(data as unknown as CaretakerViewRow);
+    return { data: transformedData, error: null };
   } catch (error) {
     console.error('❌ Exception in getCaretakerById:', error);
-    throw error;
+    return { data: null, error: error as Error };
   }
 }
 

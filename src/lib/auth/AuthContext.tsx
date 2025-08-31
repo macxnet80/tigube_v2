@@ -133,52 +133,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔍 Starting user profile load...', userId);
       setUserProfile(null); // Clear previous profile state while loading
       
-      // Verbesserte Profile-Loading mit mehreren Versuchen
-      let retryCount = 0;
-      const maxRetries = 7;
+      // Sehr einfache Profile-Loading ohne Retry-Logik
       let profile = null;
       let profileError = null;
 
-      while (retryCount < maxRetries) {
-        if (retryCount > 0) {
-           const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 7000);
-           console.log(`🔄 Waiting ${delay}ms before profile retry ${retryCount + 1}...`);
-           await new Promise(resolve => setTimeout(resolve, delay));
-        }
+      // Nur ein Versuch, kein Retry
+      const result = await userService.getUserProfile(userId);
+      profile = result.data;
+      profileError = result.error;
 
-        const result = await userService.getUserProfile(userId);
-        profile = result.data;
-        profileError = result.error;
-
-        if (profileError) {
-          console.error(`❌ Profile loading error (attempt ${retryCount + 1}):`, profileError);
-        } else if (profile) {
-          console.log('✅ Profile loaded successfully:', profile);
-          
-          // Lade Subscription-Daten
-          try {
-            const userSubscription = await SubscriptionService.getActiveSubscription(userId);
-            setSubscription(userSubscription);
-            console.log('✅ Subscription loaded:', userSubscription);
-          } catch (error) {
-            console.error('❌ Failed to load subscription:', error);
-            setSubscription(null);
-          }
-          
-          setUserProfile(profile); // *** Set profile state on success ***
-          console.log('✅ setUserProfile called with profile:', profile);
-          return { data: profile, error: null }; // Return success early
-        } else {
-          console.warn('⚠️ Profile is null but no error during profile load loop');
+      if (profileError) {
+        console.error('❌ Profile loading error:', profileError);
+        setUserProfile(null);
+        return { data: null, error: profileError };
+      } else if (profile) {
+        console.log('✅ Profile loaded successfully:', profile);
+        
+        // Lade Subscription-Daten
+        try {
+          const userSubscription = await SubscriptionService.getActiveSubscription(userId);
+          setSubscription(userSubscription);
+          console.log('✅ Subscription loaded:', userSubscription);
+        } catch (error) {
+          console.error('❌ Failed to load subscription:', error);
+          setSubscription(null);
         }
-         retryCount++;
+        
+        setUserProfile(profile);
+        console.log('✅ setUserProfile called with profile:', profile);
+        return { data: profile, error: null };
+      } else {
+        console.warn('⚠️ Profile is null but no error');
+        setUserProfile(null);
+        return { data: null, error: new Error('Profile is null') };
       }
-
-      console.error('❌ Profile loading failed after all retries for user:', userId);
-      setUserProfile(null); // Ensure profile is null on final failure
-      // TODO: Handle case where profile cannot be loaded (e.g., redirect to profile creation)
-
-      return { data: null, error: profileError || new Error('Failed to load profile after retries') };
 
   }, []); // Dependencies for useCallback
 
@@ -192,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('🔍 Starting initial session recovery...');
         // Warte kurz um sicherzustellen, dass Supabase bereit ist
-        await new Promise(resolve => setTimeout(resolve, 150));
+        await new Promise(resolve => setTimeout(resolve, 50)); // Reduziere von 150ms auf 50ms
 
         const { data: { session }, error } = await supabase.auth.getSession();
 

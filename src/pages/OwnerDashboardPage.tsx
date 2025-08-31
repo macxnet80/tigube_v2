@@ -141,7 +141,9 @@ function OwnerDashboardPage() {
     email: '',
     plz: '',
     street: '',
-    location: ''
+    location: '',
+    dateOfBirth: '',
+    gender: ''
   });
   const [editVet, setEditVet] = useState(false);
   const [vetData, setVetData] = useState({
@@ -243,6 +245,8 @@ function OwnerDashboardPage() {
         plz: userProfile.plz || '',
         street: userProfile.street || '',
         location: userProfile.city || '',
+        dateOfBirth: userProfile.date_of_birth || '',
+        gender: userProfile.gender || '',
       });
     } else if (user && !authLoading) {
       // Fallback: Setze E-Mail vom Auth-User
@@ -296,7 +300,9 @@ function OwnerDashboardPage() {
               email: user.email || '',
               plz: freshProfile.plz || '',
               street: (freshProfile as any).street || '',
-              location: freshProfile.city || ''
+              location: freshProfile.city || '',
+              dateOfBirth: freshProfile.date_of_birth || '',
+              gender: freshProfile.gender || ''
             });
           }
         } catch (error) {
@@ -976,6 +982,8 @@ function OwnerDashboardPage() {
       // Only include fields that have changed
       if (ownerData.phoneNumber !== (userProfile?.phone_number || '')) dataToUpdate.phoneNumber = ownerData.phoneNumber;
       if (ownerData.street !== (userProfile?.street || '')) dataToUpdate.street = ownerData.street;
+      if (ownerData.dateOfBirth !== (userProfile?.date_of_birth || '')) dataToUpdate.dateOfBirth = ownerData.dateOfBirth;
+      if (ownerData.gender !== (userProfile?.gender || '')) dataToUpdate.gender = ownerData.gender;
 
       // Handle PLZ and City logic
       const plzChanged = ownerData.plz !== (userProfile?.plz || '');
@@ -1040,6 +1048,8 @@ function OwnerDashboardPage() {
         plz: userProfile.plz || '',
         street: userProfile.street || '',
         location: userProfile.city || '',
+        dateOfBirth: userProfile.date_of_birth || '',
+        gender: userProfile.gender || '',
       });
     } else if (user) {
        // Fallback for users without a profile yet
@@ -1049,7 +1059,7 @@ function OwnerDashboardPage() {
         }));
     } else {
        // Should not happen
-       setOwnerData({ phoneNumber: '', email: '', plz: '', street: '', location: '' });
+       setOwnerData({ phoneNumber: '', email: '', plz: '', street: '', location: '', dateOfBirth: '', gender: '' });
     }
     setEditData(false); // Exit edit mode
   };
@@ -1517,6 +1527,25 @@ function OwnerDashboardPage() {
                           <Phone className="h-4 w-4 text-gray-500" />
                           <span className="text-gray-700">{userProfile?.phone_number || '—'}</span>
                         </div>
+                        {userProfile?.date_of_birth && (
+                          <div className="flex items-center gap-3">
+                            <Calendar className="h-4 w-4 text-gray-500" />
+                            <span className="text-gray-700">
+                              {new Date(userProfile.date_of_birth).toLocaleDateString('de-DE')}
+                            </span>
+                          </div>
+                        )}
+                        {userProfile?.gender && (
+                          <div className="flex items-center gap-3">
+                            <User className="h-4 w-4 text-gray-500" />
+                            <span className="text-gray-700">
+                              {userProfile.gender === 'male' ? 'Männlich' : 
+                               userProfile.gender === 'female' ? 'Weiblich' : 
+                               userProfile.gender === 'other' ? 'Divers' : 
+                               userProfile.gender === 'prefer_not_to_say' ? 'Keine Angabe' : userProfile.gender}
+                            </span>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="space-y-3">
@@ -1561,6 +1590,32 @@ function OwnerDashboardPage() {
                             onChange={e => handlePhoneNumberChange(e.target.value, 'phoneNumber')}
                             placeholder="+49 123 456789"
                           />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Geburtsdatum</label>
+                            <input
+                              type="date"
+                              className="input w-full"
+                              value={ownerData.dateOfBirth}
+                              onChange={e => setOwnerData(d => ({ ...d, dateOfBirth: e.target.value }))}
+                              max={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Geschlecht</label>
+                            <select
+                              className="input w-full"
+                              value={ownerData.gender}
+                              onChange={e => setOwnerData(d => ({ ...d, gender: e.target.value }))}
+                            >
+                              <option value="">Bitte wählen</option>
+                              <option value="male">Männlich</option>
+                              <option value="female">Weiblich</option>
+                              <option value="other">Divers</option>
+                              <option value="prefer_not_to_say">Keine Angabe</option>
+                            </select>
+                          </div>
                         </div>
                         <div className="flex gap-2 pt-2">
                           <button

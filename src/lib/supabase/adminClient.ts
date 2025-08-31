@@ -18,7 +18,7 @@ console.log('[Admin Client] Environment check:', {
   keyPreview: serviceRoleKey ? `${serviceRoleKey.substring(0, 10)}...` : 'missing'
 });
 
-// Create admin client with service role key if available
+// Create admin client with service role key if available, otherwise use regular client
 export const adminSupabase = serviceRoleKey && supabaseUrl
   ? (() => {
       console.log('[Admin Client] Using real Supabase client with Service Role Key');
@@ -30,9 +30,15 @@ export const adminSupabase = serviceRoleKey && supabaseUrl
       });
     })()
   : (() => {
-      console.warn('[Admin Client] Service Role Key not found - using mock client for development');
+      console.warn('[Admin Client] Service Role Key not found - using regular client for read access');
+      // Use regular client for read operations, but with limited admin capabilities
       return {
-        // Mock admin client for development with realistic responses
+        // For read operations, use the regular client
+        from: (table: string) => {
+          console.log(`[Admin Client] Using regular client for table: ${table}`);
+          return supabase.from(table);
+        },
+        // For RPC calls, provide mock responses
         rpc: async (functionName: string, params?: any) => {
           console.warn(`[DEV] Mock RPC call: ${functionName}`, params);
           
@@ -78,75 +84,6 @@ export const adminSupabase = serviceRoleKey && supabaseUrl
             default:
               return { data: null, error: { message: `Mock RPC: ${functionName} not implemented` } };
           }
-        },
-        from: (table: string) => {
-          // For read-only operations, delegate to the regular client
-          if (table === 'users' || table === 'conversations' || table === 'messages' || 
-              table === 'billing_history' || table === 'subscriptions' || 
-              table === 'caretaker_profiles') {
-            console.log(`[Admin Client] Delegating ${table} query to regular client for read access`);
-            return supabase.from(table);
-          }
-          
-          // For admin-only tables, return mock implementation
-          return {
-            select: (columns?: string, options?: any) => ({
-              eq: (column: string, value: any) => ({
-                single: async () => {
-                  console.warn(`[DEV] Mock query: ${table}.select(${columns}).eq(${column}, ${value}).single()`);
-                  return { data: null, error: { message: 'Mock response - Service Role Key needed for admin tables' } };
-                },
-                range: async (start: number, end: number) => {
-                  console.warn(`[DEV] Mock query: ${table}.select(${columns}).eq(${column}, ${value}).range(${start}, ${end})`);
-                  return { data: [], error: null, count: 0 };
-                }
-              }),
-              or: (condition: string) => ({
-                gte: (column: string, value: any) => ({
-                  lte: (column: string, value: any) => ({
-                    order: (column: string, options?: any) => ({
-                      range: async (start: number, end: number) => {
-                        console.warn(`[DEV] Mock query: ${table} complex query with range(${start}, ${end})`);
-                        return { data: [], error: null, count: 0 };
-                      }
-                    })
-                  })
-                })
-              }),
-              ilike: (column: string, pattern: string) => ({
-                range: async (start: number, end: number) => {
-                  console.warn(`[DEV] Mock query: ${table}.select().ilike(${column}, ${pattern}).range(${start}, ${end})`);
-                  return { data: [], error: null, count: 0 };
-                }
-              }),
-              range: async (start: number, end: number) => {
-                console.warn(`[DEV] Mock query: ${table}.select(${columns}).range(${start}, ${end})`);
-                return { data: [], error: null, count: 0 };
-              }
-            }),
-            insert: (data: any) => ({
-              select: async () => {
-                console.warn(`[DEV] Mock insert: ${table}`, data);
-                return { data: null, error: null };
-              }
-            }),
-            update: (data: any) => ({
-              eq: (column: string, value: any) => ({
-                select: async () => {
-                  console.warn(`[DEV] Mock update: ${table}.update().eq(${column}, ${value})`, data);
-                  return { data: null, error: null };
-                }
-              })
-            }),
-            delete: () => ({
-              eq: (column: string, value: any) => ({
-                async: () => {
-                  console.warn(`[DEV] Mock delete: ${table}.delete().eq(${column}, ${value})`);
-                  return { data: null, error: null };
-                }
-              })
-            })
-          };
         }
       } as any;
     })();
@@ -161,6 +98,7 @@ export interface AdminUserDetails {
   user_type: 'owner' | 'caretaker';
   city?: string;
   plz?: string;
+  street?: string;
   created_at: string;
   updated_at: string;
   is_suspended: boolean;
@@ -173,6 +111,64 @@ export interface AdminUserDetails {
   subscription_expires_at?: string;
   is_admin?: boolean;
   admin_role?: 'super_admin' | 'admin' | 'moderator' | 'support' | null;
+  approval_status?: 'pending' | 'approved' | 'rejected' | null;
+  // Erweiterte Felder für vollständige Daten
+  profile_picture?: string;
+  date_of_birth?: string;
+  gender?: string;
+  emergency_contact?: string;
+  emergency_phone?: string;
+  // Caretaker-spezifische Felder
+  caretaker_profile?: {
+    bio?: string;
+    services?: any;
+    hourly_rate?: number;
+    availability?: any;
+    experience_years?: number;
+    is_verified?: boolean;
+    rating?: number;
+    review_count?: number;
+    animal_types?: string[];
+    prices?: any;
+    service_radius?: number;
+    home_photos?: string[];
+    qualifications?: string[];
+    experience_description?: string;
+    short_about_me?: string;
+    long_about_me?: string;
+    languages?: string[];
+    is_commercial?: boolean;
+    company_name?: string;
+    tax_number?: string;
+    vat_id?: string;
+    short_term_available?: boolean;
+    overnight_availability?: any;
+    services_with_categories?: any;
+  };
+  // Owner-spezifische Felder
+  owner_profile?: {
+    pets?: Array<{
+      id: string;
+      name: string;
+      type: string;
+      breed?: string;
+      age?: number;
+      weight?: number;
+      photo_url?: string;
+      description?: string;
+      gender?: string;
+      neutered?: boolean;
+    }>;
+    preferences?: {
+      services: string[];
+      other_services?: string;
+      vet_info?: string;
+      emergency_contact_name?: string;
+      emergency_contact_phone?: string;
+      care_instructions?: string;
+      share_settings?: any;
+    };
+  };
 }
 
 export interface AdminCaretakerProfile {
