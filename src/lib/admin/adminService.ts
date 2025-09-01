@@ -10,6 +10,7 @@ export interface AdminUser {
   last_name: string;
   is_admin: boolean;
   admin_role: AdminRole | null;
+  user_type: string | null;
   totp_secret: string | null;
   last_admin_login: string | null;
   created_at: string;
@@ -94,6 +95,7 @@ export class AdminService {
           last_name,
           is_admin,
           admin_role,
+          user_type,
           totp_secret,
           last_admin_login,
           created_at

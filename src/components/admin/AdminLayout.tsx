@@ -53,8 +53,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   }
 
   const handleLogout = () => {
-    // Redirect to main site
-    window.location.href = '/';
+    // Redirect to appropriate user dashboard based on user type
+    if (adminUser?.user_type === 'caretaker') {
+      window.location.href = '/caretaker-dashboard';
+    } else if (adminUser?.user_type === 'owner') {
+      window.location.href = '/dashboard-owner';
+    } else {
+      // Fallback to main dashboard if user type is unknown
+      window.location.href = '/dashboard';
+    }
   };
 
   return (
@@ -112,7 +119,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
                       <LogOut className="h-4 w-4 mr-2" />
-                      Zur Hauptseite
+                      Zurück zum Profil
                     </button>
                   </div>
                 </div>
