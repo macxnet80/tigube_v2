@@ -55,7 +55,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const handleLogout = () => {
     // Redirect to appropriate user dashboard based on user type
     if (adminUser?.user_type === 'caretaker') {
-      window.location.href = '/caretaker-dashboard';
+      window.location.href = '/dashboard-caretaker';
     } else if (adminUser?.user_type === 'owner') {
       window.location.href = '/dashboard-owner';
     } else {
