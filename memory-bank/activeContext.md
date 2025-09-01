@@ -2,98 +2,88 @@
 
 ## 🎯 Aktueller Fokus
 
-**Hauptaufgabe**: Datenbankstruktur analysiert und dokumentiert  
-**Status**: Vollständige Datenbankanalyse abgeschlossen, neue databaseStructure.md erstellt  
-**Nächster Schritt**: Memory Bank mit Datenbank-Erkenntnissen aktualisieren
+**Hauptaufgabe**: Search Card Werbung in SearchPage korrekt implementiert  
+**Status**: Search Card Werbung funktioniert, Memory Bank Update läuft  
+**Nächster Schritt**: Memory Bank mit Search Card Werbung-Erkenntnissen aktualisieren
 
 ### Aktuelle Arbeiten
-- ✅ **BEHOBEN**: Öffentliche Betreuer-Suche für anonyme Benutzer
-- ✅ **BEHOBEN**: RLS-Policy-Problem in users-Tabelle
-- ✅ **BEHOBEN**: BetreuerProfilePage mit Anmeldung-Aufforderung
-- ✅ **BEHOBEN**: Migration für öffentliche Betreuer-Suche erstellt
-- ✅ **ABGESCHLOSSEN**: Vollständige Supabase-Datenbankanalyse
-- ✅ **ABGESCHLOSSEN**: Neue databaseStructure.md erstellt
-- 🔄 **IN ARBEIT**: Memory Bank mit Datenbank-Erkenntnissen aktualisieren
+- ✅ **BEHOBEN**: Search Card Werbung zwischen Suchergebnissen implementiert
+- ✅ **BEHOBEN**: Search Card Höhe an Profil-Karten angepasst
+- ✅ **BEHOBEN**: Button-Positionierung korrigiert (unten, links)
+- ✅ **BEHOBEN**: "Werbung" Badge entfernt, "Gesponsert" rechts positioniert
+- 🔄 **IN ARBEIT**: Memory Bank mit Search Card Werbung-Erkenntnissen aktualisieren
 
 ### Kürzlich abgeschlossen
-- ✅ **Öffentliche Betreuer-Suche**: Nicht eingeloggte Benutzer können jetzt Betreuer suchen
-- ✅ **RLS-Policy-Problem**: Datenbankzugriff für anonyme Benutzer behoben
-- ✅ **BetreuerProfilePage**: Anmeldung-Aufforderung für nicht eingeloggte Benutzer
-- ✅ **Datenbankanalyse**: Vollständige Struktur aller 25+ Tabellen dokumentiert
-- ✅ **Supabase-Integration**: Aktuelle Datenbankstruktur analysiert
+- ✅ **Search Card Werbung**: Vollständige Implementierung zwischen Suchergebnissen
+- ✅ **AdvertisementBanner**: Anpassung für search_results Platzierung
+- ✅ **Layout-Konsistenz**: Einheitliche Höhe mit Profil-Karten
+- ✅ **Button-Positionierung**: Button immer unten, "Gesponsert" rechts
+- ✅ **Admin-Navigation**: Desktop- und Mobile-Header mit Admin-Link für Admins
 
-### Neue Erkenntnisse: Datenbankstruktur
+### Neue Erkenntnisse: Search Card Werbung
 
-#### Umfang der Datenbank
-- **25+ Tabellen** mit vollständiger RLS-Implementierung
-- **3 Views** für optimierte Abfragen (caretaker_search_view, advertisements_with_formats, stripe_subscription_details)
-- **PostgreSQL 15.8.1** auf Supabase mit modernen Features
+#### Search Card-Implementierung
+- **Platzierung**: `placement="search_results"` für zwischen Suchergebnissen
+- **Höhe**: Einheitliche Höhe mit Profil-Karten durch Flexbox-Layout
+- **Bild**: Quadratisches Bild (`aspect-square`) wie Profil-Karten
+- **Content**: Strukturierter Content mit Titel, Beschreibung, Button
 
-#### Kern-Architektur
-- **User Management**: Zentrale users-Tabelle mit user_type (owner/caretaker/admin)
-- **Betreuer-System**: Vollständige Profile mit Services, Verfügbarkeit, Bewertungen
-- **Haustier-Management**: Pet-Profile mit Owner-Verknüpfung
-- **Buchungssystem**: Care Requests → Bookings → Reviews Pipeline
-- **Messaging**: Konversationen und Nachrichten zwischen Benutzern
-- **Admin-System**: Audit-Logs, User-Notes, Support-Tickets
-
-#### Technische Highlights
-- **RLS aktiviert** für alle Tabellen (Sicherheit)
-- **JSONB-Felder** für flexible Datenstrukturen (Services, Verfügbarkeit)
-- **Geografische Daten** mit PostGIS (Standort-Suche)
-- **Stripe-Integration** für Abonnements
-- **Advertisement-System** für dynamische Werbung
+#### Technische Details
+- **AdvertisementBanner**: Angepasst für search_results mit speziellem Layout
+- **Flexbox-Layout**: `flex flex-col flex-1` für Button-Positionierung
+- **Bedingte Rendering**: Verschiedene Layouts für verschiedene Platzierungen
+- **Button-Position**: Immer unten durch Spacer (`flex-1`)
 
 ### Nächste Schritte
 
 #### Kurzfristig (Diese Woche)
-1. **Memory Bank Update**: Alle Dateien mit Datenbank-Erkenntnissen aktualisieren
-2. **RLS-Policy Test**: Öffentliche Betreuer-Suche in Produktion testen
-3. **Performance-Optimierung**: caretaker_search_view optimieren
+1. **Memory Bank Update**: Alle Dateien mit Search Card Werbung-Erkenntnissen aktualisieren
+2. **Werbung-Test**: Search Card Werbung in verschiedenen Szenarien testen
+3. **Performance**: Werbung-Loading-Performance optimieren
 
 #### Mittelfristig (Nächste 2 Wochen)
-1. **Datenbank-Indizes**: Performance für häufige Suchabfragen optimieren
-2. **Analytics-Views**: Erweiterte Berichte für Admins
-3. **Cleanup-Jobs**: Automatisierte Wartung für alte Daten
+1. **Buchungssystem**: Grundfunktionalität implementieren
+2. **Bewertungssystem**: Review-Flow vervollständigen
+3. **Admin-Dashboard**: Erweiterte Admin-Funktionen
 
 #### Langfristig (Nächster Monat)
-1. **Datenbank-Partitionierung**: Für große Datenmengen vorbereiten
-2. **Erweiterte Features**: Buchungssystem, Zahlungsabwicklung
-3. **Mobile App**: Datenbank-API für mobile Nutzung optimieren
+1. **Payment System**: Zahlungsabwicklung implementieren
+2. **Advanced Features**: Erweiterte Plattform-Features
+3. **Mobile App**: Native Mobile-Anwendung
 
 ## 🔧 Technische Details
 
-### Datenbank-Performance
-- **Aktuelle Zeilen**: ~100+ Datensätze (Entwicklungsphase)
-- **Indizes**: Primärschlüssel + Foreign Keys automatisch indiziert
-- **Views**: Optimiert für häufige Suchabfragen
-- **RLS**: Alle Tabellen mit Row Level Security
+### Search Card Werbung-Architektur
+- **AdvertisementBanner**: Angepasst für search_results Platzierung
+- **Flexbox-Layout**: `flex flex-col flex-1` für einheitliche Höhe
+- **Bedingte Rendering**: Verschiedene Layouts für verschiedene Platzierungen
+- **Button-Positionierung**: Immer unten durch Spacer-Mechanismus
 
-### Sicherheitsaspekte
-- **Öffentliche Daten**: Betreuer-Profile für Suche sichtbar
-- **Private Daten**: Nur für berechtigte Benutzer zugänglich
-- **Admin-Funktionen**: Vollständige Audit-Logs
-- **Datenschutz**: RLS-Policies für alle Zugriffe
+### Layout-Konsistenz
+- **Einheitliche Höhe**: Search Card hat gleiche Höhe wie Profil-Karten
+- **Quadratisches Bild**: `aspect-square` für konsistente Bildgröße
+- **Strukturierter Content**: Titel, Beschreibung, Button in definierter Reihenfolge
+- **Responsive Design**: Mobile- und Desktop-optimiert
 
 ### Integration-Status
-- **Supabase**: ✅ Vollständig integriert
-- **Stripe**: ✅ Webhook-Integration funktioniert
-- **Auth**: ✅ Supabase Auth mit RLS
-- **Storage**: ✅ Für Bilder und Dokumente
+- **SearchPage.tsx**: ✅ Search Card Werbung vollständig integriert
+- **AdvertisementBanner.tsx**: ✅ search_results Layout implementiert
+- **Platzierung**: ✅ Alle 5. Stelle und am Ende der Suchergebnisse
+- **Layout**: ✅ Einheitliche Höhe mit Profil-Karten erreicht
 
 ## 📊 Projekt-Status
 
-### Version 0.8.1 - Öffentliche Betreuer-Suche
-- **Frontend**: ✅ Vollständig implementiert
-- **Backend**: ✅ RLS-Policies korrigiert
-- **Datenbank**: ✅ Alle Tabellen analysiert und dokumentiert
-- **Testing**: 🔄 In Produktion zu testen
+### Version 0.8.4 - Search Card Werbung
+- **Frontend**: ✅ Search Card Werbung in SearchPage implementiert
+- **Layout**: ✅ Einheitliche Höhe mit Profil-Karten erreicht
+- **Platzierung**: ✅ Alle 5. Stelle und am Ende der Suchergebnisse
+- **Testing**: 🔄 Search Card Werbung in verschiedenen Szenarien zu testen
 
-### Datenbank-Dokumentation
-- **Tabellen**: ✅ Alle 25+ Tabellen dokumentiert
-- **Beziehungen**: ✅ Foreign Key-Constraints dokumentiert
-- **Views**: ✅ Alle 3 Views analysiert
-- **RLS-Policies**: ✅ Sicherheitsmodell dokumentiert
+### Werbung-System-Status
+- **AdvertisementBanner**: ✅ search_results Layout implementiert
+- **Platzierung**: ✅ 3 verschiedene Werbeplätze funktionieren
+- **Layout-Konsistenz**: ✅ Einheitliche Höhe erreicht
+- **Button-Positionierung**: ✅ Button immer unten positioniert
 
 ### Nächste Version (0.9.0)
 - **Buchungssystem**: Grundfunktionalität implementieren
@@ -104,45 +94,45 @@
 ## 🎯 Prioritäten
 
 ### Höchste Priorität
-1. **Memory Bank Update** - Alle Erkenntnisse dokumentieren
-2. **Produktionstest** - Öffentliche Betreuer-Suche validieren
-3. **Performance-Optimierung** - Datenbankabfragen optimieren
+1. **Memory Bank Update** - Alle Search Card Werbung-Erkenntnisse dokumentieren
+2. **Werbung-Test** - Search Card Werbung in verschiedenen Szenarien testen
+3. **Performance** - Werbung-Loading-Performance optimieren
 
 ### Mittlere Priorität
 1. **Buchungssystem** - Grundfunktionalität implementieren
-2. **Admin-Features** - Dashboard erweitern
-3. **Analytics** - Benutzer-Verhalten analysieren
+2. **Bewertungssystem** - Review-Flow vervollständigen
+3. **Admin-Dashboard** - Erweiterte Admin-Funktionen
 
 ### Niedrige Priorität
-1. **Mobile App** - Datenbank-API vorbereiten
-2. **Erweiterte Features** - Premium-Funktionen
-3. **Skalierung** - Partitionierung und Performance
+1. **Payment System** - Zahlungsabwicklung implementieren
+2. **Advanced Features** - Erweiterte Plattform-Features
+3. **Mobile App** - Native Mobile-Anwendung
 
 ## 📝 Dokumentation
 
-### Neue Dateien
-- **databaseStructure.md**: Vollständige Datenbankstruktur
-- **Migration**: 20250208000000_fix_public_caretaker_search_access.sql
+### Aktualisierte Dateien
+- **SearchPage.tsx**: Search Card Werbung zwischen Suchergebnissen implementiert
+- **AdvertisementBanner.tsx**: search_results Layout mit einheitlicher Höhe implementiert
 
 ### Zu aktualisierende Dateien
 - **activeContext.md**: ✅ Aktuell aktualisiert
-- **progress.md**: Mit Datenbank-Erkenntnissen aktualisieren
-- **systemPatterns.md**: Datenbank-Architektur hinzufügen
-- **techContext.md**: Supabase-Integration erweitern
+- **progress.md**: Mit Search Card Werbung-Erkenntnissen aktualisieren
+- **systemPatterns.md**: AdvertisementBanner-Patterns hinzufügen
+- **techContext.md**: Werbung-Integration erweitern
 
 ### Wichtige Erkenntnisse
-- **Datenbank ist produktionsbereit** mit vollständiger RLS-Implementierung
-- **25+ Tabellen** decken alle geplanten Features ab
-- **Views optimiert** für häufige Abfragen (Suche, Werbung)
-- **Stripe-Integration** funktioniert bereits
-- **Admin-System** vollständig implementiert
+- **Search Card Werbung funktioniert** mit einheitlicher Höhe
+- **AdvertisementBanner angepasst** für search_results Platzierung
+- **Flexbox-Layout implementiert** für Button-Positionierung
+- **Layout-Konsistenz erreicht** mit Profil-Karten
+- **3 Werbeplätze funktionieren** korrekt
 
 ## 🚀 Ausblick
 
 ### Kurzfristige Ziele (Diese Woche)
 - Memory Bank vollständig aktualisiert
-- Öffentliche Betreuer-Suche in Produktion getestet
-- Performance der Datenbankabfragen optimiert
+- Search Card Werbung in verschiedenen Szenarien getestet
+- Werbung-Loading-Performance optimiert
 
 ### Mittelfristige Ziele (Nächste 2 Wochen)
 - Buchungssystem implementiert
@@ -150,12 +140,12 @@
 - Admin-Dashboard erweitert
 
 ### Langfristige Ziele (Nächster Monat)
-- Mobile App vorbereitet
-- Skalierung der Datenbank geplant
-- Erweiterte Premium-Features implementiert
+- Payment System implementiert
+- Advanced Features entwickelt
+- Mobile App gestartet
 
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: Datenbankanalyse abgeschlossen, Memory Bank Update läuft  
+**Status**: Search Card Werbung implementiert, Memory Bank Update läuft  
 **Nächste Überprüfung**: Nach Memory Bank Update

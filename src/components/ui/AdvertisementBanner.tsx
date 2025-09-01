@@ -148,6 +148,9 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
           if (placement === 'search_filter_box' && ad.display_width === 384 && ad.display_height === 480) {
             return true; // Search Card Filter Box Format
           }
+          if (placement === 'search_results' && ad.display_width === 384 && ad.display_height === 480) {
+            return true; // Search Card Results Format (gleiche Größe wie search_filter_box)
+          }
           if (placement === 'owner_dashboard' && ad.display_width === 970 && ad.display_height === 90) {
             return true; // Owner Dashboard Banner Format
           }
@@ -267,12 +270,12 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
   return (
     <div
       ref={bannerRef}
-      className={`relative bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 ${className}`}
+      className={`relative bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 ${className} ${placement === 'search_results' ? 'flex flex-col' : ''}`}
     >
       {/* Advertisement content */}
       <div
         onClick={handleClick}
-        className="cursor-pointer block"
+        className={`cursor-pointer block ${placement === 'search_results' ? 'flex flex-col flex-1' : ''}`}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
@@ -282,13 +285,13 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
           }
         }}
       >
-        {/* Image */}
+        {/* Image - für search_results quadratisch wie Profil-Karten */}
         {advertisement.image_url && (
-          <div className="relative w-full h-56 bg-gray-100">
+          <div className={`relative w-full ${placement === 'search_results' ? 'aspect-square' : 'h-56'} bg-gray-100`}>
             <img
               src={advertisement.image_url}
               alt={advertisement.title}
-              className="w-full h-full object-contain object-center"
+              className={`w-full h-full object-contain object-center ${placement === 'search_results' ? 'rounded-t-xl' : ''}`}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
@@ -297,34 +300,70 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
           </div>
         )}
 
-        {/* Content */}
-        <div className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h3 className="font-semibold text-gray-900 text-sm mb-1">
+        {/* Content - für search_results strukturiert wie Profil-Karten */}
+        <div className={`${placement === 'search_results' ? 'p-5 flex flex-col flex-1' : 'p-4'}`}>
+          {placement === 'search_results' ? (
+            // Strukturiert wie Profil-Karten für einheitliche Höhe
+            <>
+              {/* Titel */}
+              <h3 className="font-semibold text-gray-900 text-base mb-2">
                 {advertisement.title}
               </h3>
               
+              {/* Beschreibung - 3 Zeilen wie Bio */}
               {advertisement.description && (
-                <p className="text-gray-600 text-xs mb-3 line-clamp-2">
+                <p className="text-gray-700 text-sm line-clamp-3 leading-relaxed mb-4">
                   {advertisement.description}
                 </p>
               )}
-
-              {/* CTA Button */}
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-md hover:bg-primary-700 transition-colors duration-200">
-                  {advertisement.cta_text || 'Mehr erfahren'}
-                  <ExternalLink className="w-3 h-3 ml-1" />
-                </span>
+              
+              {/* Spacer um Button nach unten zu drücken */}
+              <div className="flex-1"></div>
+              
+              {/* CTA Button - immer ganz unten */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="inline-flex items-center px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-md hover:bg-primary-700 transition-colors duration-200">
+                    {advertisement.cta_text || 'Mehr erfahren'}
+                    <ExternalLink className="w-3 w-3 ml-1" />
+                  </span>
+                  
+                  {/* Sponsored label - rechts */}
+                  <span className="text-xs text-gray-400 font-medium">
+                    Gesponsert
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            // Standard-Layout für andere Platzierungen
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                  {advertisement.title}
+                </h3>
                 
-                {/* Sponsored label */}
-                <span className="text-xs text-gray-400 font-medium">
-                  Gesponsert
-                </span>
+                {advertisement.description && (
+                  <p className="text-gray-600 text-xs mb-3 line-clamp-2">
+                    {advertisement.description}
+                  </p>
+                )}
+
+                {/* CTA Button */}
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-md hover:bg-primary-700 transition-colors duration-200">
+                    {advertisement.cta_text || 'Mehr erfahren'}
+                    <ExternalLink className="w-3 h-3 ml-1" />
+                  </span>
+                  
+                  {/* Sponsored label */}
+                  <span className="text-xs text-gray-400 font-medium">
+                    Gesponsert
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

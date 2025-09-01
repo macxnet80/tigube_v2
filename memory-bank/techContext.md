@@ -900,8 +900,767 @@ const trackFeatureUsage = (feature: string, action: string) => {
 };
 ```
 
+## Admin-Integration & Navigation
+
+### Admin-System-Architektur
+
+#### Admin-App-Isolation
+```typescript
+// Separate Admin-Anwendung (admin.tsx)
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import AdminApp from './AdminApp';
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <BrowserRouter>
+      <AdminApp />
+    </BrowserRouter>
+  </React.StrictMode>,
+);
+```
+
+**Vorteile**:
+- Vollständige Admin-App-Isolation
+- Eigenes Auth-System für Admins
+- Separate Admin-Routen und -Komponenten
+- Unabhängige Admin-Entwicklung
+
+#### Admin-Routing-Struktur
+```typescript
+// AdminApp.tsx - Admin-spezifisches Routing
+function AdminApp() {
+  return (
+    <AuthProvider>
+      <NotificationProvider>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/admin/*" element={<AdminDashboardPage />} />
+            <Route path="*" element={<AdminDashboardPage />} />
+          </Routes>
+        </Suspense>
+      </NotificationProvider>
+    </AuthProvider>
+  );
+}
+```
+
+**Routing-Features**:
+- Alle Admin-Routen führen zum Admin-Dashboard
+- Lazy Loading für Admin-Komponenten
+- Separate Auth- und Notification-Provider
+
+### Admin-Status-Erkennung
+
+#### useAdmin Hook Implementation
+```typescript
+// src/lib/admin/useAdmin.ts
+export const useAdmin = () => {
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const checkAdminStatus = async () => {
+    try {
+      setLoading(true);
+      const isAdminUser = await AdminService.checkAdminAccess();
+      
+      if (isAdminUser) {
+        const currentAdmin = await AdminService.getCurrentAdmin();
+        setAdminUser(currentAdmin);
+        setIsAdmin(true);
+      } else {
+        setAdminUser(null);
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setAdminUser(null);
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    adminUser,
+    isAdmin,
+    loading,
+    hasPermission,
+    logAction,
+    refreshAdminStatus: checkAdminStatus
+  };
+};
+```
+
+**Hook-Features**:
+- Automatische Admin-Status-Prüfung
+- Admin-User-Details-Verwaltung
+- Berechtigungsprüfung und Action-Logging
+- Status-Refresh-Funktionalität
+
+#### Admin-Berechtigungen-System
+```typescript
+// Granulare Admin-Berechtigungen
+export const useAdminPermissions = () => {
+  const { adminUser, hasPermission } = useAdmin();
+
+  return {
+    canViewUsers: hasPermission('users.read'),
+    canEditUsers: hasPermission('users.write'),
+    canDeleteUsers: hasPermission('users.delete'),
+    canViewRevenue: hasPermission('revenue.read'),
+    canViewAnalytics: hasPermission('analytics.read'),
+    canManageAdvertising: hasPermission('advertising.write'),
+    canModerateContent: hasPermission('content.moderate'),
+    canViewAuditLogs: hasPermission('audit.read'),
+    isSuperAdmin: adminUser?.admin_role === 'super_admin',
+    isAdmin: adminUser?.admin_role === 'admin',
+    isModerator: adminUser?.admin_role === 'moderator',
+    isSupport: adminUser?.admin_role === 'support'
+  };
+};
+```
+
+**Berechtigungs-Features**:
+- Rollen-basierte Zugriffskontrolle
+- Granulare Berechtigungen für verschiedene Aktionen
+- Admin-Rollen-Hierarchie (Super Admin → Admin → Moderator → Support)
+- Flexible Berechtigungsverwaltung
+
+### Admin-Navigation-Integration
+
+#### Header-Integration Pattern
+```typescript
+// src/components/layout/Header.tsx
+function Header() {
+  const { isAdmin } = useAdmin();
+  
+  return (
+    <nav className="hidden md:flex items-center space-x-8">
+      {/* Bestehende Navigation */}
+      {!isPremiumUser && (
+        <NavLink to="/mitgliedschaften">
+          Mitgliedschaften
+        </NavLink>
+      )}
+      
+      {/* Admin-Link zwischen bestehenden Links */}
+      {isAdmin && (
+        <a
+          href="/admin.html"
+          className={cn(
+            'inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-200',
+            'border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-800'
+          )}
+        >
+          Admin
+        </a>
+      )}
+      
+      {/* Weitere Navigation */}
+      <Link to="/nachrichten">
+        Nachrichten
+      </Link>
+    </nav>
+  );
+}
+```
+
+**Integration-Features**:
+- Nahtlose Integration in bestehende Navigation
+- Bedingte Anzeige basierend auf Admin-Status
+- Konsistente Styling mit bestehenden Nav-Links
+- Responsive Design für alle Bildschirmgrößen
+
+#### Mobile-Navigation-Integration
+```typescript
+// Mobile Admin-Navigation
+{isMenuOpen && (
+  <div className="md:hidden">
+    <div className="pt-2 pb-4 space-y-1 animate-fade-in">
+      {/* Bestehende Mobile-Links */}
+      
+      {/* Admin-Link für Mobile */}
+      {isAdmin && (
+        <a 
+          href="/admin.html" 
+          className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+        >
+          Admin
+        </a>
+      )}
+      
+      {/* Weitere Mobile-Links */}
+    </div>
+  </div>
+)}
+```
+
+**Mobile-Features**:
+- Touch-optimierte Admin-Navigation
+- Konsistente Mobile-Erfahrung
+- Responsive Design für alle Bildschirmgrößen
+- Einheitliche Styling-Patterns
+
+### Admin-Service-Integration
+
+#### AdminService Implementation
+```typescript
+// src/lib/admin/adminService.ts
+export class AdminService {
+  static async checkAdminAccess(): Promise<boolean> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+      
+      const { data: profile } = await supabase
+        .from('users')
+        .select('is_admin, admin_role')
+        .eq('id', user.id)
+        .single();
+      
+      return profile?.is_admin === true;
+    } catch (error) {
+      console.error('Error checking admin access:', error);
+      return false;
+    }
+  }
+
+  static async getCurrentAdmin(): Promise<AdminUser | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      
+      const { data: profile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .eq('is_admin', true)
+        .single();
+      
+      return profile;
+    } catch (error) {
+      console.error('Error getting current admin:', error);
+      return null;
+    }
+  }
+}
+```
+
+**Service-Features**:
+- Server-seitige Admin-Status-Validierung
+- Sichere Admin-Erkennung über Datenbank
+- Fehlerbehandlung für Admin-Operationen
+- Admin-User-Details-Verwaltung
+
+### Admin-Sicherheits-Implementierung
+
+#### Frontend-Sicherheit
+```typescript
+// Keine Admin-Informationen im Frontend für Nicht-Admins
+const Header = () => {
+  const { isAdmin } = useAdmin();
+  
+  // Admin-Link nur bei Admin-Status anzeigen
+  const adminNavigation = isAdmin ? (
+    <a href="/admin.html">Admin</a>
+  ) : null;
+  
+  return (
+    <header>
+      <nav>
+        {/* Öffentliche Navigation */}
+        {adminNavigation}
+        {/* Weitere Navigation */}
+      </nav>
+    </header>
+  );
+};
+```
+
+**Sicherheitsaspekte**:
+- Keine Admin-Informationen im DOM für Nicht-Admins
+- Bedingte Rendering für Admin-Features
+- Server-seitige Admin-Status-Validierung
+- Vollständige Admin-App-Isolation
+
+#### Admin-App-Sicherheit
+```typescript
+// Separate Admin-App mit eigenem Auth-System
+// admin.tsx
+function AdminApp() {
+  return (
+    <AuthProvider>
+      <NotificationProvider>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+            <Route path="/admin/*" element={<AdminDashboardPage />} />
+          </Routes>
+        </Suspense>
+      </NotificationProvider>
+    </AuthProvider>
+  );
+}
+```
+
+**Sicherheits-Features**:
+- Vollständige Admin-App-Isolation
+- Eigenes Auth-System für Admins
+- Separate Admin-Routen und -Komponenten
+- Unabhängige Admin-Entwicklung
+
+### Admin-Performance-Optimierung
+
+#### Admin-Status-Caching
+```typescript
+// Admin-Status-Caching für bessere Performance
+export const useAdmin = () => {
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  // Admin-Status nur einmal prüfen
+  useEffect(() => {
+    checkAdminStatus();
+  }, []);
+
+  const checkAdminStatus = async () => {
+    // Nur prüfen wenn noch nicht geprüft
+    if (adminUser !== null || isAdmin !== false) return;
+    
+    try {
+      setLoading(true);
+      const isAdminUser = await AdminService.checkAdminAccess();
+      
+      if (isAdminUser) {
+        const currentAdmin = await AdminService.getCurrentAdmin();
+        setAdminUser(currentAdmin);
+        setIsAdmin(true);
+      } else {
+        setAdminUser(null);
+        setIsAdmin(false);
+      }
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setAdminUser(null);
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { adminUser, isAdmin, loading, refreshAdminStatus: checkAdminStatus };
+};
+```
+
+**Performance-Features**:
+- Admin-Status-Caching
+- Vermeidung unnötiger API-Aufrufe
+- Optimierte Admin-Status-Prüfung
+- Effiziente Admin-Navigation
+
+## Werbung-Integration & AdvertisementBanner
+
+### AdvertisementBanner-Architektur
+
+#### Komponenten-Struktur
+```typescript
+// AdvertisementBanner.tsx - Hauptkomponente für alle Werbeplätze
+interface AdvertisementBannerProps {
+  className?: string;
+  targetingOptions?: TargetingOptions;
+  placement?: Placement;
+}
+
+const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
+  className = '',
+  targetingOptions = {},
+  placement = 'profile_sidebar'
+}) => {
+  const [advertisement, setAdvertisement] = useState<Advertisement | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [impressionTracked, setImpressionTracked] = useState(false);
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+
+  // Lade Werbung basierend auf Platzierung und Targeting
+  useEffect(() => {
+    loadAdvertisement();
+  }, [placement]);
+
+  return (
+    <div ref={bannerRef} className={`relative bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200 ${className}`}>
+      {/* Werbung-Content mit platzierungs-spezifischem Layout */}
+    </div>
+  );
+};
+```
+
+**Zweck**: Zentrale Komponente für alle Werbeplätze mit platzierungs-spezifischem Layout
+**Vorteile**: Wiederverwendbare Komponente, konsistente Werbung-Darstellung
+
+#### Platzierungs-spezifische Layouts
+```typescript
+// Bedingte Layouts basierend auf Platzierung
+{placement === 'search_results' ? (
+  // Search Card Layout - einheitliche Höhe mit Profil-Karten
+  <div className="flex flex-col h-full">
+    {/* Quadratisches Bild */}
+    <div className="relative w-full aspect-square">
+      <img className="w-full h-full object-contain object-center rounded-t-xl" />
+    </div>
+    
+    {/* Content mit Flexbox-Layout */}
+    <div className="p-5 flex flex-col flex-1">
+      <h3 className="font-semibold text-gray-900 text-base mb-2">
+        {advertisement.title}
+      </h3>
+      
+      {advertisement.description && (
+        <p className="text-gray-700 text-sm line-clamp-3 leading-relaxed mb-4">
+          {advertisement.description}
+        </p>
+      )}
+      
+      {/* Spacer für Button-Positionierung */}
+      <div className="flex-1"></div>
+      
+      {/* Button und "Gesponsert" */}
+      <div className="flex justify-between items-center">
+        <span className="inline-flex items-center px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-md">
+          {advertisement.cta_text || 'Mehr erfahren'}
+        </span>
+        <span className="text-xs text-gray-400 font-medium">
+          Gesponsert
+        </span>
+      </div>
+    </div>
+  </div>
+) : (
+  // Standard-Layout für andere Platzierungen
+  <div className="flex items-start justify-between">
+    {/* Standard-Content */}
+  </div>
+)}
+```
+
+**Zweck**: Verschiedene Layouts für verschiedene Werbeplätze
+**Vorteile**: Optimierte Darstellung für jeden Kontext, einheitliche Höhe bei Search Cards
+
+### Werbung-Service-Integration
+
+#### AdvertisementService
+```typescript
+// src/lib/supabase/advertisementService.ts
+export class AdvertisementService {
+  static async getTargetedAdvertisements(
+    adType: string,
+    targetingOptions: TargetingOptions,
+    limit: number = 1
+  ): Promise<{ data: Advertisement[] | null; error: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('advertisements')
+        .select(`
+          *,
+          advertisement_formats (
+            name,
+            width,
+            height,
+            placement,
+            function_description
+          )
+        `)
+        .eq('ad_type', adType)
+        .eq('is_active', true)
+        .limit(limit);
+
+      if (error) throw error;
+
+      // Filtere nach Targeting-Optionen
+      const filteredData = data?.filter(ad => 
+        this.matchesTargeting(ad, targetingOptions)
+      ) || [];
+
+      return { data: filteredData, error: null };
+    } catch (error) {
+      console.error('Error fetching advertisements:', error);
+      return { data: null, error };
+    }
+  }
+
+  private static matchesTargeting(ad: Advertisement, options: TargetingOptions): boolean {
+    // Implementierung der Targeting-Logik
+    if (options.petTypes && ad.target_pet_types) {
+      return options.petTypes.some(petType => 
+        ad.target_pet_types.includes(petType)
+      );
+    }
+    return true;
+  }
+}
+```
+
+**Zweck**: Zentrale Verwaltung von Werbung-Daten und Targeting-Logik
+**Vorteile**: Konsistente Werbung-Auswahl, kontextbezogene Targeting
+
+#### Targeting-System
+```typescript
+// Targeting-Optionen für kontextbezogene Werbung
+interface TargetingOptions {
+  petTypes?: string[];           // Haustierarten aus Suchfiltern
+  location?: string;             // Standort aus Suchfiltern
+  subscriptionType?: 'free' | 'premium'; // Abo-Typ des Benutzers
+}
+
+// Targeting in SearchPage
+const targetingOptions: TargetingOptions = {
+  petTypes: selectedPetType ? [selectedPetType] : undefined,
+  location: location || undefined,
+  subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+};
+```
+
+**Zweck**: Kontextbezogene Werbung basierend auf Benutzerverhalten
+**Vorteile**: Höhere Relevanz, bessere Conversion-Raten
+
+### Werbung-Performance-Optimierung
+
+#### Lazy Loading & Caching
+```typescript
+// AdvertisementBanner mit optimierter Performance
+const AdvertisementBanner = ({ placement, targetingOptions }) => {
+  const [advertisement, setAdvertisement] = useState<Advertisement | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Memoize targeting options to prevent unnecessary re-renders
+  const memoizedTargetingOptions = useMemo(() => {
+    return {
+      petTypes: targetingOptions.petTypes || [],
+      location: targetingOptions.location || '',
+      subscriptionType: targetingOptions.subscriptionType || 'free'
+    };
+  }, [targetingOptions.petTypes, targetingOptions.location, targetingOptions.subscriptionType]);
+
+  // Lade Werbung nur bei Platzierungs-Änderung
+  useEffect(() => {
+    loadAdvertisement();
+  }, [placement]);
+
+  const loadAdvertisement = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Bestimme ad_type basierend auf Platzierung
+      const adType = getAdTypeFromPlacement(placement);
+      
+      const { data, error } = await AdvertisementService.getTargetedAdvertisements(
+        adType,
+        memoizedTargetingOptions,
+        10
+      );
+
+      if (data && data.length > 0) {
+        setAdvertisement(data[0]);
+      } else {
+        setAdvertisement(null);
+      }
+    } catch (error) {
+      console.warn('Advertisement loading failed:', error);
+      setAdvertisement(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Nicht rendern wenn Loading oder keine Werbung
+  if (isLoading || !advertisement) {
+    return null;
+  }
+};
+```
+
+**Zweck**: Optimierte Performance durch Lazy Loading und Memoization
+**Vorteile**: Reduzierte Initial-Load-Zeit, bessere User Experience
+
+#### Impression-Tracking
+```typescript
+// Intersection Observer für präzises Impression-Tracking
+useEffect(() => {
+  if (!advertisement || impressionTracked) return;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          trackImpression();
+        }
+      });
+    },
+    { threshold: 0.5, rootMargin: '0px' }
+  );
+
+  if (bannerRef.current) {
+    observer.observe(bannerRef.current);
+  }
+
+  return () => {
+    if (bannerRef.current) {
+      observer.unobserve(bannerRef.current);
+    }
+  };
+}, [advertisement, impressionTracked]);
+
+const trackImpression = async () => {
+  if (!advertisement || impressionTracked) return;
+
+  try {
+    const { data, error } = await AdvertisementService.trackImpression(
+      advertisement.id,
+      'search_results',
+      {
+        petTypes: memoizedTargetingOptions.petTypes,
+        location: memoizedTargetingOptions.location,
+        subscriptionType: memoizedTargetingOptions.subscriptionType
+      }
+    );
+
+    if (!error && data) {
+      setImpressionTracked(true);
+    }
+  } catch (error) {
+    console.warn('Could not track banner impression:', error);
+  }
+};
+```
+
+**Zweck**: Präzises Tracking von Werbe-Impressionen
+**Vorteile**: Genauere Analytics, bessere Werbe-Performance-Messung
+
+### SearchPage-Integration
+
+#### Werbung zwischen Suchergebnissen
+```typescript
+// SearchPage.tsx - Strategische Werbung-Platzierung
+{!loading && !error && caretakers.length > 0 && (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {(() => {
+      const items = [];
+      
+      caretakers.forEach((caretaker, index) => {
+        // Betreuer-Karte hinzufügen
+        items.push(
+          <CaretakerCard key={caretaker.id} caretaker={caretaker} />
+        );
+        
+        // Werbung nach jeder 5. Betreuer-Karte
+        if ((index + 1) % 5 === 0) {
+          items.push(
+            <AdvertisementBanner
+              key={`ad-${index}`}
+              placement="search_results"
+              targetingOptions={{
+                petTypes: selectedPetType ? [selectedPetType] : undefined,
+                location: location || undefined,
+                subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+              }}
+            />
+          );
+        }
+      });
+      
+      // Werbung am Ende wenn weniger als 5 Betreuer
+      if (caretakers.length < 5 || (caretakers.length % 5 !== 0)) {
+        items.push(
+          <AdvertisementBanner
+            key="ad-end"
+            placement="search_results"
+            targetingOptions={{
+              petTypes: selectedPetType ? [selectedPetType] : undefined,
+              location: location || undefined,
+              subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+            }}
+          />
+        );
+      }
+      
+      return items;
+    })()}
+  </div>
+)}
+```
+
+**Zweck**: Natürliche Integration von Werbung zwischen Suchergebnissen
+**Vorteile**: Nicht aufdringlich, kontextbezogen, strategische Platzierung
+
+### Werbung-Datenbank-Integration
+
+#### Advertisement-Tabellen
+```sql
+-- advertisements Tabelle
+CREATE TABLE advertisements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  link_url TEXT,
+  cta_text TEXT DEFAULT 'Mehr erfahren',
+  ad_type TEXT NOT NULL, -- 'search_card', 'search_filter', 'profile_banner', etc.
+  format_id UUID REFERENCES advertisement_formats(id),
+  is_active BOOLEAN DEFAULT true,
+  target_pet_types TEXT[],
+  target_locations TEXT[],
+  target_subscription_types TEXT[],
+  priority INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- advertisement_formats Tabelle
+CREATE TABLE advertisement_formats (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL, -- 'Search Card', 'Search Filter Banner', etc.
+  width INTEGER NOT NULL,
+  height INTEGER NOT NULL,
+  placement TEXT NOT NULL, -- 'search_results', 'search_filters', etc.
+  function_description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+**Zweck**: Strukturierte Verwaltung von Werbung-Daten und -Formaten
+**Vorteile**: Flexible Werbung-Verwaltung, format-basierte Validierung
+
+#### RLS-Policies für Werbung
+```sql
+-- RLS-Policy für öffentlichen Zugriff auf aktive Werbung
+CREATE POLICY "Public can view active advertisements" 
+  ON public.advertisements 
+  FOR SELECT 
+  USING (is_active = true);
+
+-- RLS-Policy für Admin-Zugriff auf alle Werbung
+CREATE POLICY "Admins can manage all advertisements" 
+  ON public.advertisements 
+  FOR ALL 
+  USING (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE id = auth.uid() 
+      AND is_admin = true
+    )
+  );
+```
+
+**Zweck**: Sichere Verwaltung von Werbung-Daten
+**Vorteile**: Öffentlicher Zugriff auf aktive Werbung, Admin-Kontrolle über alle Werbung
+
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: Vollständige Tech-Context dokumentiert, einschließlich Supabase-Integration und Datenbank-Architektur  
+**Status**: Werbung-Integration und AdvertisementBanner vollständig dokumentiert  
 **Nächste Überprüfung**: Nach Implementierung des Buchungssystems

@@ -57,6 +57,83 @@ export default Component;
 - **Form-State**: Controlled Components mit useState
 - **URL-State**: Query-Parameter für Suchfilter
 
+### Admin-Navigation Patterns
+
+#### Admin-Link-Integration
+```typescript
+// Admin-Link nur für Admins anzeigen
+const { isAdmin } = useAdmin();
+
+{isAdmin && (
+  <a href="/admin.html" className="admin-link">
+    Admin
+  </a>
+)}
+```
+
+**Zweck**: Admin-Link nur für berechtigte Benutzer sichtbar machen
+**Sicherheit**: Keine Admin-Informationen im Frontend für Nicht-Admins
+**UX**: Konsistente Navigation für alle Benutzerrollen
+
+#### Admin-Status-Erkennung
+```typescript
+// useAdmin Hook für Admin-Status-Prüfung
+export const useAdmin = () => {
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const checkAdminStatus = async () => {
+    try {
+      setLoading(true);
+      const isAdminUser = await AdminService.checkAdminAccess();
+      setIsAdmin(isAdminUser);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { isAdmin, loading, refreshAdminStatus: checkAdminStatus };
+};
+```
+
+**Vorteile**:
+- Zentrale Admin-Status-Verwaltung
+- Automatische Status-Aktualisierung
+- Fehlerbehandlung für Admin-Status-Prüfung
+
+#### Admin-Navigation-Architektur
+```typescript
+// Admin-Link in bestehende Navigation integrieren
+function Header() {
+  const { isAdmin } = useAdmin();
+  
+  return (
+    <nav>
+      {/* Bestehende Navigation */}
+      {!isPremiumUser && (
+        <NavLink to="/mitgliedschaften">Mitgliedschaften</NavLink>
+      )}
+      
+      {/* Admin-Link zwischen bestehenden Links */}
+      {isAdmin && (
+        <a href="/admin.html" className="admin-link">Admin</a>
+      )}
+      
+      {/* Weitere Navigation */}
+      <Link to="/nachrichten">Nachrichten</Link>
+    </nav>
+  );
+}
+```
+
+**Vorteile**:
+- Nahtlose Integration in bestehende Navigation
+- Konsistente Benutzerführung
+- Einfache Wartung und Erweiterung
+
 ### Datenstrukturen
 
 #### Betreuer-Modell (geplant)
@@ -99,6 +176,11 @@ interface SearchFilters {
 5. **Accessibility-Check**: Keyboard-Navigation, Screen-Reader
 
 ### Kritische Implementierungspfade
+
+#### Admin-Navigation
+1. useAdmin Hook → Admin-Status-Prüfung → Header-Integration
+2. Bedingte Anzeige → Admin-Link nur für Admins → Responsive Design
+3. Admin-App-Isolation → Separate Admin-Routen → Eigenes Auth-System
 
 #### Suchfunktionalität
 1. HomePage-Formular → Query-Parameter → SearchPage

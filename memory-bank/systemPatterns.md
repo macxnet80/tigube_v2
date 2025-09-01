@@ -658,8 +658,491 @@ const trackFeatureUsage = (feature: string, action: string) => {
 };
 ```
 
+## Admin-Navigation Patterns
+
+### Admin-Link-Integration
+
+#### Bedingte Navigation
+```typescript
+// Admin-Link nur für Admins anzeigen
+const { isAdmin } = useAdmin();
+
+{isAdmin && (
+  <a
+    href="/admin.html"
+    className={cn(
+      'inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-200',
+      'border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-800'
+    )}
+  >
+    Admin
+  </a>
+)}
+```
+
+**Zweck**: Admin-Link nur für berechtigte Benutzer sichtbar machen
+**Sicherheit**: Keine Admin-Informationen im Frontend für Nicht-Admins
+**UX**: Konsistente Navigation für alle Benutzerrollen
+
+#### Responsive Admin-Navigation
+```typescript
+// Desktop-Navigation
+{isAdmin && (
+  <a href="/admin.html" className="admin-link-desktop">
+    Admin
+  </a>
+)}
+
+// Mobile-Navigation
+{isAdmin && (
+  <a href="/admin.html" className="admin-link-mobile">
+    Admin
+  </a>
+)}
+```
+
+**Vorteile**:
+- Konsistente Admin-Navigation auf allen Geräten
+- Mobile-optimierte Touch-Interaktionen
+- Responsive Design für alle Bildschirmgrößen
+
+### Admin-Status-Erkennung
+
+#### useAdmin Hook Pattern
+```typescript
+// Admin-Status-Prüfung via Hook
+export const useAdmin = () => {
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const checkAdminStatus = async () => {
+    try {
+      setLoading(true);
+      const isAdminUser = await AdminService.checkAdminAccess();
+      setIsAdmin(isAdminUser);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { isAdmin, loading, refreshAdminStatus: checkAdminStatus };
+};
+```
+
+**Vorteile**:
+- Zentrale Admin-Status-Verwaltung
+- Automatische Status-Aktualisierung
+- Fehlerbehandlung für Admin-Status-Prüfung
+
+#### Admin-Berechtigungen Pattern
+```typescript
+// Granulare Admin-Berechtigungen
+export const useAdminPermissions = () => {
+  const { adminUser, hasPermission } = useAdmin();
+
+  return {
+    canViewUsers: hasPermission('users.read'),
+    canEditUsers: hasPermission('users.write'),
+    canDeleteUsers: hasPermission('users.delete'),
+    canViewRevenue: hasPermission('revenue.read'),
+    canViewAnalytics: hasPermission('analytics.read'),
+    isSuperAdmin: adminUser?.admin_role === 'super_admin',
+    isAdmin: adminUser?.admin_role === 'admin',
+    isModerator: adminUser?.admin_role === 'moderator'
+  };
+};
+```
+
+**Vorteile**:
+- Granulare Berechtigungsprüfung
+- Rollen-basierte Admin-Funktionen
+- Flexible Admin-Hierarchie
+
+### Admin-Navigation-Architektur
+
+#### Header-Integration Pattern
+```typescript
+// Admin-Link in bestehende Navigation integrieren
+function Header() {
+  const { isAdmin } = useAdmin();
+  
+  return (
+    <nav className="hidden md:flex items-center space-x-8">
+      {/* Bestehende Navigation */}
+      {!isPremiumUser && (
+        <NavLink to="/mitgliedschaften">
+          Mitgliedschaften
+        </NavLink>
+      )}
+      
+      {/* Admin-Link zwischen bestehenden Links */}
+      {isAdmin && (
+        <a href="/admin.html" className="admin-link">
+          Admin
+        </a>
+      )}
+      
+      {/* Weitere Navigation */}
+      <Link to="/nachrichten">
+        Nachrichten
+      </Link>
+    </nav>
+  );
+}
+```
+
+**Vorteile**:
+- Nahtlose Integration in bestehende Navigation
+- Konsistente Benutzerführung
+- Einfache Wartung und Erweiterung
+
+#### Mobile-Navigation Pattern
+```typescript
+// Admin-Link im Mobile-Menü
+{isMenuOpen && (
+  <div className="md:hidden">
+    <div className="pt-2 pb-4 space-y-1">
+      {/* Bestehende Mobile-Links */}
+      
+      {/* Admin-Link für Mobile */}
+      {isAdmin && (
+        <a 
+          href="/admin.html" 
+          className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+        >
+          Admin
+        </a>
+      )}
+      
+      {/* Weitere Mobile-Links */}
+    </div>
+  </div>
+)}
+```
+
+**Vorteile**:
+- Mobile-optimierte Admin-Navigation
+- Touch-freundliche Interaktionen
+- Konsistente Mobile-Erfahrung
+
+### Admin-Sicherheits-Patterns
+
+#### Frontend-Sicherheit
+```typescript
+// Keine Admin-Informationen im Frontend für Nicht-Admins
+const Header = () => {
+  const { isAdmin } = useAdmin();
+  
+  // Admin-Link nur bei Admin-Status anzeigen
+  const adminNavigation = isAdmin ? (
+    <a href="/admin.html">Admin</a>
+  ) : null;
+  
+  return (
+    <header>
+      <nav>
+        {/* Öffentliche Navigation */}
+        {adminNavigation}
+        {/* Weitere Navigation */}
+      </nav>
+    </header>
+  );
+};
+```
+
+**Sicherheitsaspekte**:
+- Keine Admin-Informationen im DOM für Nicht-Admins
+- Bedingte Rendering für Admin-Features
+- Server-seitige Admin-Status-Validierung
+
+#### Admin-App-Isolation
+```typescript
+// Separate Admin-App mit eigenem Auth-System
+// admin.tsx
+function AdminApp() {
+  return (
+    <AuthProvider>
+      <NotificationProvider>
+        <Routes>
+          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route path="/admin/*" element={<AdminDashboardPage />} />
+        </Routes>
+      </NotificationProvider>
+    </AuthProvider>
+  );
+}
+```
+
+**Vorteile**:
+- Vollständige Admin-App-Isolation
+- Eigenes Auth-System für Admins
+- Separate Admin-Routen und -Komponenten
+
+## AdvertisementBanner Patterns
+
+### Werbung-Platzierung-System
+
+#### Platzierungs-Typen
+```typescript
+// AdvertisementBanner Platzierungs-Typen
+type Placement = 
+  | 'profile_sidebar'    // 300x600px - Profile Sidebar
+  | 'profile_top'        // 728x90px - Profile Top Banner
+  | 'search_results'     // 384x480px - Search Card zwischen Suchergebnissen
+  | 'search_filters'     // 970x90px - Search Filter Banner
+  | 'search_filter_box'  // 384x480px - Search Card Filter Box
+  | 'owner_dashboard'    // 970x90px - Owner Dashboard Banner
+  | 'caretaker_dashboard' // 970x90px - Caretaker Dashboard Banner;
+```
+
+**Zweck**: Verschiedene Werbeplätze mit spezifischen Formaten und Funktionen
+**Vorteile**: Granulare Kontrolle über Werbeplatzierung und -format
+
+#### Platzierungs-Filterung
+```typescript
+// Platzierungs-spezifische Filterung
+const placementSpecificAd = data.find(ad => {
+  if (placement === 'search_results' && ad.display_width === 384 && ad.display_height === 480) {
+    return true; // Search Card Results Format
+  }
+  if (placement === 'search_filter_box' && ad.display_width === 384 && ad.display_height === 480) {
+    return true; // Search Card Filter Box Format
+  }
+  if (placement === 'search_filters' && ad.display_width === 970 && ad.display_height === 90) {
+    return true; // Search Filter Banner Format
+  }
+  // ... weitere Platzierungen
+  return false;
+});
+```
+
+**Zweck**: Sicherstellen, dass nur passende Werbungen für spezifische Platzierungen angezeigt werden
+**Sicherheit**: Format-basierte Validierung verhindert falsche Platzierungen
+
+### Search Card Layout-Patterns
+
+#### Einheitliche Höhe mit Profil-Karten
+```typescript
+// Flexbox-Layout für einheitliche Höhe
+<div className={`${placement === 'search_results' ? 'flex flex-col' : ''}`}>
+  <div className={`${placement === 'search_results' ? 'flex flex-col flex-1' : ''}`}>
+    {/* Bild */}
+    <div className={`${placement === 'search_results' ? 'aspect-square' : 'h-56'}`}>
+      <img className={`${placement === 'search_results' ? 'rounded-t-xl' : ''}`} />
+    </div>
+    
+    {/* Content */}
+    <div className={`${placement === 'search_results' ? 'p-5 flex flex-col flex-1' : 'p-4'}`}>
+      {placement === 'search_results' ? (
+        <>
+          {/* Titel */}
+          <h3 className="font-semibold text-gray-900 text-base mb-2">
+            {advertisement.title}
+          </h3>
+          
+          {/* Beschreibung */}
+          {advertisement.description && (
+            <p className="text-gray-700 text-sm line-clamp-3 leading-relaxed mb-4">
+              {advertisement.description}
+            </p>
+          )}
+          
+          {/* Spacer für Button-Positionierung */}
+          <div className="flex-1"></div>
+          
+          {/* Button und "Gesponsert" */}
+          <div className="flex justify-between items-center">
+            <span className="inline-flex items-center px-3 py-1 bg-primary-600 text-white text-xs font-medium rounded-md">
+              {advertisement.cta_text || 'Mehr erfahren'}
+            </span>
+            <span className="text-xs text-gray-400 font-medium">
+              Gesponsert
+            </span>
+          </div>
+        </>
+      ) : (
+        // Standard-Layout für andere Platzierungen
+        <div className="flex items-start justify-between">
+          {/* Standard-Content */}
+        </div>
+      )}
+    </div>
+  </div>
+</div>
+```
+
+**Zweck**: Einheitliche Höhe mit Profil-Karten durch Flexbox-Layout
+**Vorteile**: Konsistentes Grid-Design, Button immer unten positioniert
+
+#### Button-Positionierung-Pattern
+```typescript
+// Button immer unten durch Spacer-Mechanismus
+<div className="flex flex-col h-full">
+  {/* Content-Bereich */}
+  <div className="space-y-4">
+    <h3>{advertisement.title}</h3>
+    {advertisement.description && <p>{advertisement.description}</p>}
+  </div>
+  
+  {/* Spacer drückt Button nach unten */}
+  <div className="flex-1"></div>
+  
+  {/* Button-Bereich immer unten */}
+  <div className="flex justify-between items-center">
+    <button>{advertisement.cta_text}</button>
+    <span>Gesponsert</span>
+  </div>
+</div>
+```
+
+**Zweck**: Button immer am unteren Rand der Karte positionieren
+**Vorteile**: Konsistente Button-Positionierung unabhängig von Content-Länge
+
+### Werbung-Integration-Patterns
+
+#### SearchPage-Integration
+```typescript
+// SearchPage.tsx - Werbung zwischen Suchergebnissen
+{caretakers.forEach((caretaker, index) => {
+  // Betreuer-Karte hinzufügen
+  items.push(<CaretakerCard key={caretaker.id} caretaker={caretaker} />);
+  
+  // Werbung nach jeder 5. Betreuer-Karte
+  if ((index + 1) % 5 === 0) {
+    items.push(
+      <AdvertisementBanner
+        key={`ad-${index}`}
+        placement="search_results"
+        targetingOptions={{
+          petTypes: selectedPetType ? [selectedPetType] : undefined,
+          location: location || undefined,
+          subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+        }}
+      />
+    );
+  }
+});
+
+// Werbung am Ende wenn weniger als 5 Betreuer
+if (caretakers.length < 5 || (caretakers.length % 5 !== 0)) {
+  items.push(
+    <AdvertisementBanner
+      key="ad-end"
+      placement="search_results"
+      targetingOptions={{...}}
+    />
+  );
+}
+```
+
+**Zweck**: Werbung strategisch zwischen Suchergebnissen platzieren
+**Vorteile**: Natürliche Integration, nicht aufdringlich, kontextbezogen
+
+#### Targeting-Options-Pattern
+```typescript
+// Kontextbezogene Werbung-Targeting
+interface TargetingOptions {
+  petTypes?: string[];           // Haustierarten aus Suchfiltern
+  location?: string;             // Standort aus Suchfiltern
+  subscriptionType?: 'free' | 'premium'; // Abo-Typ des Benutzers
+}
+
+// Targeting in SearchPage
+<AdvertisementBanner
+  placement="search_results"
+  targetingOptions={{
+    petTypes: selectedPetType ? [selectedPetType] : undefined,
+    location: location || undefined,
+    subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+  }}
+/>
+```
+
+**Zweck**: Kontextbezogene Werbung basierend auf Benutzerverhalten
+**Vorteile**: Höhere Relevanz, bessere Conversion-Raten
+
+### Werbung-Performance-Patterns
+
+#### Lazy Loading für Werbung
+```typescript
+// AdvertisementBanner mit Lazy Loading
+const AdvertisementBanner = ({ placement, targetingOptions }) => {
+  const [advertisement, setAdvertisement] = useState<Advertisement | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    loadAdvertisement();
+  }, [placement]); // Nur bei Platzierungs-Änderung neu laden
+
+  const loadAdvertisement = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await advertisementService.getTargetedAdvertisements(
+        getAdTypeFromPlacement(placement),
+        targetingOptions,
+        10
+      );
+      
+      if (data && data.length > 0) {
+        setAdvertisement(data[0]);
+      } else {
+        setAdvertisement(null);
+      }
+    } catch (error) {
+      console.warn('Advertisement loading failed:', error);
+      setAdvertisement(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Nicht rendern wenn Loading oder keine Werbung
+  if (isLoading || !advertisement) {
+    return null;
+  }
+};
+```
+
+**Zweck**: Optimierte Performance durch Lazy Loading
+**Vorteile**: Reduzierte Initial-Load-Zeit, bessere User Experience
+
+#### Impression-Tracking-Pattern
+```typescript
+// Intersection Observer für Impression-Tracking
+useEffect(() => {
+  if (!advertisement || impressionTracked) return;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          trackImpression();
+        }
+      });
+    },
+    { threshold: 0.5, rootMargin: '0px' }
+  );
+
+  if (bannerRef.current) {
+    observer.observe(bannerRef.current);
+  }
+
+  return () => {
+    if (bannerRef.current) {
+      observer.unobserve(bannerRef.current);
+    }
+  };
+}, [advertisement, impressionTracked]);
+```
+
+**Zweck**: Präzises Tracking von Werbe-Impressionen
+**Vorteile**: Genauere Analytics, bessere Werbe-Performance-Messung
+
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: Vollständige System-Patterns dokumentiert, einschließlich Datenbank-Architektur  
+**Status**: AdvertisementBanner-Patterns dokumentiert, einschließlich Search Card Layout und Werbung-Integration  
 **Nächste Überprüfung**: Nach Implementierung des Buchungssystems

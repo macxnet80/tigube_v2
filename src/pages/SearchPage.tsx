@@ -3,7 +3,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Search, MapPin, Star, Filter, X, ChevronDown, PawPrint, Briefcase, Clock } from 'lucide-react';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import AdvertisementCardContainer from '../components/ui/AdvertisementCardContainer';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { UsageLimitIndicator } from '../components/ui/UsageLimitIndicator';
 import { AdvancedFilters } from '../components/ui/AdvancedFilters';
@@ -242,11 +241,32 @@ function SearchPage() {
 
         
         data = data.filter(caretaker => {
-          // Preis-Ermittlung aus service-spezifischen Preisen
+          // Preis-Ermittlung aus der neuen services_with_categories Struktur
           let lowestPrice = 0;
           
-          if (caretaker.prices && Object.keys(caretaker.prices).length > 0) {
-            // Filtere Anfahrkosten aus der Preisberechnung aus
+          // 1. Neue Struktur: Preise aus services_with_categories
+          if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
+            const validPrices = caretaker.servicesWithCategories
+              .filter(service => 
+                service.price && 
+                service.price !== '' && 
+                service.price !== null && 
+                service.price !== undefined &&
+                service.name !== 'Anfahrkosten' // Schließe Anfahrkosten aus
+              )
+              .map(service => {
+                const price = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
+                return isNaN(price) ? 0 : price;
+              })
+              .filter(price => price > 0);
+            
+            if (validPrices.length > 0) {
+              lowestPrice = Math.min(...validPrices);
+            }
+          }
+          
+          // 2. Fallback: Alte prices-Struktur (für Kompatibilität)
+          if (lowestPrice === 0 && caretaker.prices && Object.keys(caretaker.prices).length > 0) {
             const pricesWithoutTravelCosts = Object.entries(caretaker.prices)
               .filter(([key, price]) => {
                 // Schließe "Anfahrkosten" aus der Preisberechnung aus
@@ -266,15 +286,13 @@ function SearchPage() {
             }
           }
           
-          // Fallback zu hourlyRate wenn keine service-spezifischen Preise vorhanden
+          // 3. Fallback zu hourlyRate wenn keine service-spezifischen Preise vorhanden
           if (lowestPrice === 0 && caretaker.hourlyRate) {
             lowestPrice = caretaker.hourlyRate;
           }
           
           // Prüfe ob Preis unter dem Max-Preis liegt
           const isWithinBudget = lowestPrice <= maxPrice;
-          
-
           
           return isWithinBudget;
         });
@@ -792,14 +810,15 @@ function SearchPage() {
                 // Add advertisement card after every 5th caretaker (index 4, 9, 14, etc.)
                 if ((index + 1) % 5 === 0) {
                   items.push(
-                    <AdvertisementCardContainer
-                      key={`ad-${index}`}
-                      targetingOptions={{
-                        petTypes: selectedPetType ? [selectedPetType] : undefined,
-                        location: location || undefined,
-                        subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
-                      }}
-                    />
+                                          <AdvertisementBanner
+                        key={`ad-${index}`}
+                        placement="search_results"
+                        targetingOptions={{
+                          petTypes: selectedPetType ? [selectedPetType] : undefined,
+                          location: location || undefined,
+                          subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+                        }}
+                      />
                   );
                 }
               });
@@ -807,8 +826,9 @@ function SearchPage() {
               // Add advertisement at the end if we have fewer than 5 caretakers or if the last caretaker wasn't at a 5th position
               if (caretakers.length < 5 || (caretakers.length % 5 !== 0)) {
                 items.push(
-                  <AdvertisementCardContainer
+                  <AdvertisementBanner
                     key="ad-end"
+                    placement="search_results"
                     targetingOptions={{
                       petTypes: selectedPetType ? [selectedPetType] : undefined,
                       location: location || undefined,
@@ -831,9 +851,30 @@ function SearchPage() {
 function CaretakerCard({ caretaker }: CaretakerCardProps) {
   // Funktion zum Ermitteln des besten Preises für die Anzeige
   const getDisplayPrice = (caretaker: Caretaker) => {
-    // 1. Wenn Service-spezifische Preise vorhanden sind, zeige den niedrigsten
+    // 1. Neue Struktur: Preise aus services_with_categories
+    if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
+      const validPrices = caretaker.servicesWithCategories
+        .filter(service => 
+          service.price && 
+          service.price !== '' && 
+          service.price !== null && 
+          service.price !== undefined &&
+          service.name !== 'Anfahrkosten' // Schließe Anfahrkosten aus
+        )
+        .map(service => {
+          const price = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
+          return isNaN(price) ? 0 : price;
+        })
+        .filter(price => price > 0);
+      
+      if (validPrices.length > 0) {
+        const minPrice = Math.min(...validPrices);
+        return `ab €${minPrice}/Std.`;
+      }
+    }
+    
+    // 2. Fallback: Alte prices-Struktur (für Kompatibilität)
     if (caretaker.prices && Object.keys(caretaker.prices).length > 0) {
-      // Filtere Anfahrkosten aus der Preisberechnung aus
       const pricesWithoutTravelCosts = Object.entries(caretaker.prices)
         .filter(([key, price]) => {
           // Schließe "Anfahrkosten" aus der Preisberechnung aus
@@ -854,18 +895,18 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
       }
     }
     
-    // 2. Fallback zu hourlyRate
+    // 3. Fallback zu hourlyRate
     if (caretaker.hourlyRate && caretaker.hourlyRate > 0) {
       return `ab €${caretaker.hourlyRate}/Std.`;
     }
     
-    // 3. Standard-Text
+    // 4. Standard-Text
     return 'Preis auf Anfrage';
   };
 
   return (
-    <div className="card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm">
-      <div className="relative">
+    <div className="card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm h-full flex flex-col">
+      <div className="relative flex flex-col h-full">
         {/* Quadratisches Bild */}
         <div className="relative w-full aspect-square">
           <img
@@ -892,7 +933,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
               </div>
             )}
             {caretaker.short_term_available && (
-              <div className="bg-green-500 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center justify-center">
+              <div className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center justify-center">
                 <Clock className="h-3 w-3 mr-1" /> Kurzfristig
               </div>
             )}
@@ -900,7 +941,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
         </div>
 
         {/* Info-Bereich - unter dem Bild */}
-        <div className="p-5 bg-white rounded-b-xl">
+        <div className="p-5 bg-white rounded-b-xl flex flex-col flex-1">
           {/* Name und Bewertung */}
           <div className="flex justify-between items-start mb-3">
             <div className="flex-1 min-w-0 mr-3">
@@ -919,12 +960,12 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
             </div>
           </div>
 
-          {/* Bio - mehr Platz für größere Karten */}
-          <p className="text-gray-700 text-sm mb-4 line-clamp-3 leading-relaxed">
+          {/* Bio - auf 3 Zeilen begrenzt */}
+          <p className="text-gray-700 text-sm mb-4 line-clamp-3 leading-relaxed flex-1">
             {caretaker.bio}
           </p>
 
-          {/* Services - mehr Platz */}
+          {/* Services */}
           <div className="flex flex-wrap gap-2 mb-4">
             {caretaker.services.slice(0, 3).map((service: string) => (
               <span
@@ -941,8 +982,8 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
             )}
           </div>
 
-          {/* Preis und Button */}
-          <div className="space-y-3">
+          {/* Preis und Button - immer am unteren Rand */}
+          <div className="mt-auto space-y-3">
             <p className="font-semibold text-primary-600 text-sm text-center">
               {getDisplayPrice(caretaker)}
             </p>
