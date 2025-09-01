@@ -1146,3 +1146,273 @@ useEffect(() => {
 **Letzte Aktualisierung**: 08.02.2025  
 **Status**: AdvertisementBanner-Patterns dokumentiert, einschließlich Search Card Layout und Werbung-Integration  
 **Nächste Überprüfung**: Nach Implementierung des Buchungssystems
+
+## Layout-Consistency-Patterns
+
+### Einheitliche Kartenhöhe mit Flexbox
+
+#### Flexbox-Layout für Profilkarten
+```typescript
+// CaretakerCard mit einheitlicher Höhe
+function CaretakerCard({ caretaker }: CaretakerCardProps) {
+  return (
+    <div className="card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm h-full flex flex-col">
+      <div className="relative flex flex-col h-full">
+        {/* Quadratisches Bild */}
+        <div className="relative w-full aspect-square">
+          <img src={caretaker.avatar} alt={caretaker.name} />
+          {/* Badges overlay */}
+        </div>
+
+        {/* Info-Bereich - unter dem Bild */}
+        <div className="p-5 bg-white rounded-b-xl flex flex-col flex-1">
+          {/* Name und Bewertung */}
+          <div className="flex justify-between items-start mb-3">
+            {/* ... Name und Rating ... */}
+          </div>
+
+          {/* Bio - auf 3 Zeilen begrenzt, flexibel */}
+          <p className="text-gray-700 text-sm mb-4 line-clamp-3 leading-relaxed flex-1">
+            {caretaker.bio}
+          </p>
+
+          {/* Services */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {/* ... Services ... */}
+          </div>
+
+          {/* Preis und Button - immer am unteren Rand */}
+          <div className="mt-auto space-y-3">
+            <p className="font-semibold text-primary-600 text-sm text-center">
+              {getDisplayPrice(caretaker)}
+            </p>
+            <Button variant="primary" size="sm" className="w-full">
+              Profil ansehen
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+**Zweck**: Einheitliche Höhe aller Profilkarten für konsistentes Layout
+**Vorteile**: 
+- Buttons stehen immer auf einer Linie
+- Konsistentes visuelles Erscheinungsbild
+- Bessere Benutzererfahrung
+- Responsive Design auf allen Bildschirmgrößen
+
+#### Flexbox-Properties für Layout-Konsistenz
+```css
+/* CSS-Klassen für einheitliche Kartenhöhe */
+.card {
+  @apply h-full flex flex-col; /* Hauptcontainer: volle Höhe, vertikaler Flex */
+}
+
+.card-content {
+  @apply flex flex-col flex-1; /* Info-Bereich: vertikaler Flex mit flex-1 */
+}
+
+.card-bio {
+  @apply flex-1; /* Bio-Text: nutzt verfügbaren Platz */
+}
+
+.card-actions {
+  @apply mt-auto; /* Button-Bereich: immer am unteren Rand */
+}
+```
+
+**Zweck**: CSS-Klassen für konsistente Layout-Implementierung
+**Vorteile**: Wiederverwendbare Klassen, einfache Wartung
+
+### Button-Positionierung-Pattern
+
+#### mt-auto Spacer für Button-Positionierung
+```typescript
+// Button-Bereich mit mt-auto für untere Positionierung
+<div className="mt-auto space-y-3">
+  <p className="font-semibold text-primary-600 text-sm text-center">
+    {getDisplayPrice(caretaker)}
+  </p>
+  <Button variant="primary" size="sm" className="w-full">
+    Profil ansehen
+  </Button>
+</div>
+```
+
+**Zweck**: Buttons immer am unteren Rand der Karte positionieren
+**Vorteile**: 
+- Konsistente Button-Position unabhängig von Content-Länge
+- Bessere visuelle Hierarchie
+- Einheitliches Layout auf allen Karten
+
+## Preisermittlungs-Patterns
+
+### Neue Preisermittlung mit services_with_categories
+
+#### Primäre Preisermittlung aus JSONB-Struktur
+```typescript
+// Funktion zum Ermitteln des besten Preises für die Anzeige
+const getDisplayPrice = (caretaker: Caretaker) => {
+  // 1. Neue Struktur: Preise aus services_with_categories
+  if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
+    const validPrices = caretaker.servicesWithCategories
+      .filter(service => 
+        service.price && 
+        service.price !== '' && 
+        service.price !== null && 
+        service.price !== undefined &&
+        service.name !== 'Anfahrkosten' // Schließe Anfahrkosten aus
+      )
+      .map(service => {
+        const price = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
+        return isNaN(price) ? 0 : price;
+      })
+      .filter(price => price > 0);
+    
+    if (validPrices.length > 0) {
+      const minPrice = Math.min(...validPrices);
+      return `ab €${minPrice}/Std.`;
+    }
+  }
+  
+  // 2. Fallback: Alte prices-Struktur (für Kompatibilität)
+  if (caretaker.prices && Object.keys(caretaker.prices).length > 0) {
+    // ... Fallback-Logik ...
+  }
+  
+  // 3. Fallback zu hourlyRate
+  if (caretaker.hourlyRate && caretaker.hourlyRate > 0) {
+    return `ab €${caretaker.hourlyRate}/Std.`;
+  }
+  
+  // 4. Standard-Text
+  return 'Preis auf Anfrage';
+};
+```
+
+**Zweck**: Robuste Preisermittlung mit Fallback-System
+**Vorteile**: 
+- Aktuelle Preise aus neuer Datenstruktur
+- Anfahrkosten werden aus Preisberechnung ausgeschlossen
+- Robuste Fallback-Kette für verschiedene Datenquellen
+- Konsistente Preis-Anzeige
+
+#### Preis-Filter mit neuer Preisermittlung
+```typescript
+// Client-seitige Preis-Filterung mit neuer Preisermittlung
+if (maxPrice < 100 && data && data.length > 0) {
+  data = data.filter(caretaker => {
+    // Preis-Ermittlung aus der neuen services_with_categories Struktur
+    let lowestPrice = 0;
+    
+    // 1. Neue Struktur: Preise aus services_with_categories
+    if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
+      const validPrices = caretaker.servicesWithCategories
+        .filter(service => 
+          service.price && 
+          service.price !== '' && 
+          service.price !== null && 
+          service.price !== undefined &&
+          service.name !== 'Anfahrkosten'
+        )
+        .map(service => {
+          const price = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
+          return isNaN(price) ? 0 : price;
+        })
+        .filter(price => price > 0);
+      
+      if (validPrices.length > 0) {
+        lowestPrice = Math.min(...validPrices);
+      }
+    }
+    
+    // 2. Fallback: Alte prices-Struktur (für Kompatibilität)
+    if (lowestPrice === 0 && caretaker.prices && Object.keys(caretaker.prices).length > 0) {
+      // ... Fallback-Logik ...
+    }
+    
+    // 3. Fallback zu hourlyRate
+    if (lowestPrice === 0 && caretaker.hourlyRate) {
+      lowestPrice = caretaker.hourlyRate;
+    }
+    
+    // Prüfe ob Preis unter dem Max-Preis liegt
+    return lowestPrice <= maxPrice;
+  });
+}
+```
+
+**Zweck**: Max-Preis-Filter nutzt neue Preisermittlung
+**Vorteile**: 
+- Konsistente Preisermittlung zwischen Anzeige und Filterung
+- Robuste Filterung mit Fallback-System
+- Bessere Benutzererfahrung durch genaue Preisinformationen
+
+### Anfahrkosten-Filter-Pattern
+
+#### Ausschluss von Anfahrkosten aus Preisberechnung
+```typescript
+// Filter für gültige Preise ohne Anfahrkosten
+const validPrices = caretaker.servicesWithCategories
+  .filter(service => 
+    service.price && 
+    service.price !== '' && 
+    service.price !== null && 
+    service.price !== undefined &&
+    service.name !== 'Anfahrkosten' // Schließe Anfahrkosten aus
+  )
+  .map(service => {
+    const price = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
+    return isNaN(price) ? 0 : price;
+  })
+  .filter(price => price > 0);
+```
+
+**Zweck**: Anfahrkosten aus Preisberechnung ausschließen
+**Vorteile**: 
+- Realistische Preisvergleiche
+- Bessere Benutzererfahrung
+- Klare Preisstruktur
+
+### Fallback-System-Pattern
+
+#### Robuste Fallback-Kette für Preisermittlung
+```typescript
+// Fallback-System für verschiedene Preisdatenquellen
+let lowestPrice = 0;
+
+// 1. Neue Struktur: services_with_categories
+if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
+  // ... Preisermittlung aus services_with_categories ...
+}
+
+// 2. Fallback: Alte prices-Struktur (für Kompatibilität)
+if (lowestPrice === 0 && caretaker.prices && Object.keys(caretaker.prices).length > 0) {
+  // ... Fallback-Logik ...
+}
+
+// 3. Fallback zu hourlyRate
+if (lowestPrice === 0 && caretaker.hourlyRate) {
+  lowestPrice = caretaker.hourlyRate;
+}
+
+// 4. Standard-Text wenn keine Preise verfügbar
+if (lowestPrice === 0) {
+  return 'Preis auf Anfrage';
+}
+```
+
+**Zweck**: Robuste Preisermittlung mit mehreren Fallback-Ebenen
+**Vorteile**: 
+- Hohe Verfügbarkeit von Preisinformationen
+- Abwärtskompatibilität mit alten Datenstrukturen
+- Konsistente Benutzererfahrung
+
+---
+
+**Letzte Aktualisierung**: 08.02.2025  
+**Status**: Layout-Consistency- und Preisermittlungs-Patterns dokumentiert  
+**Nächste Überprüfung**: Nach Implementierung des Buchungssystems

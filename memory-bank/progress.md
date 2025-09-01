@@ -2,9 +2,33 @@
 
 ## 🎯 Aktueller Stand
 
-**Version**: 0.8.4  
-**Status**: Search Card Werbung in SearchPage implementiert, einheitliche Höhe erreicht  
+**Version**: 0.8.5  
+**Status**: Einheitliche Kartenhöhe und neue Preisermittlung implementiert  
 **Letztes Update**: 08.02.2025
+
+### ✅ Version 0.8.5 - Einheitliche Kartenhöhe & Neue Preisermittlung
+
+#### Einheitliche Kartenhöhe (Vollständig implementiert)
+- **Flexbox-Layout**: `h-full flex flex-col` für einheitliche Höhe aller Karten ✅
+- **Button-Positionierung**: `mt-auto` sorgt für Buttons am unteren Rand ✅
+- **Bio-Flexibilität**: `flex-1` für Bio-Text, der verfügbaren Platz nutzt ✅
+- **Konsistente Struktur**: Alle Karten haben identische Grundstruktur ✅
+- **Responsive Design**: Einheitliche Höhe auf allen Bildschirmgrößen ✅
+
+#### Neue Preisermittlung (Vollständig implementiert)
+- **Primäre Quelle**: `caretaker.servicesWithCategories` für aktuelle Preise ✅
+- **Struktur**: JSONB mit `{name, category_id, price, price_type}` ✅
+- **Anfahrkosten-Filter**: "Anfahrkosten" werden aus Preisberechnung ausgeschlossen ✅
+- **Fallback-Kette**: services_with_categories → prices → hourlyRate → Standard ✅
+- **Filter-Integration**: Max-Preis-Filter nutzt neue Preisermittlung ✅
+
+**Implementierte Features**:
+- Einheitliche Kartenhöhe durch Flexbox-Layout für alle Profilkarten
+- Button-Positionierung immer am unteren Rand durch mt-auto Spacer
+- Neue Preisermittlung aus services_with_categories JSONB-Struktur
+- Robuste Fallback-Kette für verschiedene Preisdatenquellen
+- Max-Preis-Filter nutzt neue Preisermittlung
+- Anfahrkosten werden aus Preisberechnung ausgeschlossen
 
 ### ✅ Version 0.8.4 - Search Card Werbung implementiert
 
@@ -296,12 +320,15 @@
 - **Search System**: 100% implementiert
 - **Chat System**: 100% implementiert
 - **Subscription System**: 100% implementiert
+- **Layout Consistency**: 100% einheitliche Kartenhöhe
+- **Price System**: 100% neue Preisermittlung implementiert
 
 ### Qualität
 - **TypeScript Coverage**: 95%+
 - **Responsive Design**: 100% mobile-optimiert
 - **Accessibility**: WCAG 2.1 AA konform
 - **Performance**: < 2s Load Time
+- **Layout Consistency**: 100% einheitliche Kartenhöhe
 
 ### Sicherheit
 - **RLS Policies**: 100% aller Tabellen
@@ -316,6 +343,8 @@
 - ✅ Version 0.8.x: Datenbankstruktur vollständig analysiert
 - ✅ Version 0.8.x: Admin-Navigation implementiert
 - ✅ Version 0.8.x: Search Card Werbung implementiert
+- ✅ Version 0.8.x: Einheitliche Kartenhöhe implementiert
+- ✅ Version 0.8.x: Neue Preisermittlung implementiert
 - 🔄 Version 0.9.x: Buchungssystem (in Entwicklung)
 
 ### Q2 2025
@@ -336,5 +365,5 @@
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: Version 0.8.4 abgeschlossen, Search Card Werbung implementiert  
+**Status**: Version 0.8.5 abgeschlossen, Einheitliche Kartenhöhe und neue Preisermittlung implementiert  
 **Nächste Version**: 0.9.0 - Buchungssystem
