@@ -255,7 +255,8 @@ function BetreuerProfilePage() {
   // Kontakt-Button Handler mit Feature Gate
   const handleContactClick = async () => {
     if (!user) {
-      console.error('User nicht verfügbar');
+      // Nicht eingeloggte Benutzer zur Anmeldung weiterleiten
+      navigate('/anmelden?redirect=' + encodeURIComponent(`/betreuer/${id}`));
       return;
     }
 
@@ -522,7 +523,7 @@ function BetreuerProfilePage() {
                       onClick={handleFavoriteToggle}
                       className="p-1 focus:ring-0 focus:ring-offset-0"
                       disabled={isFavoriteLoading}
-                      title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+                      title={!user ? 'Anmelden um zu favorisieren' : (isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen')}
                     >
                       {isFavoriteLoading ? (
                         <div className="w-5 h-5 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
@@ -583,6 +584,41 @@ function BetreuerProfilePage() {
                   isLoading={responseTimeLoading}
                 />
               </div>
+              
+              {/* Anmeldung-Aufforderung für nicht eingeloggte Benutzer */}
+              {!user && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <Shield className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-blue-800">
+                        Melde dich an, um mit {displayName} in Kontakt zu treten
+                      </h3>
+                      <p className="text-sm text-blue-600 mt-1">
+                        Du kannst das Profil ansehen, aber für Nachrichten und Favoriten musst du angemeldet sein.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => navigate('/anmelden?redirect=' + encodeURIComponent(`/betreuer/${id}`))}
+                    >
+                      Anmelden
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/registrieren?redirect=' + encodeURIComponent(`/betreuer/${id}`))}
+                    >
+                      Registrieren
+                    </Button>
+                  </div>
+                </div>
+              )}
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button 

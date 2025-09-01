@@ -21,319 +21,887 @@
 - **React Context**: AuthContext für User-Session und Subscription-State
 - **Custom Hooks**: useSubscription, useFeatureAccess, useCurrentUsage
 
-### Backend & Database
+### Backend-Technologien
 
-#### Backend-as-a-Service
-- **Supabase**: PostgreSQL + Authentication + Real-time + Edge Functions
-- **PostgreSQL 15**: Relationale Datenbank mit Row Level Security
-- **Supabase Auth**: JWT-basierte Authentifizierung mit Social Logins
-- **Supabase Real-time**: WebSocket-basierte Live-Updates
+#### Supabase (Backend-as-a-Service)
+- **PostgreSQL 15.8.1**: Moderne Datenbank mit erweiterten Features
+- **Row Level Security (RLS)**: Vollständige Datenbank-Sicherheit
+- **Supabase Auth**: JWT-basierte Authentifizierung
+- **Real-time Subscriptions**: WebSocket-Integration für Chat-System
+- **Edge Functions**: Serverless-Funktionen für komplexe Logik
+- **Storage**: Datei-Upload für Profile-Bilder und Dokumente
 
-#### Database Schema
-```sql
--- Core Tables
-users                    # Benutzerprofile mit street-Feld
-conversations           # Chat-Gespräche
-messages                # Chat-Nachrichten
-owner_caretaker_connections  # Betreuer-Client-Verbindungen
+#### Datenbank-Architektur
+- **25+ Tabellen** mit vollständiger RLS-Implementierung
+- **3 optimierte Views** für häufige Abfragen
+- **JSONB-Felder** für flexible Datenstrukturen
+- **Geografische Daten** mit PostGIS-Integration
+- **Automatische Indizierung** aller Primärschlüssel
 
--- Subscription System (NEU)
-subscriptions           # User-Subscriptions mit Plan-Info
-usage_tracking          # Feature-Nutzung und Limits
-caretaker_images        # Image-Upload-Tracking
-billing_history         # Payment-Historie
-owner_preferences       # Datenschutz-Einstellungen mit share_settings
-```
+#### Payment Integration
+- **Stripe**: Vollständige Payment-Integration
+- **Webhook-Handling**: Automatische Subscription-Updates
+- **PCI-Compliance**: Sichere Zahlungsabwicklung
+- **Subscription Management**: Abo-Verwaltung mit Feature-Gates
 
-#### Row Level Security (RLS)
-- Vollständige RLS-Policies für alle Tabellen
-- User-basierte Zugriffskontrolle
-- Sichere Multi-Tenant-Architektur
+## Datenbank-Integration
 
-### Payment Integration
+### Supabase-Client Setup
 
-#### Stripe Integration
-- **@stripe/stripe-js**: Frontend Stripe SDK
-- **Stripe API**: Server-side Payment Processing
-- **Pricing**: Owner Premium €4,90/Monat, Caretaker Professional €12,90/Monat
-- **Test Environment**: Vollständig konfiguriert mit Test-Karten
-
-#### Supabase Edge Functions (Deno Runtime)
+#### Client-Konfiguration
 ```typescript
-/supabase/functions/
-├── create-checkout-session/    # Stripe Checkout Session Creation
-├── validate-checkout-session/  # Payment Success Validation
-└── stripe-webhook/            # Webhook Event Handling
-```
+// src/lib/supabase/client.ts
+import { createClient } from '@supabase/supabase-js';
 
-#### Payment Security
-- Server-side Session Creation für sichere Checkout-URLs
-- Webhook-Signatur-Validierung für Event-Authenticity
-- Automatic Subscription Updates nach erfolgreicher Zahlung
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-### Development Tools
-
-#### Code-Qualität
-- **ESLint**: Code-Linting mit React/TypeScript Rules
-- **TypeScript Strict Mode**: Maximale Type-Safety
-- **Vite Dev Tools**: Hot Module Replacement für schnelle Entwicklung
-
-#### Database-Integration
-- **Supabase CLI**: Database Migrations und Type Generation
-- **Auto-generated Types**: TypeScript-Definitionen aus Database Schema
-- **Database Migrations**: Versionierte Schema-Änderungen
-
-### Hosting & Deployment
-
-#### Frontend Hosting
-- **Vercel**: Primäre Hosting-Plattform (konfiguriert)
-- **Alternative**: Netlify für Backup-Deployment
-- **CDN**: Automatische Asset-Optimierung und Caching
-
-#### Backend Infrastructure
-- **Supabase Cloud**: Managed PostgreSQL + Auth + Functions
-- **Edge Functions**: Global deployment für niedrige Latenz
-- **Real-time Infrastructure**: WebSocket-Handling durch Supabase
-
-### Environment Configuration
-
-#### Environment Variables
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-
-# Stripe Configuration (NEU)
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_SECRET_KEY=sk_test_...           # Server-side only
-STRIPE_WEBHOOK_SECRET=whsec_...         # Edge Functions only
-```
-
-#### Build Configuration
-- **Vite Config**: Optimized für Production-Builds
-- **TypeScript Config**: Strict-Mode mit Path-Mapping
-- **Tailwind Config**: Custom Design-System-Integration
-
-### Dependencies
-
-#### Core Dependencies
-```json
-{
-  "react": "^18.3.1",
-  "react-dom": "^18.3.1",
-  "react-router-dom": "^6.21.0",
-  "typescript": "^5.2.2",
-  "@supabase/supabase-js": "^2.38.0",
-  "zustand": "^4.5.0"
-}
-```
-
-#### UI & Styling
-```json
-{
-  "tailwindcss": "^3.4.0",
-  "@headlessui/react": "^1.7.17",
-  "lucide-react": "^0.298.0",
-  "clsx": "^2.0.0",
-  "tailwind-merge": "^2.2.0"
-}
-```
-
-#### Payment Integration (NEU)
-```json
-{
-  "@stripe/stripe-js": "^2.0.0",
-  "stripe": "^14.0.0"
-}
-```
-
-#### Development Dependencies
-```json
-{
-  "@types/react": "^18.2.43",
-  "@types/react-dom": "^18.2.17",
-  "@vitejs/plugin-react": "^4.2.1",
-  "vite": "^5.1.0",
-  "eslint": "^8.55.0"
-}
-```
-
-### Subscription System Architecture
-
-#### Feature Matrix System
-```typescript
-interface FeatureMatrix {
-  owner: {
-    starter: { contact_requests: { limit: 3 }, reviews: { enabled: false } },
-    premium: { contact_requests: { unlimited: true }, reviews: { enabled: true } }
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true
   },
-  caretaker: {
-    starter: { environment_images: { limit: 0 } },
-    professional: { environment_images: { limit: 6 }, premium_badge: { enabled: true } }
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
+});
+```
+
+#### TypeScript-Integration
+```typescript
+// Automatisch generierte Typen aus Datenbank-Schema
+export interface Database {
+  public: {
+    Tables: {
+      users: {
+        Row: {
+          id: string;
+          first_name: string | null;
+          last_name: string | null;
+          email: string | null;
+          user_type: 'owner' | 'caretaker' | 'admin' | null;
+          // ... weitere Felder
+        };
+        Insert: { /* Insert-Typen */ };
+        Update: { /* Update-Typen */ };
+      };
+      // ... weitere Tabellen
+    };
+  };
+}
+```
+
+### Datenbank-Schema-Übersicht
+
+#### Core User Management
+```sql
+-- Zentrale Benutzerverwaltung
+users (
+  id: UUID (PK),
+  user_type: 'owner' | 'caretaker' | 'admin',
+  first_name, last_name, email,
+  profile_photo_url, plan_type,
+  subscription_status, is_admin,
+  admin_role, public_profile_visible
+)
+
+-- Betreuer-Profile
+caretaker_profiles (
+  id: UUID (FK -> users.id),
+  bio, hourly_rate, animal_types,
+  services_with_categories: JSONB,
+  experience_years, qualifications,
+  availability: JSONB, short_term_available
+)
+```
+
+#### Pet & Care Management
+```sql
+-- Haustier-Profile
+pets (
+  id: UUID (PK),
+  owner_id: UUID (FK -> users.id),
+  name, type, breed, age,
+  weight, gender, neutered, birth_date
+)
+
+-- Betreuungsanfragen
+care_requests (
+  id: UUID (PK),
+  owner_id: UUID (FK -> users.id),
+  pet_id: UUID (FK -> pets.id),
+  services: JSONB, start_date, end_date,
+  status: 'pending' | 'accepted' | 'rejected' | 'completed' | 'cancelled'
+)
+
+-- Buchungen
+bookings (
+  id: UUID (PK),
+  care_request_id: UUID (FK -> care_requests.id),
+  caretaker_id: UUID (FK -> caretaker_profiles.id),
+  status, price, payment_status
+)
+```
+
+#### Communication System
+```sql
+-- Chat-Konversationen
+conversations (
+  id: UUID (PK),
+  owner_id: UUID (FK -> auth.users.id),
+  caretaker_id: UUID (FK -> users.id),
+  status: 'active' | 'archived' | 'blocked',
+  last_message_at
+)
+
+-- Einzelne Nachrichten
+messages (
+  id: UUID (PK),
+  conversation_id: UUID (FK -> conversations.id),
+  sender_id: UUID (FK -> users.id),
+  content, message_type, read_at
+)
+```
+
+### Row Level Security (RLS)
+
+#### RLS-Policy-Implementierung
+```sql
+-- Öffentliche Betreuer-Suche
+CREATE POLICY "Public can view caretaker profile info" 
+  ON public.users 
+  FOR SELECT 
+  USING (
+    user_type = 'caretaker' OR auth.uid() = id
+  );
+
+-- Private Benutzerdaten
+CREATE POLICY "Users can view own data" 
+  ON public.users 
+  FOR SELECT 
+  USING (auth.uid() = id);
+
+-- Verbindungs-basierte Berechtigungen
+CREATE POLICY "Connected caretakers can view owner profiles" 
+  ON public.users 
+  FOR SELECT 
+  USING (
+    EXISTS (
+      SELECT 1 FROM owner_caretaker_connections 
+      WHERE caretaker_id = auth.uid() 
+      AND owner_id = id 
+      AND status = 'active'
+    )
+  );
+```
+
+#### RLS-Performance-Optimierung
+- **Policy-Caching**: RLS-Policies werden gecacht für bessere Performance
+- **Index-Optimierung**: Automatische Indizierung aller Primärschlüssel
+- **Query-Optimierung**: Views für häufige Abfragen optimiert
+
+### Datenbank-Views
+
+#### Optimierte Such-Views
+```sql
+-- caretaker_search_view für optimierte Betreuer-Suche
+CREATE VIEW caretaker_search_view AS
+SELECT 
+  u.id, u.first_name, u.last_name, u.city, u.plz,
+  cp.hourly_rate, cp.rating, cp.services_with_categories,
+  cp.availability, cp.short_term_available,
+  -- Verfügbarkeit nach Wochentagen aufgeteilt
+  CASE WHEN cp.availability ? 'Mo' THEN cp.availability ->> 'Mo' ELSE '[]' END AS monday_availability
+FROM caretaker_profiles cp
+LEFT JOIN users u ON cp.id = u.id
+WHERE u.user_type = 'caretaker';
+```
+
+#### Werbeanzeigen-Views
+```sql
+-- advertisements_with_formats für optimierte Werbeanzeigen
+CREATE VIEW advertisements_with_formats AS
+SELECT 
+  a.*, f.name AS format_name, f.width, f.height,
+  f.placement, f.function_description
+FROM advertisements a
+LEFT JOIN advertisement_formats f ON a.format_id = f.id;
+```
+
+## Real-time Integration
+
+### WebSocket-Integration
+
+#### Chat-System Real-time
+```typescript
+// Real-time Chat-Integration
+const channel = supabase
+  .channel('chat')
+  .on('postgres_changes', 
+    { 
+      event: 'INSERT', 
+      schema: 'public', 
+      table: 'messages',
+      filter: `conversation_id=eq.${conversationId}`
+    },
+    (payload) => {
+      // Neue Nachricht empfangen
+      handleNewMessage(payload.new);
+    }
+  )
+  .on('postgres_changes',
+    {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'conversations',
+      filter: `id=eq.${conversationId}`
+    },
+    (payload) => {
+      // Konversations-Update (z.B. last_message_at)
+      handleConversationUpdate(payload.new);
+    }
+  )
+  .subscribe();
+```
+
+#### Subscription-Updates Real-time
+```typescript
+// Real-time Subscription-Updates
+const subscriptionChannel = supabase
+  .channel('subscription-updates')
+  .on('postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'usage_tracking',
+      filter: `user_id=eq.${userId}`
+    },
+    (payload) => {
+      // Usage-Tracking-Updates
+      handleUsageUpdate(payload);
+    }
+  )
+  .subscribe();
+```
+
+### Performance-Optimierung
+
+#### Connection Management
+```typescript
+// Intelligente Connection-Verwaltung
+class RealtimeManager {
+  private channels = new Map<string, RealtimeChannel>();
+  
+  subscribe(table: string, filters: any, callback: Function) {
+    const channelKey = `${table}-${JSON.stringify(filters)}`;
+    
+    if (this.channels.has(channelKey)) {
+      return this.channels.get(channelKey);
+    }
+    
+    const channel = supabase
+      .channel(channelKey)
+      .on('postgres_changes', { event: '*', schema: 'public', table }, callback)
+      .subscribe();
+    
+    this.channels.set(channelKey, channel);
+    return channel;
+  }
+  
+  unsubscribe(table: string, filters: any) {
+    const channelKey = `${table}-${JSON.stringify(filters)}`;
+    const channel = this.channels.get(channelKey);
+    
+    if (channel) {
+      channel.unsubscribe();
+      this.channels.delete(channelKey);
+    }
   }
 }
 ```
 
-#### Usage Tracking
-- **Real-time Tracking**: Automatische Feature-Nutzung-Verfolgung
-- **Monthly Limits**: Reset-Logic für monatliche Limits
-- **Beta Protection**: Alle Limits während Beta-Phase (bis 31.10.2025) aufgehoben
+## Payment Integration
 
-#### Services Architecture
+### Stripe-Integration
+
+#### Client-Side Setup
 ```typescript
-// Service Layer für Business Logic
-SubscriptionService     # Subscription Management
-FeatureGateService     # Feature-Zugriffskontrolle  
-UsageTrackingService   # Feature-Nutzung-Tracking
-StripeService          # Payment Processing
-AdvertisementService   # Advertisement Management
-AdTargetingService     # Advertisement Targeting
+// Stripe-Client-Initialisierung
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
+);
+
+// Checkout-Session erstellen
+const createCheckoutSession = async (planType: string) => {
+  const stripe = await stripePromise;
+  
+  const response = await fetch('/api/create-checkout-session', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ planType })
+  });
+  
+  const session = await response.json();
+  
+  const result = await stripe!.redirectToCheckout({
+    sessionId: session.id
+  });
+  
+  if (result.error) {
+    console.error(result.error);
+  }
+};
 ```
 
-#### SubscriptionService
+#### Webhook-Handling
 ```typescript
-class SubscriptionService {
-  async getSubscription(userId: string): Promise<Subscription>
-  async createCheckoutSession(planId: string): Promise<string>
-  async handleWebhook(event: Stripe.Event): Promise<void>
-  async cancelSubscription(subscriptionId: string): Promise<void>
+// Supabase Edge Function für Stripe-Webhooks
+// supabase/functions/stripe-webhook/index.ts
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
+
+serve(async (req) => {
+  const signature = req.headers.get('stripe-signature');
+  const body = await req.text();
+  
+  try {
+    const event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      Deno.env.get('STRIPE_WEBHOOK_SECRET')
+    );
+    
+    switch (event.type) {
+      case 'customer.subscription.created':
+        await handleSubscriptionCreated(event.data.object);
+        break;
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object);
+        break;
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object);
+        break;
+    }
+    
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200
+    });
+  } catch (err) {
+    return new Response(
+      `Webhook Error: ${err.message}`,
+      { status: 400 }
+    );
+  }
+});
+```
+
+### Subscription Management
+
+#### Feature-Gate-Implementierung
+```typescript
+// Feature-Zugriff mit Usage-Tracking
+const useFeatureAccess = (feature: string) => {
+  const { user } = useAuth();
+  const { subscription } = useSubscription();
+  const { usage, limit } = useCurrentUsage(feature);
+  
+  const hasAccess = subscription?.plan_type === 'premium' || 
+                   (subscription?.plan_type === 'starter' && usage < limit);
+  
+  const trackUsage = async () => {
+    if (hasAccess) {
+      await supabase.from('usage_tracking').insert({
+        user_id: user?.id,
+        action_type: feature,
+        month_year: getCurrentMonthYear()
+      });
+    }
+  };
+  
+  return { hasAccess, usage, limit, trackUsage };
+};
+```
+
+## Development Tools
+
+### Build & Development
+
+#### Vite-Konfiguration
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@lib': path.resolve(__dirname, './src/lib'),
+      '@types': path.resolve(__dirname, './src/types')
+    }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js'],
+          stripe: ['@stripe/stripe-js']
+        }
+      }
+    }
+  },
+  server: {
+    port: 5174,
+    host: true
+  }
+});
+```
+
+#### TypeScript-Konfiguration
+```json
+// tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@lib/*": ["src/lib/*"],
+      "@types/*": ["src/types/*"]
+    }
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
 }
 ```
 
-#### FeatureGateService
-```typescript
-class FeatureGateService {
-  async hasAccess(feature: string, userId: string): Promise<boolean>
-  async checkLimit(feature: string, userId: string): Promise<UsageStatus>
-  async getFeatureMatrix(planType: string): Promise<FeatureMatrix>
+### Code Quality
+
+#### ESLint-Konfiguration
+```javascript
+// eslint.config.js
+import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+
+export default [
+  js.configs.recommended,
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh
+    },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true }
+      ]
+    }
+  }
+];
+```
+
+#### Prettier-Konfiguration
+```json
+// .prettierrc
+{
+  "semi": true,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false
 }
 ```
 
-#### UsageTrackingService
+## Performance-Optimierung
+
+### Bundle-Optimierung
+
+#### Code-Splitting
 ```typescript
-class UsageTrackingService {
-  async increment(feature: string, userId: string): Promise<void>
-  async getCurrentUsage(feature: string, userId: string): Promise<number>
-  async resetMonthlyUsage(): Promise<void>
-}
+// Lazy Loading für alle Routen
+const HomePage = lazy(() => import('./pages/HomePage'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+
+// Mit Suspense
+<Suspense fallback={<PageSkeleton />}>
+  <Routes>
+    <Route path="/" element={<HomePage />} />
+    <Route path="/suche" element={<SearchPage />} />
+    <Route path="/profil" element={<ProfilePage />} />
+    <Route path="/chat" element={<ChatPage />} />
+  </Routes>
+</Suspense>
 ```
 
-#### StripeService
+#### Dynamic Imports
 ```typescript
-class StripeService {
-  async createCustomer(email: string): Promise<Stripe.Customer>
-  async createCheckoutSession(params: CheckoutParams): Promise<Stripe.Checkout.Session>
-  async handleWebhook(signature: string, body: string): Promise<void>
-}
-```
-
-#### AdvertisementService
-```typescript
-class AdvertisementService {
-  async getTargetedAds(criteria: TargetingCriteria): Promise<Advertisement[]>
-  async trackImpression(adId: string, userId?: string): Promise<void>
-  async trackClick(adId: string, userId?: string): Promise<void>
-  async createAdvertisement(data: CreateAdData): Promise<Advertisement>
-  async updateAdvertisement(id: string, data: UpdateAdData): Promise<Advertisement>
-  async deleteAdvertisement(id: string): Promise<void>
-  async getAdMetrics(adId: string): Promise<AdMetrics>
-}
-```
-
-#### AdTargetingService
-```typescript
-class AdTargetingService {
-  async getAdsForOwner(ownerProfile: OwnerProfile): Promise<Advertisement[]>
-  async getAdsForCaretaker(caretakerProfile: CaretakerProfile): Promise<Advertisement[]>
-  async calculateRelevanceScore(ad: Advertisement, profile: UserProfile): Promise<number>
-  async updateTargetingCriteria(adId: string, criteria: TargetingCriteria): Promise<void>
-}
+// Dynamische Imports für schwere Libraries
+const loadStripe = async () => {
+  if (typeof window !== 'undefined') {
+    const { loadStripe } = await import('@stripe/stripe-js');
+    return loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+  }
+  return null;
+};
 ```
 
 ### Database Performance
 
-#### Optimizations
-- **Indizes**: Optimierte Queries für Subscription- und Chat-Tabellen
-- **Connection Pooling**: Supabase-managed für hohe Concurrent-Users
-- **Real-time Subscriptions**: Effiziente WebSocket-Verbindungen
-
-#### Migrations
-```sql
--- Beispiel: Subscription System Migration
-20250129000000_create_subscription_system.sql
--- Street Field Integration
-20250113_owner_caretaker_connections.sql
-20250114_add_share_settings.sql
+#### Query-Optimierung
+```typescript
+// Optimierte Betreuer-Suche
+const searchCaretakers = async (filters: SearchFilters) => {
+  let query = supabase
+    .from('caretaker_search_view')
+    .select('*');
+  
+  // Filter anwenden
+  if (filters.petType) {
+    query = query.contains('animal_types', [filters.petType]);
+  }
+  
+  if (filters.location) {
+    query = query.ilike('city', `%${filters.location}%`);
+  }
+  
+  if (filters.service) {
+    query = query.contains('services_with_categories', [
+      { name: filters.service }
+    ]);
+  }
+  
+  const { data, error } = await query
+    .order('rating', { ascending: false })
+    .limit(20);
+  
+  return { data, error };
+};
 ```
 
-### Security Implementation
+#### Caching-Strategien
+```typescript
+// React Query für API-Caching
+const { data: caretakers, isLoading } = useQuery({
+  queryKey: ['caretakers', searchParams],
+  queryFn: () => searchCaretakers(searchParams),
+  staleTime: 5 * 60 * 1000, // 5 Minuten
+  cacheTime: 10 * 60 * 1000, // 10 Minuten
+  refetchOnWindowFocus: false
+});
+```
 
-#### Authentication Security
-- **JWT Tokens**: Sichere Session-Management
-- **Row Level Security**: Database-Level Access Control
-- **Rate Limiting**: Schutz vor Missbrauch (30s Limit für Profil-Zugriffe)
+## Security Implementation
 
-#### Payment Security
-- **Server-side Processing**: Alle kritischen Payment-Operationen
-- **Webhook Validation**: Stripe-Signatur-Verifizierung
-- **Secure Environment Variables**: Keine Secrets im Client-Code
+### Authentication Security
 
-#### Data Privacy
-- **GDPR Compliance**: Datenschutz-konforme Datenverarbeitung
-- **Share Settings**: Granulare Kontrolle über Datenfreigabe
-- **Secure Deletion**: Vollständige Chat-Löschung mit CASCADE
+#### JWT-Token-Management
+```typescript
+// Token-Validierung und -Erneuerung
+const validateToken = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  
+  if (error || !session) {
+    // Token ungültig, zur Anmeldung weiterleiten
+    await signOut();
+    return null;
+  }
+  
+  // Token ist gültig
+  return session.user;
+};
+```
 
-### Development Workflow
+#### Session-Management
+```typescript
+// Automatische Session-Verwaltung
+useEffect(() => {
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setUser(session.user);
+        await loadUserProfile(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+      }
+    }
+  );
+  
+  return () => subscription.unsubscribe();
+}, []);
+```
 
-#### Local Development
+### Data Protection
+
+#### Input-Validierung
+```typescript
+// Zod-Schema für Input-Validierung
+import { z } from 'zod';
+
+const userProfileSchema = z.object({
+  firstName: z.string().min(2).max(50),
+  lastName: z.string().min(2).max(50),
+  email: z.string().email(),
+  phoneNumber: z.string().optional(),
+  city: z.string().min(2).max(100),
+  plz: z.string().regex(/^\d{5}$/)
+});
+
+const validateUserProfile = (data: unknown) => {
+  return userProfileSchema.parse(data);
+};
+```
+
+#### XSS-Schutz
+```typescript
+// React's eingebaute XSS-Schutz + zusätzliche Sanitization
+import DOMPurify from 'dompurify';
+
+const safeHtml = (html: string) => {
+  const sanitized = DOMPurify.sanitize(html);
+  return { __html: sanitized };
+};
+
+// Verwendung
+<div dangerouslySetInnerHTML={safeHtml(userContent)} />
+```
+
+## Testing Infrastructure
+
+### Testing Tools
+
+#### Unit Testing
+```typescript
+// Vitest für Unit-Tests
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import SearchPage from './SearchPage';
+
+describe('SearchPage', () => {
+  it('should display search form', () => {
+    render(<SearchPage />);
+    expect(screen.getByPlaceholderText('Nach Betreuern suchen...')).toBeInTheDocument();
+  });
+});
+```
+
+#### Integration Testing
+```typescript
+// API-Integration-Tests
+describe('Caretaker Search API', () => {
+  it('should return filtered results', async () => {
+    const response = await fetch('/api/caretakers/search?petType=Hund');
+    const data = await response.json();
+    
+    expect(response.status).toBe(200);
+    expect(data.caretakers).toHaveLength(3);
+  });
+});
+```
+
+### Mock-Services
+
+#### Service-Mocking
+```typescript
+// Mock für Caretaker-Search-Service
+vi.mock('../lib/services/caretaker-search', () => ({
+  searchCaretakers: vi.fn().mockResolvedValue([
+    { id: '1', name: 'Max Mustermann', rating: 4.5 }
+  ])
+}));
+```
+
+## Deployment & CI/CD
+
+### Environment Configuration
+
+#### Environment Variables
 ```bash
-# Setup
-npm install
-npm run dev                    # Vite Dev Server (Port 5174)
-
-# Database
-npx supabase start            # Local Supabase Instance
-npx supabase db reset         # Reset Database with Migrations
-npx supabase gen types typescript --local > src/lib/supabase/database.types.ts
-
-# Edge Functions  
-npx supabase functions serve  # Local Functions Development
+# .env.local
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+VITE_APP_ENV=development
 ```
 
-#### Production Deployment
-```bash
-# Frontend Build
-npm run build                 # Optimized Production Build
-npm run preview              # Preview Production Build
-
-# Database Deployment
-npx supabase db push         # Apply Migrations to Production
-npx supabase functions deploy # Deploy Edge Functions
+#### Build-Konfiguration
+```typescript
+// Vite-Konfiguration für verschiedene Environments
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  
+  return {
+    define: {
+      __APP_ENV__: JSON.stringify(env.APP_ENV)
+    },
+    build: {
+      outDir: 'dist',
+      sourcemap: mode === 'development',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            supabase: ['@supabase/supabase-js'],
+            stripe: ['@stripe/stripe-js']
+          }
+        }
+      }
+    }
+  };
+});
 ```
 
-### Performance Characteristics
+### CI/CD Pipeline
 
-#### Bundle Size
-- **Initial Bundle**: ~250KB (gzipped)
-- **Lazy Loaded Routes**: 20-50KB per Page
-- **Stripe SDK**: Dynamically loaded nur bei Payment-Flow
+#### GitHub Actions
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm run test
+      - run: npm run build
+  
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: npm ci
+      - run: npm run build
+      - uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.ORG_ID }}
+          vercel-project-id: ${{ secrets.PROJECT_ID }}
+```
 
-#### Runtime Performance
-- **Feature Checks**: < 50ms (mit in-memory Caching)
-- **Database Queries**: < 100ms (optimierte Indizes)
-- **Real-time Updates**: < 200ms (WebSocket-basiert)
-- **Payment Processing**: < 2s (Stripe Checkout Session)
+## Monitoring & Analytics
 
-### Monitoring & Debugging
+### Performance Monitoring
 
-#### Debug Tools
-- **`/debug/subscriptions`**: Admin-Dashboard für Subscription-Management
-- **`/debug/subscription-status`**: User-Dashboard für detaillierte Status-Anzeige
-- **Supabase Dashboard**: Real-time Database und Auth Monitoring
-- **Stripe Dashboard**: Payment und Subscription Analytics
+#### Web Vitals
+```typescript
+// Web Vitals Tracking
+import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
 
-#### Error Handling
-- **React Error Boundaries**: Graceful Component-Error-Recovery
-- **API Error Handling**: Structured Error-Responses mit User-freundlichen Messages
-- **Payment Error Recovery**: Fallback-Strategien bei Stripe-Fehlern
-- **Real-time Connection Recovery**: Automatische Reconnection bei WebSocket-Drops
+const sendToAnalytics = (metric: any) => {
+  // Google Analytics
+  gtag('event', metric.name, {
+    value: Math.round(metric.value),
+    event_category: 'Web Vitals',
+    event_label: metric.id
+  });
+};
+
+getCLS(sendToAnalytics);
+getFID(sendToAnalytics);
+getFCP(sendToAnalytics);
+getLCP(sendToAnalytics);
+getTTFB(sendToAnalytics);
+```
+
+#### Error Tracking
+```typescript
+// Error Tracking mit Sentry
+import * as Sentry from '@sentry/react';
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  environment: import.meta.env.VITE_APP_ENV,
+  integrations: [
+    new Sentry.BrowserTracing(),
+    new Sentry.Replay()
+  ],
+  tracesSampleRate: 1.0,
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0
+});
+```
+
+### User Analytics
+
+#### Event Tracking
+```typescript
+// Benutzer-Event-Tracking
+const trackEvent = (eventName: string, properties?: Record<string, any>) => {
+  // Google Analytics
+  gtag('event', eventName, properties);
+  
+  // Supabase Analytics
+  supabase.analytics.track(eventName, properties);
+  
+  // Custom Analytics
+  analytics.track(eventName, {
+    ...properties,
+    timestamp: new Date().toISOString(),
+    userId: user?.id
+  });
+};
+```
+
+#### Feature-Usage-Tracking
+```typescript
+// Feature-Usage-Tracking
+const trackFeatureUsage = (feature: string, action: string) => {
+  trackEvent('feature_usage', {
+    feature,
+    action,
+    subscription_type: subscription?.plan_type,
+    user_type: user?.user_type
+  });
+};
+```
+
+---
+
+**Letzte Aktualisierung**: 08.02.2025  
+**Status**: Vollständige Tech-Context dokumentiert, einschließlich Supabase-Integration und Datenbank-Architektur  
+**Nächste Überprüfung**: Nach Implementierung des Buchungssystems

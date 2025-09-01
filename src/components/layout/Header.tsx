@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, PawPrint as Paw, MessageCircle, LogOut } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useAdmin } from '../../lib/admin/useAdmin';
 import { useAuth } from '../../lib/auth/AuthContext';
 import { useNotifications } from '../../lib/notifications/NotificationContext';
 import { useSubscription } from '../../lib/auth/useSubscription';
@@ -16,6 +17,7 @@ function Header() {
   const { isAuthenticated, userProfile, signOut, loading } = useAuth();
   const { unreadCount } = useNotifications();
   const { isPremiumUser } = useSubscription();
+  const { isAdmin } = useAdmin();
 
   
   const isActive = (path: string) => location.pathname === path;
@@ -87,6 +89,17 @@ function Header() {
                   <NavLink to="/mitgliedschaften" isActive={isActive('/mitgliedschaften') || isActive('/preise')}>
                     Mitgliedschaften
                   </NavLink>
+                )}
+                {isAdmin && (
+                  <a
+                    href="/admin.html"
+                    className={cn(
+                      'inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-200',
+                      'border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-800'
+                    )}
+                  >
+                    Admin
+                  </a>
                 )}
                 <Link to="/nachrichten" className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-primary-700 transition-colors relative">
                   <MessageCircle className="h-5 w-5" /> 
@@ -182,6 +195,14 @@ function Header() {
                     >
                       Mitgliedschaften
                     </MobileNavLink>
+                  )}
+                  {isAdmin && (
+                    <a 
+                      href="/admin.html" 
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    >
+                      Admin
+                    </a>
                   )}
                   <Link to="/nachrichten" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-primary-700 relative" onClick={() => setIsMenuOpen(false)}>
                     <MessageCircle className="h-5 w-5" /> 
