@@ -170,7 +170,7 @@ function RegisterPage() {
         {/* Headline & Beschreibung */}
           <div className="text-center mb-8">
             <Link to="/" className="inline-flex items-center mb-6">
-              <img src="/Image/Logos/tigube_logo_klein.png" alt="tigube Logo" className="h-10 w-auto mr-2" />
+              <img src="/Image/Logos/tigube_logo.svg" alt="tigube Logo" className="h-10 w-auto mr-2" />
             </Link>
             <h1 className="text-3xl font-bold mb-4">
               {userType === 'owner' ? 'Als Tierbesitzer registrieren' : 'Als Betreuer registrieren'}

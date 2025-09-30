@@ -9,7 +9,7 @@ import type { ClientData } from '../components/ui/ClientDetailsAccordion';
 import { useAuth } from '../lib/auth/AuthContext';
 import { useEffect, useState, useRef } from 'react';
 import { caretakerProfileService, ownerCaretakerService, userService } from '../lib/supabase/db';
-import { Calendar, Check, Edit, LogOut, MapPin, Phone, Shield, Upload, Camera, Star, Info, Lock, Briefcase, Verified, Eye, EyeOff, KeyRound, Trash2, AlertTriangle, Mail, X, Clock, Crown, Settings, PawPrint, Moon, CheckCircle, User, XCircle } from 'lucide-react';
+import { Calendar, Check, Edit, LogOut, MapPin, Phone, Shield, Upload, Camera, Star, Info, Lock, Briefcase, Verified, Eye, EyeOff, KeyRound, Trash2, AlertTriangle, Mail, X, Clock, Crown, Settings, PawPrint, Moon, CheckCircle, User, XCircle, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase/client';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
@@ -23,11 +23,15 @@ import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { DEFAULT_SERVICE_CATEGORIES, type ServiceCategory, type CategorizedService } from '../lib/types/service-categories';
 import { ServiceUtils as SupabaseServiceUtils } from '../lib/supabase/service-categories';
 import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityContext';
+import { useToast } from '../hooks/useToast';
+import ToastContainer from '../components/ui/ToastContainer';
+import { VerificationService, type VerificationDocument } from '../lib/services/verificationService';
 
 
 function CaretakerDashboardPage() {
   const { user, userProfile, loading: authLoading, subscription, updateProfileState } = useAuth();
   const navigate = useNavigate();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
   const { isPremiumUser } = useSubscription();
   const { maxEnvironmentImages } = useFeatureAccess();
   const [profile, setProfile] = useState<any>(null);
@@ -64,6 +68,14 @@ function CaretakerDashboardPage() {
 
   // Approval state
   const [approvalLoading, setApprovalLoading] = useState(false);
+
+  // Verification state
+  const [verificationRequest, setVerificationRequest] = useState<VerificationDocument | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<string>('not_submitted');
+  const [verificationLoading, setVerificationLoading] = useState(false);
+  const [uploadingDocuments, setUploadingDocuments] = useState(false);
+  const [ausweisFile, setAusweisFile] = useState<File | null>(null);
+  const [zertifikatFiles, setZertifikatFiles] = useState<File[]>([]);
 
   // Overnight availability state
   const [overnightAvailability, setOvernightAvailability] = useState<Record<string, boolean>>({
@@ -801,9 +813,25 @@ function CaretakerDashboardPage() {
       }));
       
       console.log('✅ Freigabe erfolgreich angefordert');
-    } catch (error) {
+      
+      // Erfolgs-Benachrichtigung anzeigen
+      showSuccess(
+        'Profil erfolgreich eingereicht!',
+        'Ihr Profil wurde zur Freigabe eingereicht. Sie erhalten eine Benachrichtigung, sobald es von einem Administrator überprüft wurde.',
+        6000
+      );
+      
+    } catch (error: any) {
       console.error('❌ Fehler beim Anfordern der Freigabe:', error);
-      // Hier könnte man eine Fehlermeldung anzeigen
+      
+      // Fehler-Benachrichtigung anzeigen
+      const errorMessage = error?.message || 'Ein unbekannter Fehler ist aufgetreten.';
+      showError(
+        'Fehler beim Einreichen',
+        errorMessage,
+        8000
+      );
+      
     } finally {
       setApprovalLoading(false);
     }
@@ -1474,7 +1502,7 @@ function CaretakerDashboardPage() {
   const avatarUrl = getAvatarUrl();
 
   // Tab-Navigation für Übersicht/Fotos
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'sicherheit' | 'mitgliedschaften'>('uebersicht');
+  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften'>('uebersicht');
   
   // Scroll-Position-Persistierung entfernt - Browser sollte das automatisch handhaben
   // Das Problem liegt woanders - wahrscheinlich an anderen useEffect-Hooks die Re-Renders verursachen
@@ -1548,6 +1576,27 @@ function CaretakerDashboardPage() {
     }
     if (activeTab === 'kunden') fetchClients();
   }, [activeTab, user, profile?.id]);
+
+  // Verifizierungsdaten laden
+  useEffect(() => {
+    async function fetchVerificationData() {
+      if (!user) return;
+      setVerificationLoading(true);
+      try {
+        const [request, status] = await Promise.all([
+          VerificationService.getVerificationRequest(user.id),
+          VerificationService.getVerificationStatus(user.id)
+        ]);
+        setVerificationRequest(request);
+        setVerificationStatus(status.status);
+      } catch (error) {
+        console.error('Error fetching verification data:', error);
+      } finally {
+        setVerificationLoading(false);
+      }
+    }
+    if (activeTab === 'verifizierung') fetchVerificationData();
+  }, [activeTab, user]);
 
   // Bewertung beantworten
   const handleRespondToReview = async (reviewId: string) => {
@@ -1802,6 +1851,86 @@ function CaretakerDashboardPage() {
   const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
+  // Verifizierung Handler
+  const handleFileSelect = (files: FileList | null, type: 'ausweis' | 'zertifikat') => {
+    if (!files || files.length === 0) return;
+    
+    if (type === 'ausweis') {
+      setAusweisFile(files[0]);
+    } else {
+      setZertifikatFiles(Array.from(files));
+    }
+  };
+
+  const handleSubmitVerification = async () => {
+    if (!user || !ausweisFile) {
+      showError('Fehler', 'Bitte lade mindestens deinen Ausweis hoch.');
+      return;
+    }
+
+    setUploadingDocuments(true);
+    try {
+      const result = await VerificationService.submitVerificationRequest(
+        user.id,
+        ausweisFile,
+        zertifikatFiles
+      );
+      
+      setVerificationRequest(result);
+      setVerificationStatus('pending');
+      setAusweisFile(null);
+      setZertifikatFiles([]);
+      
+      showSuccess(
+        'Verifizierung eingereicht!',
+        'Deine Dokumente wurden erfolgreich hochgeladen und zur Überprüfung eingereicht. Du erhältst eine Benachrichtigung, sobald die Überprüfung abgeschlossen ist.',
+        6000
+      );
+    } catch (error: any) {
+      console.error('Error submitting verification:', error);
+      showError(
+        'Fehler beim Hochladen',
+        error.message || 'Die Dokumente konnten nicht hochgeladen werden. Bitte versuche es erneut.',
+        8000
+      );
+    } finally {
+      setUploadingDocuments(false);
+    }
+  };
+
+  const getVerificationStatusText = (status: string) => {
+    switch (status) {
+      case 'not_submitted': return 'Nicht eingereicht';
+      case 'pending': return 'Ausstehend';
+      case 'in_review': return 'In Bearbeitung';
+      case 'approved': return 'Genehmigt';
+      case 'rejected': return 'Abgelehnt';
+      default: return 'Unbekannt';
+    }
+  };
+
+  const getVerificationStatusColor = (status: string) => {
+    switch (status) {
+      case 'not_submitted': return 'text-gray-500';
+      case 'pending': return 'text-yellow-600';
+      case 'in_review': return 'text-blue-600';
+      case 'approved': return 'text-green-600';
+      case 'rejected': return 'text-red-600';
+      default: return 'text-gray-500';
+    }
+  };
+
+  const getVerificationStatusIcon = (status: string) => {
+    switch (status) {
+      case 'not_submitted': return <AlertTriangle className="w-5 h-5" />;
+      case 'pending': return <Clock className="w-5 h-5" />;
+      case 'in_review': return <Eye className="w-5 h-5" />;
+      case 'approved': return <CheckCircle className="w-5 h-5" />;
+      case 'rejected': return <XCircle className="w-5 h-5" />;
+      default: return <AlertTriangle className="w-5 h-5" />;
+    }
+  };
+
   // Konto löschen Handler
   const handleDeleteAccount = async () => {
     if (!user) return;
@@ -1950,7 +2079,7 @@ function CaretakerDashboardPage() {
     setLoading(false);
   }
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="container-custom py-8">
       {/* Profilkarte */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
         <div className="flex flex-col lg:flex-row items-start gap-6">
@@ -2388,6 +2517,16 @@ function CaretakerDashboardPage() {
               Sicherheit
             </button>
             <button
+              onClick={() => setActiveTab('verifizierung')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'verifizierung'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Verifizierung
+            </button>
+            <button
               onClick={() => setActiveTab('mitgliedschaften')}
               className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === 'mitgliedschaften'
@@ -2403,10 +2542,14 @@ function CaretakerDashboardPage() {
       {/* Tab-Inhalt */}
       {activeTab === 'uebersicht' && (
         <>
-          {/* Leistungen */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><PawPrint className="w-5 h-5" /> Leistungen</h2>
-            <div className="bg-white rounded-xl shadow p-6 mb-8 relative">
+          {/* 2-Spalten Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Linke Spalte */}
+            <div className="space-y-8">
+              {/* Leistungen */}
+              <div>
+                <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><PawPrint className="w-5 h-5" /> Leistungen</h2>
+                <div className="bg-white rounded-xl shadow p-6 relative">
               {!editServices && (
                 <button className="absolute top-4 right-4 p-2 text-gray-400 hover:text-primary-600" onClick={() => setEditServices(true)} title="Bearbeiten">
                   <Edit className="h-3.5 w-3.5" />
@@ -2729,13 +2872,51 @@ function CaretakerDashboardPage() {
                   </div>
                 </form>
               )}
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* Qualifikationen */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Shield className="w-5 h-5" /> Qualifikationen</h2>
-            <div className="bg-white rounded-xl shadow p-6 mb-8 relative">
+            {/* Rechte Spalte */}
+            <div className="space-y-8">
+              {/* Verifizierungsstatus */}
+              <div>
+                <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Shield className="w-5 h-5" /> Verifizierungsstatus</h2>
+                <div className="bg-white rounded-xl shadow p-6">
+                  <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                    <div className={`${getVerificationStatusColor(verificationStatus)}`}>
+                      {getVerificationStatusIcon(verificationStatus)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        Status: {getVerificationStatusText(verificationStatus)}
+                      </p>
+                      {verificationRequest?.admin_comment && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Admin-Kommentar: {verificationRequest.admin_comment}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Link 
+                      to="#" 
+                      onClick={(e) => { e.preventDefault(); setActiveTab('verifizierung'); }}
+                      className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
+                    >
+                      {verificationStatus === 'not_submitted' || verificationStatus === 'rejected' 
+                        ? 'Dokumente hochladen' 
+                        : 'Verifizierung verwalten'
+                      }
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              {/* Qualifikationen */}
+              <div>
+                <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Shield className="w-5 h-5" /> Qualifikationen</h2>
+                <div className="bg-white rounded-xl shadow p-6 relative">
               {!editQualifications && (
                 <button className="absolute top-4 right-4 p-2 text-gray-400 hover:text-primary-600" onClick={() => setEditQualifications(true)} title="Bearbeiten">
                   <Edit className="h-3.5 w-3.5" />
@@ -2908,32 +3089,35 @@ function CaretakerDashboardPage() {
                   </div>
                 </form>
               )}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Verfügbarkeit */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-2 flex items-center gap-2 text-gray-900"><Calendar className="w-5 h-5" /> Verfügbarkeit</h2>
-            <div className="bg-white rounded-xl shadow p-6">
-              <AvailabilityScheduler
-                availability={availability}
-                onAvailabilityChange={handleSaveAvailability}
-              />
+          {/* Verfügbarkeit - Linke Spalte */}
+          <div className="space-y-8">
+            {/* Verfügbarkeit */}
+            <div>
+              <h2 className="text-xl font-semibold mb-2 flex items-center gap-2 text-gray-900"><Calendar className="w-5 h-5" /> Verfügbarkeit</h2>
+              <div className="bg-white rounded-xl shadow p-6">
+                <AvailabilityScheduler
+                  availability={availability}
+                  onAvailabilityChange={handleSaveAvailability}
+                />
+              </div>
+            </div>
+
+            {/* Übernachtungs-Verfügbarkeit */}
+            <div>
+              <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Moon className="w-5 h-5" /> Übernachtungen</h2>
+              <div className="bg-white rounded-xl shadow p-6">
+                <OvernightAvailabilitySelector
+                  overnightAvailability={overnightAvailability}
+                  onOvernightAvailabilityChange={handleOvernightAvailabilityChange}
+                />
+              </div>
             </div>
           </div>
-
-          {/* Übernachtungs-Verfügbarkeit */}
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Moon className="w-5 h-5" /> Übernachtungen</h2>
-            <div className="bg-white rounded-xl shadow p-6">
-              <OvernightAvailabilitySelector
-                overnightAvailability={overnightAvailability}
-                onOvernightAvailabilityChange={handleOvernightAvailabilityChange}
-              />
-            </div>
-          </div>
-
-
         </>
       )}
       {activeTab === 'fotos' && (
@@ -3693,6 +3877,175 @@ function CaretakerDashboardPage() {
         </div>
       )}
 
+      {/* Verifizierung Tab */}
+      {activeTab === 'verifizierung' && (
+        <div className="space-y-8">
+          {/* Verifizierungsstatus */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <Shield className="h-6 w-6 text-primary-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Verifizierungsstatus</h2>
+            </div>
+            
+            {verificationLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <LoadingSpinner />
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                <div className={`${getVerificationStatusColor(verificationStatus)}`}>
+                  {getVerificationStatusIcon(verificationStatus)}
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">
+                    Status: {getVerificationStatusText(verificationStatus)}
+                  </p>
+                  {verificationRequest?.admin_comment && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      Admin-Kommentar: {verificationRequest.admin_comment}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Dokument-Upload */}
+          {verificationStatus === 'not_submitted' || verificationStatus === 'rejected' ? (
+            <div className="bg-white rounded-xl shadow p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <Upload className="h-6 w-6 text-primary-600" />
+                <h2 className="text-xl font-semibold text-gray-900">Dokumente hochladen</h2>
+              </div>
+
+              <div className="space-y-6">
+                {/* Ausweis Upload (Pflichtfeld) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ausweis (Pflichtfeld) *
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors">
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => handleFileSelect(e.target.files, 'ausweis')}
+                      className="hidden"
+                      id="ausweis-upload"
+                    />
+                    <label
+                      htmlFor="ausweis-upload"
+                      className="cursor-pointer flex flex-col items-center"
+                    >
+                      <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                      <span className="text-sm text-gray-600">
+                        {ausweisFile ? ausweisFile.name : 'Ausweis hochladen (PDF, JPG, PNG)'}
+                      </span>
+                      <span className="text-xs text-gray-500 mt-1">Max. 10MB</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Zertifikate Upload (Optional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Zertifikate (Optional)
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition-colors">
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      multiple
+                      onChange={(e) => handleFileSelect(e.target.files, 'zertifikat')}
+                      className="hidden"
+                      id="zertifikat-upload"
+                    />
+                    <label
+                      htmlFor="zertifikat-upload"
+                      className="cursor-pointer flex flex-col items-center"
+                    >
+                      <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                      <span className="text-sm text-gray-600">
+                        {zertifikatFiles.length > 0 
+                          ? `${zertifikatFiles.length} Zertifikat(e) ausgewählt`
+                          : 'Zertifikate hochladen (PDF, JPG, PNG)'
+                        }
+                      </span>
+                      <span className="text-xs text-gray-500 mt-1">Max. 10MB pro Datei</span>
+                    </label>
+                  </div>
+                  {zertifikatFiles.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {zertifikatFiles.map((file, index) => (
+                        <div key={index} className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                          {file.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSubmitVerification}
+                    disabled={!ausweisFile || uploadingDocuments}
+                    className="flex items-center gap-2"
+                  >
+                    {uploadingDocuments ? (
+                      <>
+                        <LoadingSpinner />
+                        Wird hochgeladen...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Verifizierung einreichen
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Bereits eingereicht */
+            <div className="bg-white rounded-xl shadow p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+                <h2 className="text-xl font-semibold text-gray-900">Verifizierung eingereicht</h2>
+              </div>
+              
+              <div className="space-y-4">
+                <p className="text-gray-600">
+                  Deine Verifizierungsanfrage wurde am{' '}
+                  {verificationRequest?.created_at && new Date(verificationRequest.created_at).toLocaleDateString('de-DE')}
+                  {' '}eingereicht und wird von unserem Team überprüft.
+                </p>
+                
+                {verificationRequest?.zertifikate_urls && verificationRequest.zertifikate_urls.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Hochgeladene Zertifikate: {verificationRequest.zertifikate_urls.length}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-blue-800">
+                        <strong>Hinweis:</strong> Die Überprüfung kann 1-3 Werktage dauern. 
+                        Du erhältst eine E-Mail-Benachrichtigung, sobald die Überprüfung abgeschlossen ist.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Mitgliedschaften Tab */}
       {activeTab === 'mitgliedschaften' && (
         <div className="space-y-8">
@@ -3958,6 +4311,9 @@ function CaretakerDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       </div>
   );
 }

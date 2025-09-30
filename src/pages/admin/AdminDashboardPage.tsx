@@ -6,6 +6,7 @@ import AnalyticsPanel from '../../components/admin/AnalyticsPanel';
 import BlogCmsPanel from '../../components/admin/BlogCmsPanel';
 import SubscriptionSyncPanel from '../../components/admin/SubscriptionSyncPanel';
 import AdvertisementManagementPanel from '../../components/admin/AdvertisementManagementPanel';
+import VerificationManagementPanel from '../../components/admin/VerificationManagementPanel';
 
 import { EnhancedAdminService, AdminDashboardStats } from '../../lib/admin/enhancedAdminService';
 import { AdminApprovalService } from '../../lib/services/adminApprovalService';
@@ -19,7 +20,7 @@ const AdminDashboardPage: React.FC = () => {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'moderation' | 'analytics' | 'subscriptions' | 'content' | 'advertisements'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'moderation' | 'analytics' | 'subscriptions' | 'content' | 'advertisements' | 'verification'>('dashboard');
   const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [pendingApprovalsLoading, setPendingApprovalsLoading] = useState(false);
@@ -131,131 +132,16 @@ const AdminDashboardPage: React.FC = () => {
   }
 
   return (
-    <AdminLayout>
+    <AdminLayout activeTab={activeTab} onTabChange={setActiveTab} stats={stats}>
       <div className="space-y-6">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-              <p className="text-gray-600">
-                Willkommen im tigube Admin-Bereich. Hier finden Sie einen Überblick über die wichtigsten Platform-Metriken.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={loadDashboardStats}
-                className="btn btn-outline btn-sm"
-                disabled={loading}
-              >
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Aktualisieren
-              </button>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+            <p className="text-gray-600">
+              Willkommen im tigube Admin-Bereich. Hier finden Sie einen Überblick über die wichtigsten Platform-Metriken.
+            </p>
           </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <nav className="flex space-x-8 px-6" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'dashboard'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Übersicht
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'users'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Database className="h-4 w-4" />
-                Benutzerverwaltung
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('moderation')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'moderation'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Content Moderation
-                {stats && stats.pending_reports > 0 && (
-                  <span className="bg-red-500 text-white rounded-full text-xs px-2 py-1 min-w-[20px] h-5 flex items-center justify-center">
-                    {stats.pending_reports}
-                  </span>
-                )}
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'analytics'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <PieChart className="h-4 w-4" />
-                Analytics
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('subscriptions')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'subscriptions'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Subscription Sync
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('content')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'content'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Blog & News
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('advertisements')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'advertisements'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Werbeverwaltung
-              </div>
-            </button>
-
-          </nav>
         </div>
 
         {/* Tab Content */}
@@ -452,14 +338,14 @@ const AdminDashboardPage: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleApprovalAction(approval.id, 'approve')}
-                            className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg"
+                            className="p-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors"
                             title="Freigeben"
                           >
                             <CheckCircle className="h-5 w-5" />
                           </button>
                           <button
                             onClick={() => handleApprovalAction(approval.id, 'reject')}
-                            className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg"
+                            className="p-2 bg-red-600 text-white hover:bg-red-700 rounded-lg transition-colors"
                             title="Ablehnen"
                           >
                             <XCircle className="h-5 w-5" />
@@ -497,74 +383,78 @@ const AdminDashboardPage: React.FC = () => {
           <AdvertisementManagementPanel currentAdminId={currentAdminId} />
         )}
 
+        {activeTab === 'verification' && currentAdminId && (
+          <VerificationManagementPanel currentAdminId={currentAdminId} />
+        )}
 
-
-        {/* System Status */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">System Status</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Stripe Status */}
-            <StripeStatusIndicator />
-            
-            {/* Database Status */}
-            <div className="border rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-3">Database Status</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Connection:</span>
-                  <span className="font-medium text-green-600">✅ Connected</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Environment:</span>
-                  <span className="font-medium text-gray-900">Production</span>
+        {/* System Status - nur im Dashboard Tab anzeigen */}
+        {activeTab === 'dashboard' && (
+          <>
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">System Status</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Stripe Status */}
+                <StripeStatusIndicator />
+                
+                {/* Database Status */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-900 mb-3">Database Status</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Connection:</span>
+                      <span className="font-medium text-green-600">✅ Connected</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Environment:</span>
+                      <span className="font-medium text-gray-900">Production</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Subscription Sync Debug */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Subscription Sync Debug</h2>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-            <h4 className="font-medium text-yellow-800 mb-2">🔧 Debug Tools</h4>
-            <p className="text-sm text-yellow-700 mb-3">
-              Diese Tools helfen dabei, Sync-Probleme zwischen Stripe und Supabase zu diagnostizieren.
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={() => testSyncFunction()}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
-              >
-                Test Sync Function
-              </button>
-              <button
-                onClick={() => checkSubscriptionStatus()}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm ml-2"
-              >
-                Check Subscription Status
-              </button>
-              <button
-                onClick={() => testUserFeatureUpdate()}
-                className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-sm ml-2"
-              >
-                Test User Feature Update
-              </button>
+            {/* Subscription Sync Debug */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Subscription Sync Debug</h2>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <h4 className="font-medium text-yellow-800 mb-2">🔧 Debug Tools</h4>
+                <p className="text-sm text-yellow-700 mb-3">
+                  Diese Tools helfen dabei, Sync-Probleme zwischen Stripe und Supabase zu diagnostizieren.
+                </p>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => testSyncFunction()}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm"
+                  >
+                    Test Sync Function
+                  </button>
+                  <button
+                    onClick={() => checkSubscriptionStatus()}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm ml-2"
+                  >
+                    Check Subscription Status
+                  </button>
+                  <button
+                    onClick={() => testUserFeatureUpdate()}
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm ml-2"
+                  >
+                    Test User Feature Update
+                  </button>
+                </div>
+              </div>
+              
+              <div id="sync-debug-output" className="mt-4 p-3 bg-gray-100 rounded font-mono text-sm max-h-64 overflow-y-auto">
+                Debug output wird hier angezeigt...
+              </div>
             </div>
-          </div>
-          
-          <div id="sync-debug-output" className="mt-4 p-3 bg-gray-100 rounded font-mono text-sm max-h-64 overflow-y-auto">
-            Debug output wird hier angezeigt...
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </AdminLayout>
   );
 };
 
-export default AdminDashboardPage;
-
-// Add these debug functions
+// Debug functions
 const testSyncFunction = async () => {
   const output = document.getElementById('sync-debug-output');
   if (!output) return;
@@ -663,3 +553,5 @@ const testUserFeatureUpdate = async () => {
     output.innerHTML += `❌ Error: ${error.message}\n`;
   }
 };
+
+export default AdminDashboardPage;

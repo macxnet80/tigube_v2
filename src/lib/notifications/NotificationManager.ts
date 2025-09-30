@@ -45,7 +45,7 @@ export class NotificationManager {
 
     const notification = new Notification(`Neue Nachricht von ${senderName}`, {
       body: truncatedMessage,
-      icon: '/Image/Logos/tigube_logo_klein.png',
+      icon: '/Image/Logos/tigube_logo.svg',
       tag: conversationId, // Prevent multiple notifications from same conversation
       badge: '/Image/Logos/tigube_logo_klein.png',
       requireInteraction: false,
@@ -76,7 +76,7 @@ export class NotificationManager {
     }
 
     const notification = new Notification(`${senderName} schreibt...`, {
-      icon: '/Image/Logos/tigube_logo_klein.png',
+      icon: '/Image/Logos/tigube_logo.svg',
       tag: `typing-${conversationId}`,
       silent: true,
       requireInteraction: false

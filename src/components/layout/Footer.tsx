@@ -11,7 +11,7 @@ function Footer() {
           {/* Logo und Beschreibung */}
           <div className="lg:col-span-1">
             <Link to="/" className="flex items-center space-x-2 mb-4">
-              <img src="/Image/Logos/tigube_logo.png" alt="tigube Logo" className="h-10 w-auto" />
+              <img src="/Image/Logos/tigube_logo_mit_hund_katze.svg" alt="tigube Logo" className="h-20 w-auto" />
             </Link>
             <p className="text-sm text-gray-300 leading-relaxed">
               Deutschlands vertrauensvolle Plattform für professionelle Tierbetreuung. Finde den perfekten Betreuer für deinen Liebling oder werde selbst Teil unserer Gemeinschaft.

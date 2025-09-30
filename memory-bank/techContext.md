@@ -30,6 +30,8 @@
 - **Real-time Subscriptions**: WebSocket-Integration für Chat-System
 - **Edge Functions**: Serverless-Funktionen für komplexe Logik
 - **Storage**: Datei-Upload für Profile-Bilder und Dokumente
+- **Verifizierungsdokumente**: Verschlüsselte Speicherung im 'certificates' Bucket
+- **RLS-Policies**: Sichere Admin-Zugriffe auf Verifizierungsdokumente
 
 #### Datenbank-Architektur
 - **25+ Tabellen** mit vollständiger RLS-Implementierung
@@ -37,6 +39,8 @@
 - **JSONB-Felder** für flexible Datenstrukturen
 - **Geografische Daten** mit PostGIS-Integration
 - **Automatische Indizierung** aller Primärschlüssel
+- **Verifizierungssystem**: verification_requests Tabelle mit RLS-Policies
+- **RPC-Funktionen**: Sichere Admin-Abfragen für Verifizierungsdaten
 
 #### Payment Integration
 - **Stripe**: Vollständige Payment-Integration
@@ -2012,8 +2016,467 @@ if (lowestPrice === 0) {
 **Zweck**: Abwärtskompatibilität während der Umstellung
 **Status**: ✅ Abgeschlossen, neue Struktur ist aktiv
 
+## Toast-Notification-System-Implementierung
+
+### Toast-System-Architektur
+
+#### Komponenten-Struktur
+```typescript
+// src/components/ui/Toast.tsx
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+export interface ToastProps {
+  id: string;
+  type: ToastType;
+  title: string;
+  message?: string;
+  duration?: number;
+  onClose: (id: string) => void;
+}
+
+const Toast: React.FC<ToastProps> = ({
+  id,
+  type,
+  title,
+  message,
+  duration = 5000,
+  onClose
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  useEffect(() => {
+    // Animation einblenden
+    const showTimer = setTimeout(() => setIsVisible(true), 100);
+    
+    // Auto-close nach duration
+    const hideTimer = setTimeout(() => {
+      handleClose();
+    }, duration);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [duration]);
+
+  const handleClose = () => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      onClose(id);
+    }, 300);
+  };
+
+  return (
+    <div className={cn(
+      'transform transition-all duration-300 ease-in-out',
+      isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0',
+      'bg-white rounded-lg shadow-lg border-l-4 p-4 min-w-80 max-w-md',
+      type === 'success' && 'border-green-500',
+      type === 'error' && 'border-red-500',
+      type === 'warning' && 'border-yellow-500',
+      type === 'info' && 'border-blue-500'
+    )}>
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          {getToastIcon(type)}
+        </div>
+        <div className="ml-3 w-0 flex-1">
+          <p className="text-sm font-medium text-gray-900">
+            {title}
+          </p>
+          {message && (
+            <p className="mt-1 text-sm text-gray-500">
+              {message}
+            </p>
+          )}
+        </div>
+        <div className="ml-4 flex-shrink-0 flex">
+          <button
+            className="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            onClick={handleClose}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+**Zweck**: Vollständige Toast-Komponente mit Animationen und Auto-Close
+**Features**: 
+- 4 Toast-Typen (success, error, warning, info)
+- Sanfte Ein-/Ausblend-Animationen
+- Automatisches Schließen nach konfigurierbarer Zeit
+- Manuelles Schließen möglich
+- Responsive Design
+
+#### Toast-Container-Implementierung
+```typescript
+// src/components/ui/ToastContainer.tsx
+interface ToastContainerProps {
+  toasts: ToastProps[];
+  onRemoveToast: (id: string) => void;
+}
+
+const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemoveToast }) => {
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          {...toast}
+          onClose={onRemoveToast}
+        />
+      ))}
+    </div>
+  );
+};
+
+export default ToastContainer;
+```
+
+**Zweck**: Container für alle Toasts mit Positionierung oben rechts
+**Features**: 
+- Feste Positionierung (fixed top-4 right-4)
+- Hoher Z-Index (z-50) für Überlagerung
+- Vertikale Stapelung mit Abständen
+- Automatisches Rendering nur bei vorhandenen Toasts
+
+#### useToast Hook-Implementierung
+```typescript
+// src/hooks/useToast.ts
+interface ToastOptions {
+  type: ToastType;
+  title: string;
+  message?: string;
+  duration?: number;
+}
+
+export const useToast = () => {
+  const [toasts, setToasts] = useState<ToastProps[]>([]);
+
+  const addToast = useCallback((options: ToastOptions) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newToast: ToastProps = {
+      id,
+      ...options,
+      onClose: (id: string) => removeToast(id)
+    };
+
+    setToasts(prev => [...prev, newToast]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
+
+  const showSuccess = useCallback((title: string, message?: string, duration?: number) => {
+    addToast({ type: 'success', title, message, duration });
+  }, [addToast]);
+
+  const showError = useCallback((title: string, message?: string, duration?: number) => {
+    addToast({ type: 'error', title, message, duration });
+  }, [addToast]);
+
+  const showWarning = useCallback((title: string, message?: string, duration?: number) => {
+    addToast({ type: 'warning', title, message, duration });
+  }, [addToast]);
+
+  const showInfo = useCallback((title: string, message?: string, duration?: number) => {
+    addToast({ type: 'info', title, message, duration });
+  }, [addToast]);
+
+  return { toasts, showSuccess, showError, showWarning, showInfo, removeToast };
+};
+```
+
+**Zweck**: Zentrale Toast-Verwaltung mit einfachen Methoden
+**Features**: 
+- Einfache API für verschiedene Toast-Typen
+- Automatische ID-Generierung
+- Callback-basierte Toast-Entfernung
+- Memoized Callbacks für Performance
+
+### AdminApprovalService-Reparatur
+
+#### Problem-Identifikation
+```typescript
+// Vorher: Falsche Tabelle verwendet
+const { error } = await adminSupabase
+  .from('users')  // ❌ Falsche Tabelle
+  .update({
+    approval_status: 'pending',
+    approval_requested_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  })
+  .eq('id', caretakerId);
+```
+
+#### Lösung-Implementierung
+```typescript
+// Nachher: Korrekte Tabelle verwendet
+const { error } = await adminSupabase
+  .from('caretaker_profiles')  // ✅ Korrekte Tabelle
+  .update({
+    approval_status: 'pending',
+    approval_requested_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  })
+  .eq('id', caretakerId);
+```
+
+#### Vollständige Service-Reparatur
+```typescript
+// src/lib/services/adminApprovalService.ts
+export class AdminApprovalService {
+  /**
+   * Admin: Freigabe-Anfrage für einen Caretaker erstellen
+   */
+  static async requestApproval(caretakerId: string): Promise<void> {
+    try {
+      console.log('[AdminApprovalService] Requesting approval for:', caretakerId);
+      
+      // Erst validieren
+      const validation = await this.validateProfileForApproval(caretakerId);
+      
+      if (!validation.isValid) {
+        throw new Error(`Profil nicht vollständig. Fehlende Felder: ${validation.missingFields.join(', ')}`);
+      }
+
+      // Freigabe anfordern - KORRIGIERT: caretaker_profiles statt users
+      const { error } = await adminSupabase
+        .from('caretaker_profiles')
+        .update({
+          approval_status: 'pending',
+          approval_requested_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', caretakerId);
+
+      if (error) {
+        console.error('[AdminApprovalService] Error requesting approval:', error);
+        throw error;
+      }
+
+      console.log('[AdminApprovalService] Approval requested successfully');
+    } catch (error) {
+      console.error('[AdminApprovalService] Error in requestApproval:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Admin: Freigabe-Status zurücksetzen
+   */
+  static async resetApprovalStatus(caretakerId: string): Promise<void> {
+    try {
+      console.log('[AdminApprovalService] Resetting approval status for:', caretakerId);
+      
+      // KORRIGIERT: caretaker_profiles statt users
+      const { error } = await adminSupabase
+        .from('caretaker_profiles')
+        .update({
+          approval_status: null,
+          approval_requested_at: null,
+          approval_approved_at: null,
+          approval_approved_by: null,
+          approval_notes: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', caretakerId);
+
+      if (error) {
+        console.error('[AdminApprovalService] Error resetting approval status:', error);
+        throw error;
+      }
+
+      console.log('[AdminApprovalService] Approval status reset successfully');
+    } catch (error) {
+      console.error('[AdminApprovalService] Error in resetApprovalStatus:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Admin: Caretaker-Profil für Freigabe validieren
+   */
+  static async validateProfileForApproval(caretakerId: string): Promise<ProfileValidationResult> {
+    try {
+      console.log('[AdminApprovalService] Validating profile for approval:', caretakerId);
+      
+      // Caretaker-Profil laden - KORRIGIERT: id statt user_id
+      const { data: profile, error: profileError } = await adminSupabase
+        .from('caretaker_profiles')
+        .select('*')
+        .eq('id', caretakerId)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Profil nicht gefunden');
+      }
+
+      // User-Daten für Profilbild prüfen
+      const { data: user, error: userError } = await adminSupabase
+        .from('users')
+        .select('profile_photo_url')
+        .eq('id', caretakerId)
+        .single();
+
+      if (userError || !user) {
+        throw new Error('User nicht gefunden');
+      }
+
+      const missingFields: string[] = [];
+
+      // Pflichtfelder prüfen
+      if (!profile.bio || profile.bio.trim() === '') {
+        missingFields.push('Bio');
+      }
+      if (!profile.hourly_rate || profile.hourly_rate <= 0) {
+        missingFields.push('Stundensatz');
+      }
+      if (!profile.animal_types || profile.animal_types.length === 0) {
+        missingFields.push('Tierarten');
+      }
+      if (!profile.services_with_categories || profile.services_with_categories.length === 0) {
+        missingFields.push('Services');
+      }
+      if (!user.profile_photo_url) {
+        missingFields.push('Profilbild');
+      }
+
+      return {
+        isValid: missingFields.length === 0,
+        missingFields
+      };
+    } catch (error) {
+      console.error('[AdminApprovalService] Error in validateProfileForApproval:', error);
+      throw error;
+    }
+  }
+}
+```
+
+**Zweck**: Vollständige Reparatur des AdminApprovalService
+**Korrekturen**: 
+- `requestApproval()`: users → caretaker_profiles
+- `resetApprovalStatus()`: users → caretaker_profiles  
+- `validateProfileForApproval()`: user_id → id, services_with_categories Validierung
+
+### Toast-Integration in CaretakerDashboardPage
+
+#### Integration-Implementierung
+```typescript
+// src/pages/CaretakerDashboardPage.tsx
+import { useToast } from '../hooks/useToast';
+import ToastContainer from '../components/ui/ToastContainer';
+
+function CaretakerDashboardPage() {
+  const { user, userProfile, loading: authLoading, subscription, updateProfileState } = useAuth();
+  const navigate = useNavigate();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
+
+  // Handler für Profil-Freigabe anfordern
+  const handleRequestApproval = async () => {
+    if (approvalLoading || !user || !profile) return;
+    
+    setApprovalLoading(true);
+    
+    try {
+      // Import AdminApprovalService dynamisch
+      const { AdminApprovalService } = await import('../lib/services/adminApprovalService');
+      
+      // Freigabe anfordern
+      await AdminApprovalService.requestApproval(user.id);
+      
+      // Lokalen State aktualisieren
+      setProfile((prev: any) => ({ 
+        ...prev, 
+        approval_status: 'pending',
+        approval_requested_at: new Date().toISOString()
+      }));
+      
+      console.log('✅ Freigabe erfolgreich angefordert');
+      
+      // Erfolgs-Benachrichtigung anzeigen
+      showSuccess(
+        'Profil erfolgreich eingereicht!',
+        'Ihr Profil wurde zur Freigabe eingereicht. Sie erhalten eine Benachrichtigung, sobald es von einem Administrator überprüft wurde.',
+        6000
+      );
+      
+    } catch (error: any) {
+      console.error('❌ Fehler beim Anfordern der Freigabe:', error);
+      
+      // Fehler-Benachrichtigung anzeigen
+      const errorMessage = error?.message || 'Ein unbekannter Fehler ist aufgetreten.';
+      showError(
+        'Fehler beim Einreichen des Profils',
+        errorMessage,
+        8000
+      );
+    } finally {
+      setApprovalLoading(false);
+    }
+  };
+
+  return (
+    <div className="container-custom py-8">
+      {/* Dashboard-Inhalt */}
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+    </div>
+  );
+}
+```
+
+**Zweck**: Integration von Toast-System in CaretakerDashboardPage
+**Features**: 
+- Einfache Integration mit useToast Hook
+- Benutzerfreundliche Nachrichten statt alert()
+- Konfigurierbare Dauer für verschiedene Nachrichten
+- Automatische Positionierung oben rechts
+
+### TypeScript-Integration
+
+#### Typen-Definitionen
+```typescript
+// src/components/ui/Toast.tsx
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
+
+export interface ToastProps {
+  id: string;
+  type: ToastType;
+  title: string;
+  message?: string;
+  duration?: number;
+  onClose: (id: string) => void;
+}
+
+// src/hooks/useToast.ts
+interface ToastOptions {
+  type: ToastType;
+  title: string;
+  message?: string;
+  duration?: number;
+}
+```
+
+**Zweck**: Vollständige TypeScript-Integration für Toast-System
+**Features**: 
+- Strikte Typisierung für alle Toast-Komponenten
+- Interface-Definitionen für Props und Options
+- Type-Safety für Toast-Typen
+- Bessere Entwicklererfahrung mit IntelliSense
+
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: Layout-Consistency und neue Preisermittlung vollständig dokumentiert  
+**Status**: Toast-Notification-System und AdminApprovalService-Reparatur vollständig dokumentiert  
 **Nächste Überprüfung**: Nach Implementierung des Buchungssystems

@@ -189,18 +189,18 @@ export class AdminApprovalService {
     try {
       console.log('[AdminApprovalService] Validating profile for approval:', caretakerId);
       
-      // Caretaker-Profil laden
+      // Caretaker-Profil laden - caretakerId ist die ID in der caretaker_profiles Tabelle
       const { data: profile, error: profileError } = await adminSupabase
         .from('caretaker_profiles')
         .select('*')
-        .eq('user_id', caretakerId)
+        .eq('id', caretakerId)
         .single();
 
       if (profileError || !profile) {
         throw new Error('Profil nicht gefunden');
       }
 
-      // User-Daten für Profilbild prüfen
+      // User-Daten für Profilbild prüfen - caretakerId ist auch die user_id
       const { data: user, error: userError } = await adminSupabase
         .from('users')
         .select('profile_photo_url')
@@ -225,10 +225,10 @@ export class AdminApprovalService {
         missingFields.push('Profilbild');
       }
 
-      // Prüfe mindestens eine Leistung
-      const hasServices = !!(profile.services && 
-        (Array.isArray(profile.services) ? profile.services.length > 0 : 
-         typeof profile.services === 'object' && Object.keys(profile.services).length > 0));
+      // Prüfe mindestens eine Leistung - services_with_categories verwenden
+      const hasServices = !!(profile.services_with_categories && 
+        (Array.isArray(profile.services_with_categories) ? profile.services_with_categories.length > 0 : 
+         typeof profile.services_with_categories === 'object' && Object.keys(profile.services_with_categories).length > 0));
       if (!hasServices) {
         missingFields.push('Mindestens eine Leistung');
       }
@@ -263,9 +263,9 @@ export class AdminApprovalService {
         throw new Error(`Profil nicht vollständig. Fehlende Felder: ${validation.missingFields.join(', ')}`);
       }
 
-      // Freigabe anfordern
+      // Freigabe anfordern - approval_status ist in caretaker_profiles, nicht in users
       const { error } = await adminSupabase
-        .from('users')
+        .from('caretaker_profiles')
         .update({
           approval_status: 'pending',
           approval_requested_at: new Date().toISOString(),
@@ -293,7 +293,7 @@ export class AdminApprovalService {
       console.log('[AdminApprovalService] Resetting approval status for:', caretakerId);
       
       const { error } = await adminSupabase
-        .from('users')
+        .from('caretaker_profiles')
         .update({
           approval_status: null,
           approval_requested_at: null,

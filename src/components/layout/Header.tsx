@@ -62,7 +62,7 @@ function Header() {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <img src="/Image/Logos/tigube_logo.png" alt="tigube Logo" className="h-10 w-auto" />
+            <img src="/Image/Logos/tigube_logo.svg" alt="tigube Logo" className="h-10 w-auto" />
           </Link>
           
           {/* Desktop Navigation */}

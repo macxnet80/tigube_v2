@@ -474,7 +474,7 @@ const AdvancedUserManagementPanel: React.FC<AdvancedUserManagementPanelProps> = 
               <button
                 onClick={searchUsers}
                 disabled={searchLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
               >
                 <RefreshCw className={`h-4 w-4 ${searchLoading ? 'animate-spin' : ''}`} />
                 Aktualisieren
@@ -1111,7 +1111,7 @@ const UserNotesTab: React.FC<{
           <button
             onClick={onAddNote}
             disabled={!newNote.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
           >
             Notiz hinzufügen
           </button>

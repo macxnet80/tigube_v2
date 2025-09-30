@@ -2,6 +2,102 @@
 
 ## Systemarchitektur
 
+### Verifizierungssystem-Architektur
+
+#### VerificationService Pattern
+```typescript
+// Vollständiger Backend-Service für Dokument-Upload und -Verwaltung
+export class VerificationService {
+  // Dokument-Verschlüsselung vor Storage-Upload
+  private static async encryptFile(file: File): Promise<Blob>
+  
+  // Datei-Validierung (PDF, JPG, PNG, 10MB Limit)
+  private static validateFile(file: File): { isValid: boolean; error?: string }
+  
+  // Upload zur Supabase Storage mit Verschlüsselung
+  private static async uploadFile(file: File, userId: string, documentType: 'ausweis' | 'zertifikat'): Promise<string>
+  
+  // Verifizierungsanfrage einreichen
+  static async submitVerificationRequest(userId: string, ausweisFile: File, zertifikatFiles: File[]): Promise<VerificationDocument>
+  
+  // Admin: Alle Verifizierungsanfragen laden (mit RPC)
+  static async getAllVerificationRequests(): Promise<VerificationDocument[]>
+  
+  // Admin: Status aktualisieren
+  static async updateVerificationStatus(requestId: string, status: string, adminComment?: string, adminId?: string): Promise<void>
+}
+```
+
+#### RLS-Policies Pattern
+```sql
+-- Benutzer können nur ihre eigenen Verifizierungsanfragen sehen
+CREATE POLICY "Users can view own verification requests" ON verification_requests
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Admins können alle Verifizierungsanfragen sehen
+CREATE POLICY "Admins can view all verification requests" ON verification_requests
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.is_admin = true
+    )
+  );
+
+-- RPC-Funktion für sichere Admin-Abfragen
+CREATE OR REPLACE FUNCTION get_all_verification_requests()
+RETURNS TABLE (...) LANGUAGE plpgsql SECURITY DEFINER
+```
+
+#### Admin-Verwaltungs-Pattern
+```typescript
+// VerificationManagementPanel für Admin-Dashboard
+const VerificationManagementPanel: React.FC<VerificationManagementPanelProps> = ({ currentAdminId }) => {
+  // State für Verifizierungsanfragen
+  const [verificationRequests, setVerificationRequests] = useState<VerificationWithUser[]>([]);
+  
+  // Filter und Suche
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  
+  // Status-Update mit Admin-Kommentar
+  const handleStatusUpdate = async (requestId: string, status: string, comment?: string) => {
+    await VerificationService.updateVerificationStatus(requestId, status, comment, currentAdminId);
+  };
+  
+  // Dokument-Download für Admins
+  const handleDownloadDocument = async (fileUrl: string, fileName: string) => {
+    const blob = await VerificationService.downloadDocument(fileUrl);
+    // Download-Logik
+  };
+};
+```
+
+#### Caretaker-Dashboard-Integration-Pattern
+```typescript
+// Verifizierungs-Tab im CaretakerDashboardPage
+const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften'>('uebersicht');
+
+// Verifizierungsstatus in Dashboard-Übersicht
+{activeTab === 'uebersicht' && (
+  <div className="space-y-8">
+    {/* Verifizierungsstatus */}
+    <div className="bg-white rounded-xl shadow p-6">
+      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+        <div className={`${getVerificationStatusColor(verificationStatus)}`}>
+          {getVerificationStatusIcon(verificationStatus)}
+        </div>
+        <div>
+          <p className="font-medium text-gray-900">
+            Status: {getVerificationStatusText(verificationStatus)}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
 ### Frontend-Architektur
 
 #### React SPA (Single Page Application)
@@ -1411,8 +1507,544 @@ if (lowestPrice === 0) {
 - Abwärtskompatibilität mit alten Datenstrukturen
 - Konsistente Benutzererfahrung
 
+## Dashboard-Layout-Patterns
+
+### Dashboard-Breiten-Konsistenz
+
+#### Container-Klasse-Pattern
+```typescript
+// Einheitliche Container-Klasse für alle Dashboards
+<div className="container-custom py-8">
+  {/* Dashboard-Inhalt */}
+</div>
+```
+
+**Zweck**: Konsistente Breite aller Dashboards mit Header/Navigation
+**Vorteile**: 
+- Gleiche maximale Breite (max-w-7xl) wie Header/Navigation
+- Responsive Padding (px-4 sm:px-6 lg:px-8)
+- Automatische Zentrierung (mx-auto)
+
+#### Dashboard-Breiten-Migration
+```typescript
+// Vorher: Begrenzte Breite
+<div className="max-w-4xl mx-auto py-8 px-4">
+  {/* Dashboard-Inhalt */}
+</div>
+
+// Nachher: Vollbreite mit container-custom
+<div className="container-custom py-8">
+  {/* Dashboard-Inhalt */}
+</div>
+```
+
+**Zweck**: Migration von begrenzter zu voller Dashboard-Breite
+**Vorteile**: 
+- Bessere Raumnutzung auf größeren Bildschirmen
+- Konsistente Breite mit Header/Navigation
+- Einfachere Wartung durch einheitliche Container-Klasse
+
+### 2-Spalten-Grid-Layout-Pattern
+
+#### Responsive Grid-System
+```typescript
+// 2-Spalten-Grid mit Mobile-First Ansatz
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  {/* Linke Spalte */}
+  <div className="space-y-8">
+    {/* Sektion 1 */}
+    <div>
+      <h2>Sektion 1</h2>
+      <div className="bg-white rounded-xl shadow p-6">
+        {/* Inhalt */}
+      </div>
+    </div>
+    
+    {/* Sektion 2 */}
+    <div>
+      <h2>Sektion 2</h2>
+      <div className="bg-white rounded-xl shadow p-6">
+        {/* Inhalt */}
+      </div>
+    </div>
+  </div>
+
+  {/* Rechte Spalte */}
+  <div className="space-y-8">
+    {/* Sektion 3 */}
+    <div>
+      <h2>Sektion 3</h2>
+      <div className="bg-white rounded-xl shadow p-6">
+        {/* Inhalt */}
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+**Zweck**: Optimale Raumnutzung durch 2-Spalten-Layout
+**Vorteile**: 
+- Mobile-First responsive Design
+- Logische Gruppierung verwandter Sektionen
+- Konsistente Abstände zwischen Sektionen
+- Bessere Benutzererfahrung auf größeren Bildschirmen
+
+#### Grid-Spalten-Struktur
+```typescript
+// Linke Spalte: Hauptfunktionen
+<div className="space-y-8">
+  {/* Leistungen */}
+  <div>
+    <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2">
+      <PawPrint className="w-5 h-5" /> Leistungen
+    </h2>
+    <div className="bg-white rounded-xl shadow p-6 relative">
+      {/* Leistungen-Inhalt */}
+    </div>
+  </div>
+
+  {/* Verfügbarkeit */}
+  <div>
+    <h2 className="text-xl font-semibold mb-2 flex items-center gap-2 text-gray-900">
+      <Calendar className="w-5 h-5" /> Verfügbarkeit
+    </h2>
+    <div className="bg-white rounded-xl shadow p-6">
+      {/* Verfügbarkeit-Inhalt */}
+    </div>
+  </div>
+
+  {/* Übernachtungs-Verfügbarkeit */}
+  <div>
+    <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2">
+      <Moon className="w-5 h-5" /> Übernachtungen
+    </h2>
+    <div className="bg-white rounded-xl shadow p-6">
+      {/* Übernachtungs-Inhalt */}
+    </div>
+  </div>
+</div>
+
+// Rechte Spalte: Qualifikationen
+<div className="space-y-8">
+  {/* Qualifikationen */}
+  <div>
+    <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2">
+      <Shield className="w-5 h-5" /> Qualifikationen
+    </h2>
+    <div className="bg-white rounded-xl shadow p-6 relative">
+      {/* Qualifikationen-Inhalt */}
+    </div>
+  </div>
+</div>
+```
+
+**Zweck**: Logische Gruppierung von Dashboard-Sektionen
+**Vorteile**: 
+- Hauptfunktionen in der linken Spalte
+- Zusätzliche Informationen in der rechten Spalte
+- Konsistente Icon-Verwendung für Sektionen
+- Einheitliche Karten-Struktur
+
+### Dashboard-Layout-Konsistenz
+
+#### Einheitliche Sektion-Struktur
+```typescript
+// Standard-Sektion-Struktur für alle Dashboard-Sektionen
+<div>
+  <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2">
+    <Icon className="w-5 h-5" /> Titel
+  </h2>
+  <div className="bg-white rounded-xl shadow p-6 relative">
+    {/* Sektion-Inhalt */}
+  </div>
+</div>
+```
+
+**Zweck**: Konsistente Struktur für alle Dashboard-Sektionen
+**Vorteile**: 
+- Einheitliches visuelles Erscheinungsbild
+- Konsistente Icon-Verwendung
+- Einheitliche Abstände und Schatten
+- Einfache Wartung und Erweiterung
+
+#### Responsive Abstände
+```typescript
+// Konsistente Abstände zwischen Sektionen
+<div className="space-y-8">
+  {/* Sektionen mit einheitlichen Abständen */}
+</div>
+```
+
+**Zweck**: Konsistente Abstände zwischen Dashboard-Sektionen
+**Vorteile**: 
+- Einheitliche visuelle Hierarchie
+- Bessere Lesbarkeit
+- Konsistente Benutzererfahrung
+
+### Dashboard-Layout-Integration
+
+#### Tab-Integration mit Grid-Layout
+```typescript
+// Tab-Inhalt mit Grid-Layout
+{activeTab === 'uebersicht' && (
+  <>
+    {/* 2-Spalten Grid Layout */}
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Linke Spalte */}
+      <div className="space-y-8">
+        {/* Sektionen */}
+      </div>
+
+      {/* Rechte Spalte */}
+      <div className="space-y-8">
+        {/* Sektionen */}
+      </div>
+    </div>
+  </>
+)}
+```
+
+**Zweck**: Grid-Layout in bestehende Tab-Struktur integrieren
+**Vorteile**: 
+- Nahtlose Integration in bestehende Navigation
+- Konsistente Tab-Erfahrung
+- Optimale Raumnutzung
+
+#### JSX-Struktur-Konsistenz
+```typescript
+// Korrekte JSX-Struktur für Grid-Layout
+{activeTab === 'uebersicht' && (
+  <>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="space-y-8">
+        <div>
+          <h2>Titel</h2>
+          <div className="bg-white rounded-xl shadow p-6">
+            {/* Inhalt */}
+          </div>
+        </div>
+      </div>
+    </div>
+  </>
+)}
+```
+
+**Zweck**: Korrekte JSX-Struktur für Grid-Layout
+**Vorteile**: 
+- Vermeidung von JSX-Syntax-Fehlern
+- Konsistente Komponenten-Struktur
+- Einfache Wartung und Erweiterung
+
+## Toast-Notification-Patterns
+
+### Toast-System-Architektur
+
+#### Toast-Komponenten-Struktur
+```typescript
+// Toast.tsx - Einzelne Toast-Komponente
+interface ToastProps {
+  id: string;
+  type: ToastType;
+  title: string;
+  message?: string;
+  duration?: number;
+  onClose: (id: string) => void;
+}
+
+const Toast: React.FC<ToastProps> = ({
+  id,
+  type,
+  title,
+  message,
+  duration = 5000,
+  onClose
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  useEffect(() => {
+    // Animation einblenden
+    const showTimer = setTimeout(() => setIsVisible(true), 100);
+    
+    // Auto-close nach duration
+    const hideTimer = setTimeout(() => {
+      handleClose();
+    }, duration);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [duration]);
+
+  const handleClose = () => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      onClose(id);
+    }, 300);
+  };
+
+  return (
+    <div className={cn(
+      'transform transition-all duration-300 ease-in-out',
+      isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0',
+      'bg-white rounded-lg shadow-lg border-l-4 p-4 min-w-80 max-w-md',
+      type === 'success' && 'border-green-500',
+      type === 'error' && 'border-red-500',
+      type === 'warning' && 'border-yellow-500',
+      type === 'info' && 'border-blue-500'
+    )}>
+      {/* Toast-Content */}
+    </div>
+  );
+};
+```
+
+**Zweck**: Einzelne Toast-Komponente mit Animationen und Auto-Close
+**Vorteile**: 
+- Sanfte Ein-/Ausblend-Animationen
+- Automatisches Schließen nach konfigurierbarer Zeit
+- Manuelles Schließen möglich
+- 4 verschiedene Typen (success, error, warning, info)
+
+#### Toast-Container-Pattern
+```typescript
+// ToastContainer.tsx - Container für alle Toasts
+const ToastContainer: React.FC<ToastContainerProps> = ({ toasts, onRemoveToast }) => {
+  if (toasts.length === 0) return null;
+
+  return (
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          {...toast}
+          onClose={onRemoveToast}
+        />
+      ))}
+    </div>
+  );
+};
+```
+
+**Zweck**: Container für alle Toasts mit Positionierung oben rechts
+**Vorteile**: 
+- Feste Positionierung (fixed top-4 right-4)
+- Hoher Z-Index (z-50) für Überlagerung
+- Vertikale Stapelung mit Abständen
+- Automatisches Rendering nur bei vorhandenen Toasts
+
+#### useToast Hook Pattern
+```typescript
+// useToast.ts - Hook für Toast-Management
+export const useToast = () => {
+  const [toasts, setToasts] = useState<ToastProps[]>([]);
+
+  const addToast = useCallback((options: ToastOptions) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newToast: ToastProps = {
+      id,
+      ...options,
+      onClose: (id: string) => removeToast(id)
+    };
+
+    setToasts(prev => [...prev, newToast]);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
+
+  const showSuccess = useCallback((title: string, message?: string, duration?: number) => {
+    addToast({ type: 'success', title, message, duration });
+  }, [addToast]);
+
+  const showError = useCallback((title: string, message?: string, duration?: number) => {
+    addToast({ type: 'error', title, message, duration });
+  }, [addToast]);
+
+  const showWarning = useCallback((title: string, message?: string, duration?: number) => {
+    addToast({ type: 'warning', title, message, duration });
+  }, [addToast]);
+
+  const showInfo = useCallback((title: string, message?: string, duration?: number) => {
+    addToast({ type: 'info', title, message, duration });
+  }, [addToast]);
+
+  return { toasts, showSuccess, showError, showWarning, showInfo, removeToast };
+};
+```
+
+**Zweck**: Zentrale Toast-Verwaltung mit einfachen Methoden
+**Vorteile**: 
+- Einfache API für verschiedene Toast-Typen
+- Automatische ID-Generierung
+- Callback-basierte Toast-Entfernung
+- Memoized Callbacks für Performance
+
+### Toast-Integration-Patterns
+
+#### Komponenten-Integration
+```typescript
+// CaretakerDashboardPage.tsx - Toast-Integration
+function CaretakerDashboardPage() {
+  const { toasts, showSuccess, showError, removeToast } = useToast();
+
+  const handleRequestApproval = async () => {
+    try {
+      await AdminApprovalService.requestApproval(user.id);
+      
+      // Erfolgs-Benachrichtigung anzeigen
+      showSuccess(
+        'Profil erfolgreich eingereicht!',
+        'Ihr Profil wurde zur Freigabe eingereicht. Sie erhalten eine Benachrichtigung, sobald es von einem Administrator überprüft wurde.',
+        6000
+      );
+      
+    } catch (error: any) {
+      // Fehler-Benachrichtigung anzeigen
+      const errorMessage = error?.message || 'Ein unbekannter Fehler ist aufgetreten.';
+      showError(
+        'Fehler beim Einreichen des Profils',
+        errorMessage,
+        8000
+      );
+    }
+  };
+
+  return (
+    <div className="container-custom py-8">
+      {/* Dashboard-Inhalt */}
+      
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+    </div>
+  );
+}
+```
+
+**Zweck**: Integration von Toast-System in bestehende Komponenten
+**Vorteile**: 
+- Einfache Integration mit useToast Hook
+- Benutzerfreundliche Nachrichten statt alert()
+- Konfigurierbare Dauer für verschiedene Nachrichten
+- Automatische Positionierung oben rechts
+
+#### Toast-Typen-Pattern
+```typescript
+// Toast-Typen mit spezifischen Styling
+const getToastIcon = (type: ToastType) => {
+  switch (type) {
+    case 'success':
+      return <CheckCircle className="w-5 h-5 text-green-500" />;
+    case 'error':
+      return <XCircle className="w-5 h-5 text-red-500" />;
+    case 'warning':
+      return <AlertCircle className="w-5 h-5 text-yellow-500" />;
+    case 'info':
+      return <Info className="w-5 h-5 text-blue-500" />;
+  }
+};
+
+const getToastBorderColor = (type: ToastType) => {
+  switch (type) {
+    case 'success':
+      return 'border-green-500';
+    case 'error':
+      return 'border-red-500';
+    case 'warning':
+      return 'border-yellow-500';
+    case 'info':
+      return 'border-blue-500';
+  }
+};
+```
+
+**Zweck**: Konsistente Styling-Patterns für verschiedene Toast-Typen
+**Vorteile**: 
+- Einheitliche Icon-Verwendung
+- Konsistente Farbgebung
+- Einfache Erweiterbarkeit für neue Typen
+
+### Toast-Performance-Patterns
+
+#### Animation-Optimierung
+```typescript
+// Optimierte Animationen mit CSS-Transitions
+const Toast = ({ id, type, title, message, duration, onClose }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  useEffect(() => {
+    // Animation einblenden
+    const showTimer = setTimeout(() => setIsVisible(true), 100);
+    
+    // Auto-close nach duration
+    const hideTimer = setTimeout(() => {
+      handleClose();
+    }, duration);
+
+    return () => {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+    };
+  }, [duration]);
+
+  const handleClose = () => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      onClose(id);
+    }, 300);
+  };
+
+  return (
+    <div className={cn(
+      'transform transition-all duration-300 ease-in-out',
+      isVisible && !isLeaving ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0',
+      'bg-white rounded-lg shadow-lg border-l-4 p-4 min-w-80 max-w-md'
+    )}>
+      {/* Toast-Content */}
+    </div>
+  );
+};
+```
+
+**Zweck**: Optimierte Animationen für bessere Performance
+**Vorteile**: 
+- CSS-Transitions für Hardware-Beschleunigung
+- Kontrollierte Animation-Timing
+- Smooth Ein-/Ausblend-Effekte
+
+#### Memory-Management
+```typescript
+// Automatische Cleanup für Toasts
+const useToast = () => {
+  const [toasts, setToasts] = useState<ToastProps[]>([]);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
+
+  // Automatische Cleanup bei Komponenten-Unmount
+  useEffect(() => {
+    return () => {
+      // Alle Toasts beim Unmount entfernen
+      setToasts([]);
+    };
+  }, []);
+
+  return { toasts, removeToast, /* ... */ };
+};
+```
+
+**Zweck**: Automatische Memory-Verwaltung für Toasts
+**Vorteile**: 
+- Verhindert Memory-Leaks
+- Automatische Cleanup bei Komponenten-Unmount
+- Effiziente Toast-Verwaltung
+
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: Layout-Consistency- und Preisermittlungs-Patterns dokumentiert  
+**Status**: Toast-Notification-Patterns dokumentiert, einschließlich System-Architektur und Integration  
 **Nächste Überprüfung**: Nach Implementierung des Buchungssystems

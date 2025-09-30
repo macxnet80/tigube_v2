@@ -352,7 +352,7 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
               setShowCreateForm(true);
               setActiveTab('list'); // Wechsle zum List-Tab wenn eine neue Anzeige erstellt wird
             }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
           >
             <Plus className="w-4 h-4" />
             <span>Neue Anzeige</span>
@@ -737,7 +737,7 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                   >
                     {editingAd ? 'Aktualisieren' : 'Erstellen'}
                   </button>

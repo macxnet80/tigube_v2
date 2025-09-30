@@ -1424,7 +1424,7 @@ function OwnerDashboardPage() {
 
   return (
     <div className="bg-gray-50 min-h-screen py-10">
-      <div className="container-custom max-w-4xl">
+      <div className="container-custom">
         {/* Profil-Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
           <div className="flex flex-col lg:flex-row items-start gap-6">
