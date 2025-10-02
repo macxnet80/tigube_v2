@@ -124,7 +124,7 @@ export function ReviewForm({
             disabled={isLoading}
             rows={4}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            placeholder="Teile deine Erfahrungen mit anderen Tierbesitzern..."
+            placeholder="Teile deine Erfahrungen mit anderen Tierhaltern..."
             maxLength={1000}
           />
           <div className="flex justify-between items-center mt-1">

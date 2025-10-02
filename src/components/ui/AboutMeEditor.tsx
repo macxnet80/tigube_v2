@@ -148,7 +148,7 @@ function AboutMeEditor({
                 <li>• Erzähle deine Geschichte mit Tieren</li>
                 <li>• Beschreibe deine Erfahrungen</li>
                 <li>• Was ist dir bei der Tierbetreuung wichtig?</li>
-                <li>• Warum können Tierbesitzer dir vertrauen?</li>
+                <li>• Warum können Tierhalter dir vertrauen?</li>
                 <li>• Teile persönliche Anekdoten</li>
               </>
             )}

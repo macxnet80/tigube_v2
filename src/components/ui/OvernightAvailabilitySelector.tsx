@@ -62,7 +62,7 @@ export default function OvernightAvailabilitySelector({
       {/* Info Text */}
       <p className="text-sm text-gray-600">
         Wähle die Tage aus, an denen du Übernachtungen anbietest. 
-        Dies wird in deinem Profil angezeigt und hilft Tierbesitzern bei der Suche.
+        Dies wird in deinem Profil angezeigt und hilft Tierhaltern bei der Suche.
       </p>
 
       {/* Header */}

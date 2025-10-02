@@ -241,7 +241,7 @@ function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker
       premium: {
         name: 'Premium',
         price: planPrice,
-        description: 'Für aktive Tierbesitzer',
+        description: 'Für aktive Tierhalter',
         icon: <Star className="w-8 h-8 text-blue-600" />,
         features: [
           { name: 'Kontaktanfragen', available: true, highlight: 'Unlimited' },
@@ -346,7 +346,7 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
                 )}
                 <div className="flex items-center justify-center mb-3">
                   <span className="text-2xl mr-2">🐕</span>
-                  <h3 className="text-lg font-bold text-gray-900">Ich bin Tierbesitzer</h3>
+                  <h3 className="text-lg font-bold text-gray-900">Ich bin Tierhalter</h3>
                 </div>
                 <p className="text-sm text-gray-600 text-center">
                   Finde die perfekte Betreuung

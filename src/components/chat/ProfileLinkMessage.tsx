@@ -16,7 +16,7 @@ function ProfileLinkMessage({ ownerId, ownerName }: ProfileLinkMessageProps) {
         </div>
         <div className="flex-1">
           <p className="text-sm text-green-800">
-            {ownerName ? `${ownerName} hat dich` : 'Dieser Tierbesitzer hat dich'} als Betreuer gespeichert! 
+            {ownerName ? `${ownerName} hat dich` : 'Dieser Tierhalter hat dich'} als Betreuer gespeichert! 
             Du kannst nun die Kontaktdaten in deinem Dashboard unter "Kunden" einsehen.
           </p>
         </div>

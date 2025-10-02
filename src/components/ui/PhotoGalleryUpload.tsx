@@ -159,7 +159,7 @@ function PhotoGalleryUpload({
             Noch keine Fotos hinzugefügt
           </p>
           <p className="text-xs text-gray-400">
-            Zeige deine Betreuungsumgebung! Tierbesitzer möchten sehen, wo ihre Lieblinge betreut werden.
+            Zeige deine Betreuungsumgebung! Tierhalter möchten sehen, wo ihre Lieblinge betreut werden.
           </p>
         </div>
       )}

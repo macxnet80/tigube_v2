@@ -100,7 +100,7 @@ function LaunchPage() {
               Was Sie erwartet
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              tigube verbindet liebevolle Tierbesitzer mit vertrauenswürdigen Betreuern
+              tigube verbindet liebevolle Tierhalter mit vertrauenswürdigen Betreuern
             </p>
           </div>
 

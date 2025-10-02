@@ -308,11 +308,11 @@ export default function PricingPage() {
 
               <div className="border-b border-gray-200 pb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Unterscheiden sich die Pläne für Tierbesitzer und Betreuer?
+                  Unterscheiden sich die Pläne für Tierhalter und Betreuer?
                 </h3>
                 <p className="text-gray-600">
                   Ja, beide nutzen das gleiche 2-Plan-System, aber mit unterschiedlichen Namen und Features: 
-                  Tierbesitzer erhalten "Premium" (€4,90/Monat) mit unlimited Kontakten und erweiterten Filtern. 
+                  Tierhalter erhalten "Premium" (€4,90/Monat) mit unlimited Kontakten und erweiterten Filtern. 
                   Betreuer erhalten "Professional" (€12,90/Monat) mit zusätzlichen Business-Features wie 
                   Umgebungsbildern und erweiterten Analytics.
                 </p>

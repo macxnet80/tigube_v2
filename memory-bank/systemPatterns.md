@@ -2,6 +2,194 @@
 
 ## Systemarchitektur
 
+### Terminologie-Konsistenz-Patterns
+
+#### Einheitliche Terminologie-Verwaltung
+```typescript
+// Konsistente Terminologie im gesamten Projekt
+interface UserTerminology {
+  owner: 'Tierhalter';           // Statt "Tierbesitzer"
+  caretaker: 'Betreuer';         // Unverändert
+  platform: 'tigube';           // Unverändert
+  service: 'Tierbetreuung';     // Unverändert
+}
+
+// Verwendung in Komponenten
+const getUserTypeLabel = (userType: 'owner' | 'caretaker') => {
+  switch (userType) {
+    case 'owner':
+      return 'Tierhalter';
+    case 'caretaker':
+      return 'Betreuer';
+    default:
+      return 'Benutzer';
+  }
+};
+```
+
+**Zweck**: Einheitliche Terminologie-Verwaltung im gesamten Projekt
+**Vorteile**: 
+- Konsistente Benutzererfahrung
+- Einheitliche Kommunikation
+- Professionelle Terminologie
+
+#### Terminologie-Update-Pattern
+```typescript
+// Systematische Terminologie-Updates
+const updateTerminology = (oldTerm: string, newTerm: string) => {
+  // 1. Vollständige Projekt-Durchsuchung
+  const occurrences = grepSearch(oldTerm);
+  
+  // 2. Systematische Ersetzung
+  occurrences.forEach(occurrence => {
+    replaceInFile(occurrence.file, occurrence.line, oldTerm, newTerm);
+  });
+  
+  // 3. Verifikation
+  const remainingOccurrences = grepSearch(oldTerm);
+  if (remainingOccurrences.length > 0) {
+    throw new Error(`Terminologie-Update unvollständig: ${remainingOccurrences.length} Vorkommen verbleiben`);
+  }
+  
+  // 4. Dokumentation aktualisieren
+  updateDocumentation(newTerm);
+};
+```
+
+**Zweck**: Systematische Terminologie-Updates im gesamten Projekt
+**Vorteile**: 
+- Vollständige Abdeckung aller Vorkommen
+- Automatische Verifikation
+- Dokumentations-Update
+
+#### Rechtliche Dokumente-Update-Pattern
+```typescript
+// Rechtliche Dokumente mit Terminologie-Updates
+const updateLegalDocuments = (oldTerm: string, newTerm: string) => {
+  const legalFiles = [
+    'src/pages/AgbPage.tsx',
+    'src/pages/DatenschutzPage.tsx',
+    'src/pages/ImpressumPage.tsx'
+  ];
+  
+  legalFiles.forEach(file => {
+    const content = readFile(file);
+    const updatedContent = content.replace(new RegExp(oldTerm, 'g'), newTerm);
+    writeFile(file, updatedContent);
+  });
+};
+```
+
+**Zweck**: Rechtliche Dokumente mit Terminologie-Updates
+**Vorteile**: 
+- Rechtliche Compliance
+- Konsistente Terminologie in AGB
+- Professionelle Dokumentation
+
+#### Frontend-Komponenten-Update-Pattern
+```typescript
+// Frontend-Komponenten mit Terminologie-Updates
+const updateFrontendComponents = (oldTerm: string, newTerm: string) => {
+  const componentFiles = [
+    'src/pages/RegisterPage.tsx',
+    'src/pages/CaretakerDashboardPage.tsx',
+    'src/components/layout/Footer.tsx',
+    'src/pages/BetreuerProfilePage.tsx'
+  ];
+  
+  componentFiles.forEach(file => {
+    const content = readFile(file);
+    const updatedContent = content.replace(new RegExp(oldTerm, 'g'), newTerm);
+    writeFile(file, updatedContent);
+  });
+};
+```
+
+**Zweck**: Frontend-Komponenten mit Terminologie-Updates
+**Vorteile**: 
+- Konsistente UI-Texte
+- Einheitliche Benutzererfahrung
+- Professionelle Präsentation
+
+#### Backend-Services-Update-Pattern
+```typescript
+// Backend-Services mit Terminologie-Updates
+const updateBackendServices = (oldTerm: string, newTerm: string) => {
+  const backendFiles = [
+    'src/lib/supabase/db.ts',
+    'supabase/migrations/*.sql',
+    'supabase/functions/*/index.ts'
+  ];
+  
+  backendFiles.forEach(file => {
+    const content = readFile(file);
+    const updatedContent = content.replace(new RegExp(oldTerm, 'g'), newTerm);
+    writeFile(file, updatedContent);
+  });
+};
+```
+
+**Zweck**: Backend-Services mit Terminologie-Updates
+**Vorteile**: 
+- Konsistente API-Responses
+- Einheitliche Datenbank-Kommentare
+- Professionelle Backend-Dokumentation
+
+#### Dokumentations-Update-Pattern
+```typescript
+// Dokumentation mit Terminologie-Updates
+const updateDocumentation = (oldTerm: string, newTerm: string) => {
+  const documentationFiles = [
+    'README.md',
+    'memory-bank/activeContext.md',
+    'memory-bank/progress.md',
+    'memory-bank/systemPatterns.md'
+  ];
+  
+  documentationFiles.forEach(file => {
+    const content = readFile(file);
+    const updatedContent = content.replace(new RegExp(oldTerm, 'g'), newTerm);
+    writeFile(file, updatedContent);
+  });
+};
+```
+
+**Zweck**: Dokumentation mit Terminologie-Updates
+**Vorteile**: 
+- Konsistente Dokumentation
+- Einheitliche Projekt-Beschreibungen
+- Professionelle Dokumentation
+
+### Terminologie-Verifikation-Pattern
+```typescript
+// Verifikation der Terminologie-Konsistenz
+const verifyTerminologyConsistency = (oldTerm: string, newTerm: string) => {
+  // 1. Prüfe ob alte Terminologie noch vorhanden ist
+  const remainingOldTerms = grepSearch(oldTerm);
+  if (remainingOldTerms.length > 0) {
+    console.warn(`Warnung: ${remainingOldTerms.length} Vorkommen von "${oldTerm}" verbleiben`);
+    return false;
+  }
+  
+  // 2. Prüfe ob neue Terminologie korrekt implementiert ist
+  const newTerms = grepSearch(newTerm);
+  if (newTerms.length === 0) {
+    console.error(`Fehler: Keine Vorkommen von "${newTerm}" gefunden`);
+    return false;
+  }
+  
+  // 3. Bestätige erfolgreiche Ersetzung
+  console.log(`✅ Terminologie-Update erfolgreich: ${newTerms.length} Vorkommen von "${newTerm}" gefunden`);
+  return true;
+};
+```
+
+**Zweck**: Verifikation der Terminologie-Konsistenz
+**Vorteile**: 
+- Automatische Verifikation
+- Fehlerbehandlung
+- Bestätigung der erfolgreichen Implementierung
+
 ### Verifizierungssystem-Architektur
 
 #### VerificationService Pattern

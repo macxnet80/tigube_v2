@@ -1,6 +1,6 @@
 -- Migration: Owner-Caretaker Connections für öffentliche Profile
 -- Erstellt: 13.01.2025
--- Zweck: Verwaltet welche Betreuer auf welche Tierbesitzer-Profile zugreifen dürfen
+-- Zweck: Verwaltet welche Betreuer auf welche Tierhalter-Profile zugreifen dürfen
 
 -- 1. Tabelle für Owner-Caretaker Verbindungen erstellen
 CREATE TABLE IF NOT EXISTS public.owner_caretaker_connections (
@@ -134,7 +134,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 8. Kommentare für Dokumentation
 COMMENT ON TABLE public.owner_caretaker_connections IS 
-'Verwaltet Beziehungen zwischen Tierbesitzern und Betreuern für Zugriff auf öffentliche Profile';
+'Verwaltet Beziehungen zwischen Tierhaltern und Betreuern für Zugriff auf öffentliche Profile';
 
 COMMENT ON COLUMN public.owner_caretaker_connections.status IS 
 'Status der Verbindung: active = Zugriff erlaubt, blocked = Zugriff gesperrt';

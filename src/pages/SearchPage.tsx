@@ -1,20 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Search, MapPin, Star, Filter, X, ChevronDown, PawPrint, Briefcase, Clock } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { MapPin, Star, Filter, X, ChevronDown, PawPrint, Briefcase, Clock } from 'lucide-react';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
-import { UsageLimitIndicator } from '../components/ui/UsageLimitIndicator';
-import { AdvancedFilters } from '../components/ui/AdvancedFilters';
-import MultiDaySelector from '../components/ui/MultiDaySelector';
+import { BetreuerAdvancedFilters } from '../components/ui/BetreuerAdvancedFilters';
 import { cn } from '../lib/utils';
 import { searchCaretakers as searchCaretakersService, type CaretakerDisplayData, type SearchFilters } from '../lib/supabase/caretaker-search';
 import { DEFAULT_SERVICE_CATEGORIES } from '../lib/types/service-categories';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import useCurrentUsage from '../hooks/useCurrentUsage';
-import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityContext';
-import { useAuth } from "../lib/auth/AuthContext";
-import { advertisementService } from '../lib/supabase/advertisementService';
 
 // Using the type from the service
 type Caretaker = CaretakerDisplayData;
@@ -25,11 +20,8 @@ interface CaretakerCardProps {
 
 function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { contactLimit, subscription } = useFeatureAccess();
   const { currentUsage: contactUsage } = useCurrentUsage('contact_request');
-  const { shortTermAvailable } = useShortTermAvailability();
-  const { user } = useAuth();
   const isFirstRender = useRef(true);
   
   // Initialize filters from URL params
@@ -50,6 +42,7 @@ function SearchPage() {
   const [selectedMinRating, setSelectedMinRating] = useState(searchParams.get('minRating') || '');
   const [selectedRadius, setSelectedRadius] = useState(searchParams.get('radius') || '');
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
+  const [showRelatedServices, setShowRelatedServices] = useState(searchParams.get('showRelatedServices') === 'true');
   const [caretakers, setCaretakers] = useState<Caretaker[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -136,7 +129,7 @@ function SearchPage() {
       }
 
 
-      let data;
+      let data: Caretaker[] = [];
       try {
         data = await searchCaretakersService(filters);
 
@@ -197,7 +190,7 @@ function SearchPage() {
       // Client-seitige Verfügbarkeits-Filterung (da noch keine DB-Unterstützung)
       if ((selectedAvailabilityDays.length > 0 || selectedAvailabilityTime) && data) {
 
-        data = data.filter(caretaker => {
+        data = data.filter(() => {
           // Vereinfachte Verfügbarkeits-Logik - in Zukunft aus DB
           // Für jetzt nehmen wir an, dass alle Betreuer verfügbar sind
           // TODO: Implementiere echte Verfügbarkeits-Prüfung
@@ -219,7 +212,7 @@ function SearchPage() {
         data = data.filter(caretaker => {
           // Prüfe ob der Betreuer Services in der gewählten Kategorie hat
           if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
-            const hasCategory = caretaker.servicesWithCategories.some(service => 
+            const hasCategory = caretaker.servicesWithCategories.some((service: any) => 
               service.category_id === parseInt(selectedServiceCategory)
             );
             console.log(`🏷️ ${caretaker.name}: has category ${selectedServiceCategory} = ${hasCategory}`);
@@ -235,8 +228,8 @@ function SearchPage() {
       if (maxPrice < 100 && data && data.length > 0) {
 
         
-        const originalLength = data.length;
-        const originalData = [...data]; // Backup für Debugging
+        // const originalLength = data.length;
+        // const originalData = [...data]; // Backup für Debugging
         
 
         
@@ -247,18 +240,18 @@ function SearchPage() {
           // 1. Neue Struktur: Preise aus services_with_categories
           if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
             const validPrices = caretaker.servicesWithCategories
-              .filter(service => 
+              .filter((service: any) => 
                 service.price && 
                 service.price !== '' && 
                 service.price !== null && 
                 service.price !== undefined &&
                 service.name !== 'Anfahrkosten' // Schließe Anfahrkosten aus
               )
-              .map(service => {
+              .map((service: any) => {
                 const price = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
                 return isNaN(price) ? 0 : price;
               })
-              .filter(price => price > 0);
+              .filter((price: number) => price > 0);
             
             if (validPrices.length > 0) {
               lowestPrice = Math.min(...validPrices);
@@ -275,7 +268,7 @@ function SearchPage() {
                 }
                 return price !== '' && price !== null && price !== undefined;
               })
-              .map(([key, price]) => {
+              .map(([, price]) => {
                 const num = typeof price === 'string' ? parseFloat(price) : price;
                 return isNaN(num) ? 0 : num;
               })
@@ -310,7 +303,7 @@ function SearchPage() {
 
         // TODO: Implementiere echte Geolocation-basierte Filterung
         // Für jetzt: Mock-Filterung basierend auf Radius
-        data = data.filter(caretaker => {
+        data = data.filter(() => {
           // Vereinfachte Logik: Kleinere Radien = weniger Ergebnisse
           const randomDistance = Math.random() * 100;
           return randomDistance <= radius;
@@ -346,6 +339,7 @@ function SearchPage() {
       if (selectedMinRating) newParams.set('minRating', selectedMinRating);
       if (selectedRadius) newParams.set('radius', selectedRadius);
       if (maxPrice < 100) newParams.set('maxPrice', maxPrice.toString());
+      if (showRelatedServices) newParams.set('showRelatedServices', 'true');
       
       setSearchParams(newParams);
     } catch (err) {
@@ -384,7 +378,7 @@ function SearchPage() {
     }, 300); // 300ms Debounce
     
     return () => clearTimeout(timeoutId);
-  }, [location, selectedPetType, selectedService, selectedServiceCategory, selectedAvailabilityDays, selectedAvailabilityTime, selectedMinRating, selectedRadius, maxPrice]); // Dependencies für Live-Suche
+  }, [location, selectedPetType, selectedService, selectedServiceCategory, selectedAvailabilityDays, selectedAvailabilityTime, selectedMinRating, selectedRadius, maxPrice, showRelatedServices]); // Dependencies für Live-Suche
 
   const clearAllFilters = () => {
     setSelectedPetType('');
@@ -395,12 +389,13 @@ function SearchPage() {
     setSelectedMinRating('');
     setSelectedRadius('');
     setMaxPrice(100);
+    setShowRelatedServices(false);
     setLocation('');
     setNoResults(false);
     setError(null);
   };
 
-  const hasActiveFilters = selectedPetType || selectedService || selectedServiceCategory || selectedAvailabilityDays.length > 0 || selectedAvailabilityTime || selectedMinRating || selectedRadius || maxPrice < 100 || location.trim();
+  const hasActiveFilters = selectedPetType || selectedService || selectedServiceCategory || selectedAvailabilityDays.length > 0 || selectedAvailabilityTime || selectedMinRating || selectedRadius || maxPrice < 100 || showRelatedServices || location.trim();
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -500,35 +495,6 @@ function SearchPage() {
                   </div>
                 </div>
 
-                {/* Max Preis Slider */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Max. Preis: €{maxPrice === 100 ? '100+' : maxPrice}/Std
-                  </label>
-                  <div className="relative">
-                    <div className="relative h-2 bg-gray-200 rounded-lg mt-1">
-                      <div 
-                        className="absolute h-2 bg-primary-500 rounded-lg"
-                        style={{
-                          left: '0%',
-                          width: `${maxPrice}%`
-                        }}
-                      />
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        value={maxPrice}
-                        onChange={(e) => setMaxPrice(parseInt(e.target.value))}
-                        className="absolute w-full h-2 bg-transparent appearance-none cursor-pointer range-slider"
-                      />
-                    </div>
-                    <div className="flex justify-between mt-1 text-xs text-gray-500">
-                      <span>€0</span>
-                      <span>€100+</span>
-                    </div>
-                  </div>
-                </div>
 
                 {/* Advanced Filter Toggle */}
                 <div>
@@ -549,15 +515,22 @@ function SearchPage() {
                 {/* Premium Filter (nur sichtbar wenn showAdvancedFilters true ist) */}
                 {showAdvancedFilters && (
                   <div className="border-t pt-6">
-                    <AdvancedFilters
+                    <BetreuerAdvancedFilters
                       availabilityDay={selectedAvailabilityDays.join(',')}
                       availabilityTime={selectedAvailabilityTime}
                       minRating={selectedMinRating}
                       radius={selectedRadius}
+                      maxPrice={maxPrice}
+                      showRelatedServices={showRelatedServices}
                       onAvailabilityDayChange={(day) => setSelectedAvailabilityDays(day ? day.split(',').filter(d => d) : [])}
                       onAvailabilityTimeChange={setSelectedAvailabilityTime}
                       onMinRatingChange={setSelectedMinRating}
                       onRadiusChange={setSelectedRadius}
+                      onMaxPriceChange={setMaxPrice}
+                      onShowRelatedServicesChange={setShowRelatedServices}
+                      showPriceFilter={true}
+                      showAvailabilityFilter={true}
+                      showServiceFilter={true}
                     />
                   </div>
                 )}
@@ -883,7 +856,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
           }
           return price !== '' && price !== null && price !== undefined;
         })
-        .map(([key, price]) => {
+        .map(([, price]) => {
           const num = typeof price === 'string' ? parseFloat(price) : price;
           return isNaN(num) ? 0 : num;
         })

@@ -11,7 +11,7 @@ DECLARE
 BEGIN
     -- Owner Premium Produkt
     INSERT INTO stripe_wrapper.products (name, description, type)
-    VALUES ('Tigube Owner Premium', 'Premium-Mitgliedschaft für Haustierbesitzer mit erweiterten Features', 'service')
+    VALUES ('Tigube Owner Premium', 'Premium-Mitgliedschaft für Haustierhalter mit erweiterten Features', 'service')
     ON CONFLICT (name) DO UPDATE SET 
         description = EXCLUDED.description,
         updated = NOW()

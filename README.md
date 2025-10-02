@@ -1,6 +1,6 @@
 # Tigube v2 - Pet Care Platform
 
-Eine moderne, vollständig funktionsfähige Plattform zur Vermittlung zwischen Haustierbesitzern und Tierbetreuern.
+Eine moderne, vollständig funktionsfähige Plattform zur Vermittlung zwischen Haustierhaltern und Tierbetreuern.
 
 ## 🎯 Aktueller Status
 

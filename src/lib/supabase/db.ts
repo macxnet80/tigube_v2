@@ -948,7 +948,7 @@ export const caretakerSearchService = {
 
 // Owner Caretaker Connections Service
 export const ownerCaretakerService = {
-  // Speichere einen Betreuer für einen Tierbesitzer (aus Chat)
+  // Speichere einen Betreuer für einen Tierhalter (aus Chat)
   async saveCaretaker(ownerId: string, caretakerId: string) {
     try {
       // Prüfe ob bereits eine Verbindung existiert
@@ -995,7 +995,7 @@ export const ownerCaretakerService = {
     }
   },
 
-  // Entferne einen Betreuer für einen Tierbesitzer
+  // Entferne einen Betreuer für einen Tierhalter
   async removeCaretaker(ownerId: string, caretakerId: string) {
     try {
       const { error } = await supabase
@@ -1262,7 +1262,7 @@ export const ownerCaretakerService = {
     }
   },
 
-  // Lade alle Tierbesitzer für einen Betreuer (für das Betreuer Dashboard)
+  // Lade alle Tierhalter für einen Betreuer (für das Betreuer Dashboard)
   async getCaretakerClients(caretakerId: string) {
     try {
       // Erst die Verbindungen laden

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, PawPrint as Paw, MessageCircle, LogOut } from 'lucide-react';
+import { Menu, X, MessageCircle, LogOut } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAdmin } from '../../lib/admin/useAdmin';
 import { useAuth } from '../../lib/auth/AuthContext';
@@ -42,7 +42,7 @@ function Header() {
 
   // Bessere Owner-Prüfung mit Fallback
   const isOwner = userProfile?.user_type === 'owner' || (!userProfile && isAuthenticated);
-  const isCaretaker = userProfile?.user_type === 'caretaker';
+  const isCaretaker = userProfile?.user_type === 'caretaker' || userProfile?.user_type === 'dienstleister';
   
   // Debug: Log current state
   if (import.meta.env.DEV) {
@@ -74,13 +74,21 @@ function Header() {
                     Dashboard
                   </NavLink>
                 )}
-                {isCaretaker && (
+                {userProfile?.user_type === 'caretaker' && (
                   <NavLink to="/dashboard-caretaker" isActive={isActive('/dashboard-caretaker')}>
+                    Dashboard
+                  </NavLink>
+                )}
+                {userProfile?.user_type === 'dienstleister' && (
+                  <NavLink to="/dashboard-dienstleister" isActive={isActive('/dashboard-dienstleister')}>
                     Dashboard
                   </NavLink>
                 )}
                 <NavLink to="/suche" isActive={isActive('/suche')}>
                   Betreuer finden
+                </NavLink>
+                <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
+                  Wo finde ich...?
                 </NavLink>
                 <NavLink to="/blog" isActive={isActive('/blog')}>
                   tigube-Welt
@@ -125,8 +133,8 @@ function Header() {
             <NavLink to="/suche" isActive={isActive('/suche')}>
             Betreuer finden
             </NavLink>
-            <NavLink to="/registrieren?type=caregiver" isActive={isActive('/registrieren?type=caregiver')}>
-            Betreuer werden
+            <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
+            Wo finde ich...?
             </NavLink>
             <NavLink to="/mitgliedschaften" isActive={isActive('/mitgliedschaften') || isActive('/preise')}>
             Preise
@@ -176,13 +184,21 @@ function Header() {
                       Dashboard
                     </MobileNavLink>
                   )}
-                  {isCaretaker && (
-                  <MobileNavLink to="/dashboard-caretaker" isActive={isActive('/dashboard-caretaker')} onClick={() => setIsMenuOpen(false)}>
+                  {userProfile?.user_type === 'caretaker' && (
+                    <MobileNavLink to="/dashboard-caretaker" isActive={isActive('/dashboard-caretaker')} onClick={() => setIsMenuOpen(false)}>
+                      Dashboard
+                    </MobileNavLink>
+                  )}
+                  {userProfile?.user_type === 'dienstleister' && (
+                    <MobileNavLink to="/dashboard-dienstleister" isActive={isActive('/dashboard-dienstleister')} onClick={() => setIsMenuOpen(false)}>
                       Dashboard
                     </MobileNavLink>
                   )}
                   <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
                     Betreuer finden
+                  </MobileNavLink>
+                  <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
+                    Wo finde ich...?
                   </MobileNavLink>
                   <MobileNavLink to="/blog" isActive={isActive('/blog')} onClick={() => setIsMenuOpen(false)}>
                     tigube-Welt
@@ -231,12 +247,8 @@ function Header() {
               <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
                     Betreuer finden
               </MobileNavLink>
-              <MobileNavLink 
-                to="/registrieren?type=caregiver"
-                isActive={isActive('/registrieren?type=caregiver')}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                    Betreuer werden
+              <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
+                    Wo finde ich...?
               </MobileNavLink>
               <MobileNavLink 
                 to="/mitgliedschaften" 

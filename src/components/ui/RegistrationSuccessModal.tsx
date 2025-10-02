@@ -82,9 +82,9 @@ const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> = ({
     },
     {
       id: 'connect',
-      title: 'Verbinde dich mit Tierbesitzern',
+      title: 'Verbinde dich mit Tierhaltern',
       subtitle: 'Neue Kunden finden',
-      description: 'Tierbesitzer in deiner Nähe suchen nach zuverlässigen Betreuern. Chatte mit ihnen und vereinbare Kennenlerntermine.',
+      description: 'Tierhalter in deiner Nähe suchen nach zuverlässigen Betreuern. Chatte mit ihnen und vereinbare Kennenlerntermine.',
       icon: <MessageCircle className="w-12 h-12 text-primary-500" />
     },
     {

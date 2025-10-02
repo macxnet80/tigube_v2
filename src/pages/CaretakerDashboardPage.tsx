@@ -3080,7 +3080,7 @@ function CaretakerDashboardPage() {
                       className="input w-full min-h-[60px]"
                       value={qualificationsDraft.experience_description}
                       onChange={e => handleQualificationsChange('experience_description', e.target.value)}
-                      placeholder="Erzähle den Tierbesitzern von deiner Erfahrung mit Tieren, inkl. beruflicher Erfahrung oder eigenen Tieren"
+                      placeholder="Erzähle den Tierhaltern von deiner Erfahrung mit Tieren, inkl. beruflicher Erfahrung oder eigenen Tieren"
                     />
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -3145,7 +3145,7 @@ function CaretakerDashboardPage() {
                   </h3>
                   <p className="text-yellow-700 text-sm mb-3">
                     Umgebungsbilder sind nur für Professional-Mitglieder verfügbar. 
-                    Zeige deine Betreuungsumgebung und gewinne das Vertrauen von Tierbesitzern.
+                    Zeige deine Betreuungsumgebung und gewinne das Vertrauen von Tierhaltern.
                   </p>
                   <button
                     onClick={() => setActiveTab('mitgliedschaften')}
@@ -3352,14 +3352,14 @@ function CaretakerDashboardPage() {
                 <h3 className="font-medium text-lg mb-2">Noch keine Kunden vorhanden</h3>
                 <p className="text-sm">
                   Kunden erscheinen hier automatisch, wenn sie dich als Betreuer speichern.<br />
-                  Teile dein Profil mit Tierbesitzern oder werde über die Suche gefunden!
+                  Teile dein Profil mit Tierhaltern oder werde über die Suche gefunden!
                 </p>
               </div>
             </div>
           ) : (
             <div>
               <p className="text-gray-600 mb-4 text-sm">
-                Hier siehst du alle Tierbesitzer, die dich als Betreuer gespeichert haben. 
+                Hier siehst du alle Tierhalter, die dich als Betreuer gespeichert haben. 
                 Klicke auf einen Namen, um die freigegebenen Informationen zu sehen.
               </p>
               <ClientDetailsAccordion clients={clients} onDeleteClient={handleDeleteClient} />
@@ -4120,7 +4120,7 @@ function CaretakerDashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                     <Check className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-700">Unlimited Kontaktanfragen von Tierbesitzern</span>
+                    <span className="text-sm text-gray-700">Unlimited Kontaktanfragen von Tierhaltern</span>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                     <div className="w-5 h-5 text-green-600" />
@@ -4128,7 +4128,7 @@ function CaretakerDashboardPage() {
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                     <Check className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-700">Bewertungen von Tierbesitzern erhalten</span>
+                    <span className="text-sm text-gray-700">Bewertungen von Tierhaltern erhalten</span>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                     <Check className="w-5 h-5 text-green-600" />
@@ -4235,7 +4235,7 @@ function CaretakerDashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                     <Check className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-700">Unlimited Kontaktanfragen von Tierbesitzern</span>
+                    <span className="text-sm text-gray-700">Unlimited Kontaktanfragen von Tierhaltern</span>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                     <Check className="w-5 h-5 text-green-600" />
@@ -4243,7 +4243,7 @@ function CaretakerDashboardPage() {
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                     <Check className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-gray-700">Bewertungen von Tierbesitzern erhalten</span>
+                    <span className="text-sm text-gray-700">Bewertungen von Tierhaltern erhalten</span>
                   </div>
                   <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
                     <Check className="w-5 h-5 text-green-600" />

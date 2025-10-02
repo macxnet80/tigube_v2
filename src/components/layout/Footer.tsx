@@ -30,9 +30,9 @@ function Footer() {
             </div>
           </div>
 
-          {/* Für Tierbesitzer */}
+          {/* Für Tierhalter */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Für Tierbesitzer</h3>
+            <h3 className="text-lg font-semibold mb-4">Für Tierhalter</h3>
             <ul className="space-y-2">
               <li><FooterLink to="/betreuer-finden">Betreuer finden</FooterLink></li>
               <li><FooterLink to="/wie-funktioniert">Wie es funktioniert</FooterLink></li>

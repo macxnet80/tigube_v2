@@ -215,7 +215,7 @@ Dank Profil-Bewertungen und sicheren Abläufen bekommst du genau die Fürsorge, 
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Das sagen unsere Kunden</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-            Zahlreiche Tierbesitzer vertrauen auf tigube. So berichten sie über ihre Erfahrungen:
+            Zahlreiche Tierhalter vertrauen auf tigube. So berichten sie über ihre Erfahrungen:
             </p>
           </div>
           
@@ -228,7 +228,7 @@ Dank Profil-Bewertungen und sicheren Abläufen bekommst du genau die Fürsorge, 
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">Echte Bewertungen folgen!</h3>
                 <p className="text-gray-600 text-sm">
-                  Sobald die ersten Beta-Tester ihre Erfahrungen gemacht haben, erscheinen hier echte Bewertungen von Tierbesitzern.
+                  Sobald die ersten Beta-Tester ihre Erfahrungen gemacht haben, erscheinen hier echte Bewertungen von Tierhaltern.
                 </p>
                 <div className="mt-4 text-xs text-gray-500">
                   (Vorschau: So werden Bewertungen später aussehen)

@@ -28,13 +28,13 @@ function AgbPage() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">§ 2 Leistungen der Plattform</h2>
               <div className="space-y-4 text-gray-700">
                 <p>
-                  tigube stellt eine Online-Plattform zur Verfügung, über die Tierbesitzer und Tierbetreuer 
+                  tigube stellt eine Online-Plattform zur Verfügung, über die Tierhalter und Tierbetreuer 
                   miteinander in Kontakt treten können. Die Plattform ermöglicht:
                 </p>
                 <ul className="list-disc list-inside space-y-2 ml-4">
                   <li>Suche nach qualifizierten Tierbetreuern</li>
                   <li>Präsentation von Betreuungsangeboten</li>
-                  <li>Kommunikation zwischen Tierbesitzern und Betreuern</li>
+                  <li>Kommunikation zwischen Tierhaltern und Betreuern</li>
                   <li>Bewertungs- und Empfehlungssystem</li>
                 </ul>
                 <p>
@@ -77,7 +77,7 @@ function AgbPage() {
                   <li>Die Beeinträchtigung der Funktionsfähigkeit der Plattform</li>
                 </ul>
                 <p>
-                  [Platzhalter: Spezifische Verhaltensregeln für Tierbesitzer und Betreuer]
+                  [Platzhalter: Spezifische Verhaltensregeln für Tierhalter und Betreuer]
                 </p>
               </div>
             </section>
@@ -87,7 +87,7 @@ function AgbPage() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">§ 5 Vertragsschluss zwischen Nutzern</h2>
               <div className="space-y-4 text-gray-700">
                 <p>
-                  Betreuungsverträge kommen ausschließlich zwischen Tierbesitzern und Tierbetreuern zustande. 
+                  Betreuungsverträge kommen ausschließlich zwischen Tierhaltern und Tierbetreuern zustande. 
                   tigube ist nicht Vertragspartei dieser Betreuungsverträge und übernimmt keine Haftung 
                   für deren Erfüllung.
                 </p>
@@ -102,7 +102,7 @@ function AgbPage() {
               <h2 className="text-xl font-semibold text-gray-800 mb-4">§ 6 Gebühren und Zahlungsbedingungen</h2>
               <div className="space-y-4 text-gray-700">
                 <p>
-                  Die Nutzung der Grundfunktionen der Plattform ist für Tierbesitzer kostenlos. 
+                  Die Nutzung der Grundfunktionen der Plattform ist für Tierhalter kostenlos. 
                   Für erweiterte Services und für Tierbetreuer können Gebühren anfallen.
                 </p>
                 <p>

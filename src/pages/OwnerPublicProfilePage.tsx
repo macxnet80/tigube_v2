@@ -96,12 +96,12 @@ function OwnerPublicProfilePage() {
   // SEO-Optimierung: Meta-Tags dynamisch setzen
   useEffect(() => {
     if (profile) {
-      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Tierbesitzer';
+      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Tierhalter';
       const petNames = profile.pets?.map(pet => pet.name).join(', ') || '';
-      const description = `Tierbesitzer-Profil von ${fullName}${petNames ? ` mit ${petNames}` : ''} auf tigube - Professionelle Tierbetreuung finden`;
+      const description = `Tierhalter-Profil von ${fullName}${petNames ? ` mit ${petNames}` : ''} auf tigube - Professionelle Tierbetreuung finden`;
       
       // Dynamische Meta-Tags setzen
-      document.title = `${fullName} - Tierbesitzer-Profil | tigube`;
+      document.title = `${fullName} - Tierhalter-Profil | tigube`;
       
       // Meta Description
       let metaDescription = document.querySelector('meta[name="description"]');
@@ -123,7 +123,7 @@ function OwnerPublicProfilePage() {
         meta.setAttribute('content', content);
       };
 
-      setMetaProperty('og:title', `${fullName} - Tierbesitzer-Profil | tigube`);
+      setMetaProperty('og:title', `${fullName} - Tierhalter-Profil | tigube`);
       setMetaProperty('og:description', description);
       setMetaProperty('og:type', 'profile');
       setMetaProperty('og:url', window.location.href);
@@ -143,7 +143,7 @@ function OwnerPublicProfilePage() {
       };
 
       setMetaName('twitter:card', 'summary');
-      setMetaName('twitter:title', `${fullName} - Tierbesitzer-Profil | tigube`);
+      setMetaName('twitter:title', `${fullName} - Tierhalter-Profil | tigube`);
       setMetaName('twitter:description', description);
       if (profile.profile_photo_url) {
         setMetaName('twitter:image', profile.profile_photo_url);
@@ -189,7 +189,7 @@ function OwnerPublicProfilePage() {
           
           <p className="text-lg text-gray-600 mb-6 leading-relaxed">
             Du bist nicht berechtigt, dieses Profil zu sehen. 
-            Nur Betreuer, die bereits von diesem Tierbesitzer kontaktiert wurden, haben Zugriff! 🐕
+            Nur Betreuer, die bereits von diesem Tierhalter kontaktiert wurden, haben Zugriff! 🐕
           </p>
           
           <div className="bg-primary-50 rounded-lg p-6 mb-8 text-left">
@@ -200,7 +200,7 @@ function OwnerPublicProfilePage() {
                   Wie bekomme ich Zugriff?
                 </h3>
                 <ul className="text-sm text-primary-700 space-y-1">
-                  <li>• Warte darauf, dass der Tierbesitzer dich kontaktiert</li>
+                  <li>• Warte darauf, dass der Tierhalter dich kontaktiert</li>
                   <li>• Profile sind nur für bestehende Chat-Partner sichtbar</li>
                   <li>• Erstelle ein attraktives Betreuer-Profil, damit Besitzer dich finden</li>
                 </ul>
@@ -308,7 +308,7 @@ function OwnerPublicProfilePage() {
               Betreuer suchen
             </button>
             <span>/</span>
-            <span className="text-gray-900">Tierbesitzer-Profil</span>
+            <span className="text-gray-900">Tierhalter-Profil</span>
           </nav>
           <Button
             variant="secondary"
@@ -360,7 +360,7 @@ function OwnerPublicProfilePage() {
                   <div className="text-sm">
                     <p className="font-medium text-blue-800">Geteilte Informationen</p>
                     <p className="text-blue-700 mt-1">
-                      Nur freigegebene Daten werden angezeigt. Der Tierbesitzer kann jederzeit 
+                      Nur freigegebene Daten werden angezeigt. Der Tierhalter kann jederzeit 
                       kontrollieren, welche Informationen sichtbar sind.
                     </p>
                   </div>
@@ -540,7 +540,7 @@ function OwnerPublicProfilePage() {
         <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl p-6 text-center">
           <h2 className="text-xl font-semibold mb-2">Interesse an einer Zusammenarbeit?</h2>
           <p className="text-gray-600 mb-4">
-            Kontaktiere {profile.first_name || 'den Tierbesitzer'} über die Nachrichtenfunktion!
+            Kontaktiere {profile.first_name || 'den Tierhalter'} über die Nachrichtenfunktion!
           </p>
           <Button
             onClick={handleSendMessage}

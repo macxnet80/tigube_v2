@@ -12,7 +12,7 @@ function AboutPage() {
               Über tigube
             </h1>
             <p className="text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed">
-              Wir verbinden liebevolle Tierbesitzer mit vertrauenswürdigen Betreuern 
+              Wir verbinden liebevolle Tierhalter mit vertrauenswürdigen Betreuern 
               und schaffen eine Gemeinschaft, in der jedes Tier die beste Pflege erhält.
             </p>
           </div>
@@ -89,7 +89,7 @@ function AboutPage() {
               <div className="space-y-4 text-gray-600">
                 <p>
                   tigube entstand aus der persönlichen Erfahrung unserer Gründer, die selbst 
-                  Tierbesitzer sind und die Herausforderung kannten, vertrauenswürdige Betreuung 
+                  Tierhalter sind und die Herausforderung kannten, vertrauenswürdige Betreuung 
                   für ihre geliebten Vierbeiner zu finden.
                 </p>
                 <p>
@@ -98,7 +98,7 @@ function AboutPage() {
                   in den Mittelpunkt stellt.
                 </p>
                 <p>
-                  Heute verbinden wir täglich Hunderte von Tierbesitzern mit qualifizierten 
+                  Heute verbinden wir täglich Hunderte von Tierhaltern mit qualifizierten 
                   Betreuern und schaffen dabei eine Gemeinschaft, die auf Vertrauen, Liebe 
                   und Fürsorge basiert.
                 </p>

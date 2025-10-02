@@ -737,7 +737,7 @@ function BetreuerProfilePage() {
               {userProfile?.user_type === 'caretaker' && (
                 <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <p className="text-gray-700 text-sm">
-                    <strong>Bewertung schreiben:</strong> Nur Premium-Tierbesitzer können Bewertungen für Betreuer schreiben.
+                    <strong>Bewertung schreiben:</strong> Nur Premium-Tierhalter können Bewertungen für Betreuer schreiben.
                   </p>
                 </div>
               )}
@@ -877,12 +877,12 @@ function ReviewCard({ review, caretakerName }: ReviewCardProps) {
   const formatReviewerName = (firstName: string | null, lastName: string | null) => {
     if (!firstName && !lastName) {
       // Fallback für Reviews ohne Benutzer-Daten
-      return 'Tierbesitzer';
+      return 'Tierhalter';
     }
     
     if (!firstName) {
       // Nur Nachname vorhanden
-      return lastName || 'Tierbesitzer';
+      return lastName || 'Tierhalter';
     }
     
     if (!lastName) {

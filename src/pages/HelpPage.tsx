@@ -12,7 +12,7 @@ const faqData: FAQItem[] = [
   {
     id: '1',
     question: 'Wie funktioniert TiGube?',
-    answer: 'TiGube verbindet Tierbesitzer mit vertrauenswürdigen Tierbetreuern in ihrer Nähe. Sie können Profile durchsuchen, Bewertungen lesen und direkt Kontakt aufnehmen, um die beste Betreuung für Ihr Tier zu finden.',
+    answer: 'TiGube verbindet Tierhalter mit vertrauenswürdigen Tierbetreuern in ihrer Nähe. Sie können Profile durchsuchen, Bewertungen lesen und direkt Kontakt aufnehmen, um die beste Betreuung für Ihr Tier zu finden.',
     category: 'Allgemein'
   },
   {
@@ -24,7 +24,7 @@ const faqData: FAQItem[] = [
   {
     id: '3',
     question: 'Wie werden die Betreuer überprüft?',
-    answer: 'Alle Betreuer durchlaufen einen Verifizierungsprozess, der Identitätsprüfung, Referenzen und ein persönliches Gespräch umfasst. Zusätzlich sammeln wir Bewertungen von anderen Tierbesitzern.',
+    answer: 'Alle Betreuer durchlaufen einen Verifizierungsprozess, der Identitätsprüfung, Referenzen und ein persönliches Gespräch umfasst. Zusätzlich sammeln wir Bewertungen von anderen Tierhaltern.',
     category: 'Sicherheit'
   },
   {

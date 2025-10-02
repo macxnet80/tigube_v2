@@ -56,7 +56,7 @@ serve(async (req) => {
             currency: 'eur',
             product_data: {
               name: `Tigube ${planDisplayName} Plan`,
-              description: `${userType === 'owner' ? 'Tierbesitzer' : 'Betreuer'} ${planDisplayName} Mitgliedschaft`,
+              description: `${userType === 'owner' ? 'Tierhalter' : 'Betreuer'} ${planDisplayName} Mitgliedschaft`,
             },
             unit_amount: priceInCents,
             recurring: {

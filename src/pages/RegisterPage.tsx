@@ -16,7 +16,7 @@ function RegisterPage() {
   React.useEffect(() => {
     if (isAuthenticated && userProfile && !authLoading) {
       console.log('🔄 Already authenticated with profile, redirecting to dashboard...');
-      const dashboardPath = userProfile.user_type === 'caretaker' 
+      const dashboardPath = (userProfile.user_type === 'caretaker' || userProfile.user_type === 'dienstleister')
         ? '/dashboard-caretaker' 
         : '/dashboard-owner';
       navigate(dashboardPath, { replace: true });
@@ -24,11 +24,38 @@ function RegisterPage() {
   }, [isAuthenticated, userProfile, authLoading, navigate]);
   
   // Fix: Accept both 'caregiver' and 'caretaker' as valid caretaker types
-  const [userType, setUserType] = useState<'owner' | 'caretaker'>(
-    initialType === 'caregiver' || initialType === 'caretaker' ? 'caretaker' : 'owner'
+  const [userType, setUserType] = useState<'owner' | 'dienstleister'>(
+    initialType === 'caregiver' || initialType === 'caretaker' || initialType === 'dienstleister' ? 'dienstleister' : 'owner'
   );
+  
+  // Dienstleister-Kategorie State
+  const [selectedCategory, setSelectedCategory] = useState<number>(1); // Default: Betreuer
+  const [categories, setCategories] = useState<Array<{id: number, name: string, beschreibung: string, icon: string}>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Kategorien laden
+  React.useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('dienstleister_kategorien' as any)
+          .select('id, name, beschreibung, icon')
+          .eq('is_active', true)
+          .order('sortierung');
+        
+        if (error) throw error;
+        setCategories((data as any) || []);
+      } catch (err) {
+        console.error('Fehler beim Laden der Kategorien:', err);
+      }
+    };
+    
+    if (userType === 'dienstleister') {
+      loadCategories();
+    }
+  }, [userType]);
+  
   // Onboarding wird nach Dashboard-Load angezeigt, nicht mehr hier
   
   // Formular-Daten für Schritt 1 (Grundlegende Kontoinformationen)
@@ -91,12 +118,37 @@ function RegisterPage() {
               first_name: formStep1.firstName,
               last_name: formStep1.lastName,
               user_type: userType,
-            profile_completed: false // Profile ist noch nicht vollständig
+              profile_completed: false // Profile ist noch nicht vollständig
             });
 
           if (insertError) {
             setError("Profil konnte nicht gespeichert werden. Bitte versuche es erneut.");
             return;
+          }
+
+          // Für Dienstleister: Caretaker-Profil mit Kategorie erstellen
+          if (userType === 'dienstleister') {
+            const selectedCat = categories.find(cat => cat.id === selectedCategory);
+            const { error: profileError } = await supabase
+              .from('caretaker_profiles')
+              .insert({
+                id: data.user.id,
+                kategorie_id: selectedCategory,
+                dienstleister_typ: selectedCat?.name.toLowerCase() === 'betreuer' ? 'betreuer' : 
+                                   selectedCat?.name.toLowerCase() === 'tierarzt' ? 'tierarzt' :
+                                   selectedCat?.name.toLowerCase() === 'hundetrainer' ? 'hundetrainer' :
+                                   selectedCat?.name.toLowerCase() === 'tierfriseur' ? 'tierfriseur' :
+                                   selectedCat?.name.toLowerCase() === 'physiotherapeut' ? 'physiotherapeut' :
+                                   selectedCat?.name.toLowerCase() === 'ernährungsberater' ? 'ernaehrungsberater' :
+                                   selectedCat?.name.toLowerCase() === 'tierfotograf' ? 'tierfotograf' : 'sonstige',
+                bio: '',
+                approval_status: 'not_requested'
+              });
+
+            if (profileError) {
+              console.error('Fehler beim Erstellen des Dienstleister-Profils:', profileError);
+              // Nicht kritisch - kann später im Dashboard nachgeholt werden
+            }
           }
 
         // Auth-Kontext robuste aktualisieren
@@ -150,7 +202,7 @@ function RegisterPage() {
           console.warn('⚠️ Konnte onboardingData nicht in sessionStorage setzen:', e);
         }
 
-        const dashboardPath = userType === 'owner' ? '/dashboard-owner' : '/dashboard-caretaker';
+        const dashboardPath = userType === 'owner' ? '/dashboard-owner' : '/dashboard-dienstleister';
         console.log('✅ Registration completed. Redirecting to dashboard for onboarding:', dashboardPath);
         window.location.href = dashboardPath;
         }
@@ -173,12 +225,12 @@ function RegisterPage() {
               <img src="/Image/Logos/tigube_logo.svg" alt="tigube Logo" className="h-10 w-auto mr-2" />
             </Link>
             <h1 className="text-3xl font-bold mb-4">
-              {userType === 'owner' ? 'Als Tierbesitzer registrieren' : 'Als Betreuer registrieren'}
+              {userType === 'owner' ? 'Als Tierhalter registrieren' : 'Als Dienstleister registrieren'}
             </h1>
             <p className="text-gray-600 max-w-lg mx-auto">
               {userType === 'owner' 
                 ? 'Erstelle ein Konto, um vertrauenswürdige Betreuer für deine Tiere zu finden.'
-                : 'Erstelle ein Konto, um Betreuungsdienste anzubieten und Tierbesitzer zu erreichen.'}
+                : 'Erstelle ein Konto, um deine Dienstleistungen anzubieten und Tierhalter zu erreichen.'}
             </p>
           </div>
         
@@ -194,21 +246,46 @@ function RegisterPage() {
                 }`}
                 onClick={() => setUserType('owner')}
               >
-                Tierbesitzer
+                Tierhalter
               </button>
               <button
                 type="button"
                 className={`flex-1 py-3 px-4 rounded-lg text-center transition-colors ${
-                  userType === 'caretaker'
+                  userType === 'dienstleister'
                     ? 'bg-primary-500 text-white'
                     : 'bg-transparent text-gray-600 hover:bg-gray-100'
                 }`}
-                onClick={() => setUserType('caretaker')}
+                onClick={() => setUserType('dienstleister')}
               >
-                Betreuer
+                Dienstleister
               </button>
             </div>
           </div>
+        
+        {/* Dienstleister-Kategorie Auswahl */}
+        {userType === 'dienstleister' && categories.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4">Welche Dienstleistung bietest du an?</h2>
+            <p className="text-gray-600 mb-6">Wähle die Kategorie, die am besten zu deinen Dienstleistungen passt.</p>
+            
+            <div className="max-w-md">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Dienstleistungskategorie
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name} - {category.beschreibung}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
         
         {/* Error Message */}
         {error && (

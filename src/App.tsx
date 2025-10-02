@@ -8,6 +8,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 const HomePage = lazy(() => import('./pages/HomePage'));
 const LaunchPage = lazy(() => import('./pages/LaunchPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
+const DienstleisterSearchPage = lazy(() => import('./pages/DienstleisterSearchPage'));
 const BetreuerProfilePage = lazy(() => import('./pages/BetreuerProfilePage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -22,6 +23,7 @@ const HelpPage = lazy(() => import('./pages/HelpPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const OwnerDashboardPage = lazy(() => import('./pages/OwnerDashboardPage'));
 const CaretakerDashboardPage = lazy(() => import('./pages/CaretakerDashboardPage'));
+const DienstleisterDashboardPage = lazy(() => import('./pages/DienstleisterDashboardPage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const OwnerPublicProfilePage = lazy(() => import('./pages/OwnerPublicProfilePage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
@@ -41,6 +43,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/launch" element={<LaunchPage />} />
           <Route path="/suche" element={<SearchPage />} />
+          <Route path="/dienstleister" element={<DienstleisterSearchPage />} />
           <Route 
             path="/betreuer/:id" 
             element={
@@ -85,6 +88,14 @@ function App() {
             element={
               <ProtectedRoute requireCaretaker={true}>
                 <CaretakerDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard-dienstleister"
+            element={
+              <ProtectedRoute requireCaretaker={true}>
+                <DienstleisterDashboardPage />
               </ProtectedRoute>
             }
           />
