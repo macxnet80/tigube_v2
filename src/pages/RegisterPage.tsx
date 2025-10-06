@@ -126,21 +126,36 @@ function RegisterPage() {
             return;
           }
 
-          // Für Dienstleister: Caretaker-Profil mit Kategorie erstellen
+          // Für Dienstleister: Spezifischen user_type und Caretaker-Profil erstellen
           if (userType === 'dienstleister') {
             const selectedCat = categories.find(cat => cat.id === selectedCategory);
-            const { error: profileError } = await supabase
-              .from('caretaker_profiles')
-              .insert({
-                id: data.user.id,
-                kategorie_id: selectedCategory,
-                dienstleister_typ: selectedCat?.name.toLowerCase() === 'betreuer' ? 'betreuer' : 
+            
+            // Bestimme den spezifischen user_type basierend auf der Kategorie
+            const specificUserType = selectedCat?.name.toLowerCase() === 'betreuer' ? 'caretaker' :
                                    selectedCat?.name.toLowerCase() === 'tierarzt' ? 'tierarzt' :
                                    selectedCat?.name.toLowerCase() === 'hundetrainer' ? 'hundetrainer' :
                                    selectedCat?.name.toLowerCase() === 'tierfriseur' ? 'tierfriseur' :
                                    selectedCat?.name.toLowerCase() === 'physiotherapeut' ? 'physiotherapeut' :
                                    selectedCat?.name.toLowerCase() === 'ernährungsberater' ? 'ernaehrungsberater' :
-                                   selectedCat?.name.toLowerCase() === 'tierfotograf' ? 'tierfotograf' : 'sonstige',
+                                   selectedCat?.name.toLowerCase() === 'tierfotograf' ? 'tierfotograf' : 'sonstige';
+
+            // Aktualisiere den user_type in der users-Tabelle
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({ user_type: specificUserType })
+              .eq('id', data.user.id);
+
+            if (updateError) {
+              console.error('Fehler beim Aktualisieren des User-Types:', updateError);
+            }
+
+            // Erstelle das Caretaker-Profil
+            const { error: profileError } = await supabase
+              .from('caretaker_profiles')
+              .insert({
+                id: data.user.id,
+                kategorie_id: selectedCategory,
+                dienstleister_typ: specificUserType,
                 bio: '',
                 approval_status: 'not_requested'
               });
@@ -202,7 +217,7 @@ function RegisterPage() {
           console.warn('⚠️ Konnte onboardingData nicht in sessionStorage setzen:', e);
         }
 
-        const dashboardPath = userType === 'owner' ? '/dashboard-owner' : '/dashboard-dienstleister';
+        const dashboardPath = userType === 'owner' ? '/dashboard-owner' : '/dashboard-caretaker';
         console.log('✅ Registration completed. Redirecting to dashboard for onboarding:', dashboardPath);
         window.location.href = dashboardPath;
         }

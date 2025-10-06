@@ -114,9 +114,11 @@ export function AdvertisementCard({
         {/* Content Section - unter dem Bild wie Profilkarten */}
         <div className="p-5 bg-white rounded-b-xl">
           {/* Title */}
-          <h3 className="font-semibold text-base group-hover:text-primary-600 transition-colors mb-3">
-            {advertisement.title}
-          </h3>
+          {advertisement.title && (
+            <h3 className="font-semibold text-base group-hover:text-primary-600 transition-colors mb-3">
+              {advertisement.title}
+            </h3>
+          )}
           
           {/* Description */}
           {advertisement.description && (

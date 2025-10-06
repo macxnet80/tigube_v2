@@ -2,6 +2,107 @@
 
 ## Systemarchitektur
 
+### Owner Dashboard Bug-Fix-Patterns
+
+#### Datenbank-Abfrage-Optimierung-Pattern
+```typescript
+// Problematische JOIN-Query (Vorher)
+const { data: caretakers, error: careteakersError } = await supabase
+  .from('caretaker_profiles')
+  .select(`
+    id,
+    services_with_categories,
+    hourly_rate,
+    rating,
+    review_count,
+    is_verified,
+    short_about_me,
+    is_commercial,
+    users!inner(
+      id,
+      first_name,
+      last_name,
+      city,
+      plz,
+      profile_photo_url,
+      user_type
+    )
+  `)
+  .in('id', caretakerIds)
+  .eq('approval_status', 'approved');
+
+// Optimierte separate Abfragen (Nachher)
+const { data: caretakerProfiles, error: profilesError } = await supabase
+  .from('caretaker_profiles')
+  .select('*')
+  .in('id', caretakerIds)
+  .eq('approval_status', 'approved');
+
+if (profilesError) throw profilesError;
+
+const { data: userData, error: usersError } = await supabase
+  .from('users')
+  .select('id, first_name, last_name, city, plz, profile_photo_url, user_type')
+  .in('id', caretakerProfiles.map(p => p.id));
+
+if (usersError) throw usersError;
+
+// JavaScript-basierte Datenkombination
+const caretakers = caretakerProfiles.map(profile => {
+  const user = userData?.find(u => u.id === profile.id);
+  return { ...profile, users: user };
+});
+```
+
+**Zweck**: Bessere RLS-Kompatibilität durch separate Abfragen
+**Vorteile**: 
+- Umgeht komplexe JOIN-Query-Probleme mit RLS-Policies
+- Bessere Performance und Debugging-Möglichkeiten
+- Explizite Kontrolle über Datenabfragen
+
+#### Authentication-Session-Management-Pattern
+```typescript
+// Explizite Session-Validierung für RLS-Kontext
+const { data: { session } } = await supabase.auth.getSession();
+if (!session?.user?.id) {
+  return { data: [], error: 'Not authenticated' };
+}
+const authenticatedUserId = session.user.id;
+
+// Verwendung der authentifizierten User-ID
+const { data: connections, error: connectionsError } = await supabase
+  .from('owner_caretaker_connections')
+  .select('caretaker_id, created_at')
+  .eq('owner_id', authenticatedUserId) // Explizite User-ID statt auth.uid()
+  .eq('connection_type', 'favorite')
+  .order('created_at', { ascending: false });
+```
+
+**Zweck**: Sicherstellung dass auth.uid() korrekt gesetzt ist für RLS-Policies
+**Vorteile**: 
+- Explizite Session-Validierung
+- Bessere Fehlerbehandlung bei Authentication-Problemen
+- Konsistente RLS-Policy-Anwendung
+
+#### Debug-Cleanup-Pattern
+```typescript
+// Debug-Logs entfernen (Vorher)
+console.log('🔍 Loading connections for owner:', ownerId);
+console.log('📊 Found connections:', connections);
+console.log('🎯 Caretaker IDs to load:', caretakerIds);
+console.log('👥 Loaded caretaker profiles:', caretakers);
+console.warn('⚠️ No caretakers found for connections');
+
+// Sauberer Production-Code (Nachher)
+// Alle Debug-Logs entfernt für sauberen Code
+```
+
+**Zweck**: Sauberer Production-Code ohne Debug-Logs
+**Vorteile**: 
+- Bessere Performance
+- Saubere Console-Ausgabe
+- Professioneller Code
+
 ### Terminologie-Konsistenz-Patterns
 
 #### Einheitliche Terminologie-Verwaltung
@@ -1428,8 +1529,8 @@ useEffect(() => {
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: AdvertisementBanner-Patterns dokumentiert, einschließlich Search Card Layout und Werbung-Integration  
-**Nächste Überprüfung**: Nach Implementierung des Buchungssystems
+**Status**: Owner Dashboard Bug-Fix-Patterns dokumentiert, einschließlich Datenbank-Optimierung und Authentication-Verbesserungen  
+**Nächste Überprüfung**: Nach umfangreichen Tests der Dashboard-Fixes
 
 ## Layout-Consistency-Patterns
 
@@ -1923,6 +2024,328 @@ if (lowestPrice === 0) {
 - Konsistente Komponenten-Struktur
 - Einfache Wartung und Erweiterung
 
+## UI-Modal-System-Patterns
+
+### ConfirmationModal-Architektur
+
+#### Wiederverwendbare Modal-Komponente
+```typescript
+// ConfirmationModal.tsx - Zentrale Modal-Komponente für Bestätigungsdialoge
+export interface ConfirmationModalProps {
+  isOpen: boolean;
+  type?: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}
+
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  isOpen,
+  type = 'info',
+  title,
+  message,
+  confirmText = 'Bestätigen',
+  cancelText = 'Abbrechen',
+  onConfirm,
+  onCancel,
+  loading = false
+}) => {
+  if (!isOpen) return null;
+
+  const getIcon = () => {
+    switch (type) {
+      case 'warning':
+        return <AlertTriangle className="h-8 w-8 text-yellow-600" />;
+      case 'error':
+        return <XCircle className="h-8 w-8 text-red-600" />;
+      case 'success':
+        return <CheckCircle className="h-8 w-8 text-green-600" />;
+      default:
+        return <Info className="h-8 w-8 text-blue-600" />;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-fadeIn">
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <div className="flex-shrink-0 mr-3">
+              {getIcon()}
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {title}
+            </h3>
+          </div>
+          
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            {message}
+          </p>
+          
+          <div className="flex space-x-3">
+            <button
+              onClick={onCancel}
+              disabled={loading}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              {cancelText}
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className={`flex-1 px-4 py-2 text-white rounded-lg disabled:opacity-50 transition-colors ${getConfirmButtonClass()}`}
+            >
+              {loading ? 'Wird ausgeführt...' : confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+**Zweck**: Zentrale Modal-Komponente für alle Bestätigungsdialoge
+**Vorteile**: 
+- 4 verschiedene Modal-Typen mit entsprechenden Icons
+- Anpassbare Titel, Nachrichten und Button-Texte
+- Elegante Animationen mit CSS-Klassen
+- Loading-State für asynchrone Operationen
+- Responsive Design für alle Bildschirmgrößen
+
+#### Browser-Alert-Ersetzung-Pattern
+```typescript
+// Ersetzung von Browser-Alerts durch UI-Modals
+const AdvertisementManagementPanel = ({ currentAdminId }) => {
+  // Modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'info' | 'warning' | 'error' | 'success';
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+  
+  const { addToast, toasts, removeToast } = useToast();
+
+  // Modal helper functions
+  const showConfirmModal = (
+    type: 'info' | 'warning' | 'error' | 'success',
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
+    setConfirmModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const hideConfirmModal = () => {
+    setConfirmModal(null);
+  };
+
+  // Validierungsfehler - Vorher: alert()
+  if (!formData.link_url || !formData.link_url.trim()) {
+    showConfirmModal(
+      'warning',
+      'Link-URL erforderlich',
+      'Bitte geben Sie eine Link-URL ein.',
+      () => hideConfirmModal()
+    );
+    return;
+  }
+
+  // Lösch-Bestätigung - Vorher: window.confirm()
+  const handleDelete = async (id: string) => {
+    showConfirmModal(
+      'warning',
+      'Werbeanzeige löschen',
+      'Sind Sie sicher, dass Sie diese Werbeanzeige löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.',
+      async () => {
+        hideConfirmModal();
+        try {
+          await advertisementService.deleteAdvertisement(id);
+          addToast({
+            type: 'success',
+            title: 'Erfolgreich gelöscht',
+            message: 'Werbeanzeige wurde erfolgreich gelöscht.'
+          });
+        } catch (error) {
+          showConfirmModal(
+            'error',
+            'Fehler beim Löschen',
+            'Fehler beim Löschen der Werbeanzeige. Bitte versuchen Sie es später erneut.',
+            () => hideConfirmModal()
+          );
+        }
+      }
+    );
+  };
+
+  return (
+    <div>
+      {/* Komponenten-Inhalt */}
+      
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <ConfirmationModal
+          isOpen={confirmModal.isOpen}
+          type={confirmModal.type}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={hideConfirmModal}
+        />
+      )}
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+    </div>
+  );
+};
+```
+
+**Zweck**: Ersetzung von Browser-Alerts durch elegante UI-Modals
+**Vorteile**: 
+- Bessere UX durch konsistente, moderne Dialoge
+- Mehr Informationen und Kontext in Nachrichten
+- Responsive Design und bessere Accessibility
+- Integration mit Toast-System für Erfolgsmeldungen
+- Nicht-blockierende Benutzerführung
+
+#### Modal-State-Management-Pattern
+```typescript
+// Modal-State-Management mit TypeScript
+interface ModalState {
+  isOpen: boolean;
+  type: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  message: string;
+  onConfirm: () => void;
+}
+
+const useConfirmModal = () => {
+  const [modalState, setModalState] = useState<ModalState | null>(null);
+
+  const showModal = useCallback((
+    type: ModalState['type'],
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
+    setModalState({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  }, []);
+
+  const hideModal = useCallback(() => {
+    setModalState(null);
+  }, []);
+
+  const showInfo = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showModal('info', title, message, onConfirm || hideModal);
+  }, [showModal, hideModal]);
+
+  const showWarning = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showModal('warning', title, message, onConfirm || hideModal);
+  }, [showModal, hideModal]);
+
+  const showError = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showModal('error', title, message, onConfirm || hideModal);
+  }, [showModal, hideModal]);
+
+  const showSuccess = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showModal('success', title, message, onConfirm || hideModal);
+  }, [showModal, hideModal]);
+
+  return {
+    modalState,
+    showInfo,
+    showWarning,
+    showError,
+    showSuccess,
+    hideModal
+  };
+};
+```
+
+**Zweck**: Wiederverwendbares Modal-State-Management
+**Vorteile**: 
+- Typisierte Modal-Verwaltung
+- Einfache API für verschiedene Modal-Typen
+- Memoized Callbacks für Performance
+- Wiederverwendbar in verschiedenen Komponenten
+
+### Modal-Integration-Patterns
+
+#### Admin-Panel-Integration
+```typescript
+// Integration in Admin-Panels
+const AdminPanel = () => {
+  const { modalState, showWarning, showError, hideModal } = useConfirmModal();
+  const { addToast } = useToast();
+
+  const handleDangerousAction = async () => {
+    showWarning(
+      'Gefährliche Aktion',
+      'Diese Aktion kann nicht rückgängig gemacht werden. Sind Sie sicher?',
+      async () => {
+        hideModal();
+        try {
+          await performDangerousAction();
+          addToast({
+            type: 'success',
+            title: 'Erfolgreich',
+            message: 'Aktion wurde erfolgreich ausgeführt.'
+          });
+        } catch (error) {
+          showError(
+            'Fehler',
+            'Die Aktion konnte nicht ausgeführt werden.',
+            () => hideModal()
+          );
+        }
+      }
+    );
+  };
+
+  return (
+    <div>
+      {/* Panel-Inhalt */}
+      
+      {modalState && (
+        <ConfirmationModal
+          isOpen={modalState.isOpen}
+          type={modalState.type}
+          title={modalState.title}
+          message={modalState.message}
+          onConfirm={modalState.onConfirm}
+          onCancel={hideModal}
+        />
+      )}
+    </div>
+  );
+};
+```
+
+**Zweck**: Standardisierte Modal-Integration in Admin-Panels
+**Vorteile**: 
+- Konsistente Modal-Verwendung
+- Einfache Integration mit useConfirmModal Hook
+- Kombiniert mit Toast-System für vollständiges Feedback
+
 ## Toast-Notification-Patterns
 
 ### Toast-System-Architektur
@@ -2234,5 +2657,5 @@ const useToast = () => {
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: Toast-Notification-Patterns dokumentiert, einschließlich System-Architektur und Integration  
+**Status**: UI-Modal-System-Patterns und Toast-Notification-Patterns dokumentiert  
 **Nächste Überprüfung**: Nach Implementierung des Buchungssystems

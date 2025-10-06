@@ -2113,7 +2113,7 @@ function CaretakerDashboardPage() {
           </div>
           <div className="flex-1 w-full">
             <div className="flex flex-col lg:flex-row gap-8">
-              {/* Name */}
+              {/* Name und Dienstleistung */}
               <div className="flex-1">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -2203,6 +2203,33 @@ function CaretakerDashboardPage() {
                       </div>
                     )}
                   </div>
+                  
+                  {/* Dienstleistung unter dem Namen */}
+                  <div className="mb-3">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 text-primary-800">
+                      {(() => {
+                        // Verwende userProfile.user_type als primäre Quelle, dann profile.dienstleister_typ als Fallback
+                        const serviceType = userProfile?.user_type || profile?.dienstleister_typ || 'caretaker';
+                        console.log('🎯 Service Type Debug:', {
+                          userProfileType: userProfile?.user_type,
+                          profileDienstleisterTyp: profile?.dienstleister_typ,
+                          finalServiceType: serviceType
+                        });
+                        
+                        switch (serviceType) {
+                          case 'hundetrainer': return '🐕 Hundetrainer';
+                          case 'tierarzt': return '🩺 Tierarzt';
+                          case 'tierfriseur': return '✂️ Tierfriseur';
+                          case 'physiotherapeut': return '🏥 Physiotherapeut';
+                          case 'ernaehrungsberater': return '🥗 Ernährungsberater';
+                          case 'tierfotograf': return '📸 Tierfotograf';
+                          case 'sonstige': return '🔧 Sonstige Dienstleistung';
+                          default: return '🏠 Betreuer';
+                        }
+                      })()}
+                    </span>
+                  </div>
+                  
                   <div className="flex flex-wrap gap-2">
                     {profile?.is_verified && (
                       <span className="bg-primary-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full flex items-center">

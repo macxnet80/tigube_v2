@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, EyeOff, Target, BarChart3, Calendar, Monitor, Smartphone, Copy } from 'lucide-react';
 import { advertisementService, Advertisement, AdvertisementFormat } from '../../lib/supabase/advertisementService';
 import ImageUploader from '../ui/ImageUploader';
+import ConfirmationModal from '../ui/ConfirmationModal';
+import { useToast } from '../../hooks/useToast';
+import ToastContainer from '../ui/ToastContainer';
 
 interface AdvertisementManagementPanelProps {
   currentAdminId: string;
@@ -16,6 +19,37 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
   const [editingAd, setEditingAd] = useState<Advertisement | null>(null);
   const [activeTab, setActiveTab] = useState<'list' | 'analytics'>('list');
   const [imageUploadMode, setImageUploadMode] = useState<'url' | 'upload'>('url');
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'info' | 'warning' | 'error' | 'success';
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+  
+  const { addToast, toasts, removeToast } = useToast();
+
+  // Modal helper functions
+  const showConfirmModal = (
+    type: 'info' | 'warning' | 'error' | 'success',
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
+    setConfirmModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const hideConfirmModal = () => {
+    setConfirmModal(null);
+  };
 
   const [formData, setFormData] = useState({
     title: '',
@@ -99,22 +133,32 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
     
     // Validierung
     if (!currentAdminId) {
-      alert('Admin-ID nicht verfügbar. Bitte melden Sie sich erneut an.');
-      return;
-    }
-    
-    if (!formData.title.trim()) {
-      alert('Bitte geben Sie einen Titel ein.');
+      showConfirmModal(
+        'error',
+        'Admin-ID nicht verfügbar',
+        'Bitte melden Sie sich erneut an.',
+        () => hideConfirmModal()
+      );
       return;
     }
     
     if (!formData.link_url || !formData.link_url.trim()) {
-      alert('Bitte geben Sie eine Link-URL ein.');
+      showConfirmModal(
+        'warning',
+        'Link-URL erforderlich',
+        'Bitte geben Sie eine Link-URL ein.',
+        () => hideConfirmModal()
+      );
       return;
     }
     
     if (!formData.format_id) {
-      alert('Bitte wählen Sie ein Anzeigenformat aus.');
+      showConfirmModal(
+        'warning',
+        'Anzeigenformat erforderlich',
+        'Bitte wählen Sie ein Anzeigenformat aus.',
+        () => hideConfirmModal()
+      );
       return;
     }
     
@@ -124,7 +168,7 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
       // Bereite Daten vor
       const preparedData = {
         ...formData,
-        title: formData.title.trim(),
+        title: formData.title?.trim() || null,
         description: formData.description?.trim() || '',
         link_url: formData.link_url?.trim() || '',
         image_url: formData.image_url?.trim() || null,
@@ -156,40 +200,75 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
       
       if (result.error) {
         console.error('Fehler beim Speichern der Werbeanzeige:', result.error);
-        alert(`Fehler beim Speichern der Werbeanzeige: ${result.error.message || 'Unbekannter Fehler'}`);
+        showConfirmModal(
+          'error',
+          'Fehler beim Speichern',
+          `Fehler beim Speichern der Werbeanzeige: ${result.error.message || 'Unbekannter Fehler'}`,
+          () => hideConfirmModal()
+        );
         return;
       }
-      
+
       resetForm();
       loadAdvertisements();
-      alert(editingAd ? 'Werbeanzeige erfolgreich aktualisiert!' : 'Werbeanzeige erfolgreich erstellt!');
+      addToast({
+        type: 'success',
+        title: 'Erfolgreich gespeichert',
+        message: editingAd ? 'Werbeanzeige erfolgreich aktualisiert!' : 'Werbeanzeige erfolgreich erstellt!'
+      });
     } catch (error) {
       console.error('Fehler beim Speichern der Werbeanzeige:', error);
-      alert(`Fehler beim Speichern der Werbeanzeige: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+      showConfirmModal(
+        'error',
+        'Fehler beim Speichern',
+        `Fehler beim Speichern der Werbeanzeige: ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`,
+        () => hideConfirmModal()
+      );
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Sind Sie sicher, dass Sie diese Werbeanzeige löschen möchten?')) {
-      try {
-        const { error } = await advertisementService.deleteAdvertisement(id);
-        if (error) {
+    showConfirmModal(
+      'warning',
+      'Werbeanzeige löschen',
+      'Sind Sie sicher, dass Sie diese Werbeanzeige löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.',
+      async () => {
+        hideConfirmModal();
+        try {
+          const { error } = await advertisementService.deleteAdvertisement(id);
+          if (error) {
+            console.warn('Fehler beim Löschen der Werbeanzeige:', error);
+            showConfirmModal(
+              'error',
+              'Fehler beim Löschen',
+              'Fehler beim Löschen der Werbeanzeige. Bitte versuchen Sie es später erneut.',
+              () => hideConfirmModal()
+            );
+            return;
+          }
+          loadAdvertisements();
+          addToast({
+            type: 'success',
+            title: 'Erfolgreich gelöscht',
+            message: 'Werbeanzeige wurde erfolgreich gelöscht.'
+          });
+        } catch (error) {
           console.warn('Fehler beim Löschen der Werbeanzeige:', error);
-          alert('Fehler beim Löschen der Werbeanzeige. Bitte versuchen Sie es später erneut.');
-          return;
+          showConfirmModal(
+            'error',
+            'Fehler beim Löschen',
+            'Fehler beim Löschen der Werbeanzeige. Bitte versuchen Sie es später erneut.',
+            () => hideConfirmModal()
+          );
         }
-        loadAdvertisements();
-      } catch (error) {
-        console.warn('Fehler beim Löschen der Werbeanzeige:', error);
-        alert('Fehler beim Löschen der Werbeanzeige. Bitte versuchen Sie es später erneut.');
       }
-    }
+    );
   };
 
   const duplicateAdvertisement = (ad: Advertisement) => {
     // Erstelle eine Kopie der Werbung mit angepasstem Titel
     const duplicatedAd = {
-      title: `${ad.title} (Kopie)`,
+      title: `${ad.title || 'Unbenannte Anzeige'} (Kopie)`,
       description: ad.description || '',
       image_url: ad.image_url || '',
       link_url: ad.link_url || '',
@@ -241,14 +320,29 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
       
       if (error) {
         console.warn('Fehler beim Aktualisieren des Status:', error);
-        alert('Fehler beim Aktualisieren des Status. Bitte versuchen Sie es später erneut.');
+        showConfirmModal(
+          'error',
+          'Fehler beim Status-Update',
+          'Fehler beim Aktualisieren des Status. Bitte versuchen Sie es später erneut.',
+          () => hideConfirmModal()
+        );
         return;
       }
       
       loadAdvertisements();
+      addToast({
+        type: 'success',
+        title: 'Status aktualisiert',
+        message: `Werbeanzeige wurde ${!ad.is_active ? 'aktiviert' : 'deaktiviert'}.`
+      });
     } catch (error) {
       console.warn('Fehler beim Aktualisieren des Status:', error);
-      alert('Fehler beim Aktualisieren des Status. Bitte versuchen Sie es später erneut.');
+      showConfirmModal(
+        'error',
+        'Fehler beim Status-Update',
+        'Fehler beim Aktualisieren des Status. Bitte versuchen Sie es später erneut.',
+        () => hideConfirmModal()
+      );
     }
   };
 
@@ -277,7 +371,7 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
 
   const startEdit = (ad: Advertisement) => {
     setFormData({
-      title: ad.title,
+      title: ad.title || '',
       description: ad.description || '',
       image_url: ad.image_url || '',
       link_url: ad.link_url || '',
@@ -373,14 +467,14 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Titel *
+                      Titel
                     </label>
                     <input
                       type="text"
-                      required
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Optional: Titel der Werbeanzeige"
                     />
                   </div>
                   <div>
@@ -796,11 +890,11 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
                             <img
                               className="h-10 w-10 rounded-lg object-cover mr-3"
                               src={ad.image_url}
-                              alt={ad.title}
+                              alt={ad.title || 'Werbeanzeige'}
                             />
                           )}
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{ad.title}</div>
+                            <div className="text-sm font-medium text-gray-900">{ad.title || 'Unbenannte Anzeige'}</div>
                             <div className="text-sm text-gray-500 truncate max-w-xs">{ad.description}</div>
                           </div>
                         </div>
@@ -971,7 +1065,7 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
             {analytics.map((stat) => (
               <div key={stat.advertisement_id} className="bg-white rounded-lg shadow-sm border p-6">
                 <div className="text-sm font-medium text-gray-500 mb-1">
-                  {advertisements.find(ad => ad.id === stat.advertisement_id)?.title || 'Unbekannte Anzeige'}
+                  {advertisements.find(ad => ad.id === stat.advertisement_id)?.title || 'Unbenannte Anzeige'}
                 </div>
                 <div className="text-2xl font-bold text-gray-900 mb-2">
                   {stat.total_impressions}
@@ -999,6 +1093,21 @@ const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> 
           )}
         </div>
       )}
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <ConfirmationModal
+          isOpen={confirmModal.isOpen}
+          type={confirmModal.type}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={hideConfirmModal}
+        />
+      )}
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </div>
   );
 };

@@ -42,7 +42,14 @@ function Header() {
 
   // Bessere Owner-Prüfung mit Fallback
   const isOwner = userProfile?.user_type === 'owner' || (!userProfile && isAuthenticated);
-  const isCaretaker = userProfile?.user_type === 'caretaker' || userProfile?.user_type === 'dienstleister';
+  const isCaretaker = userProfile?.user_type === 'caretaker' || 
+                      userProfile?.user_type === 'tierarzt' || 
+                      userProfile?.user_type === 'hundetrainer' || 
+                      userProfile?.user_type === 'tierfriseur' || 
+                      userProfile?.user_type === 'physiotherapeut' || 
+                      userProfile?.user_type === 'ernaehrungsberater' || 
+                      userProfile?.user_type === 'tierfotograf' || 
+                      userProfile?.user_type === 'sonstige';
   
   // Debug: Log current state
   if (import.meta.env.DEV) {
@@ -74,13 +81,8 @@ function Header() {
                     Dashboard
                   </NavLink>
                 )}
-                {userProfile?.user_type === 'caretaker' && (
+                {isCaretaker && (
                   <NavLink to="/dashboard-caretaker" isActive={isActive('/dashboard-caretaker')}>
-                    Dashboard
-                  </NavLink>
-                )}
-                {userProfile?.user_type === 'dienstleister' && (
-                  <NavLink to="/dashboard-dienstleister" isActive={isActive('/dashboard-dienstleister')}>
                     Dashboard
                   </NavLink>
                 )}
@@ -184,13 +186,8 @@ function Header() {
                       Dashboard
                     </MobileNavLink>
                   )}
-                  {userProfile?.user_type === 'caretaker' && (
+                  {isCaretaker && (
                     <MobileNavLink to="/dashboard-caretaker" isActive={isActive('/dashboard-caretaker')} onClick={() => setIsMenuOpen(false)}>
-                      Dashboard
-                    </MobileNavLink>
-                  )}
-                  {userProfile?.user_type === 'dienstleister' && (
-                    <MobileNavLink to="/dashboard-dienstleister" isActive={isActive('/dashboard-dienstleister')} onClick={() => setIsMenuOpen(false)}>
                       Dashboard
                     </MobileNavLink>
                   )}

@@ -306,9 +306,11 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
             // Strukturiert wie Profil-Karten für einheitliche Höhe
             <>
               {/* Titel */}
-              <h3 className="font-semibold text-gray-900 text-base mb-2">
-                {advertisement.title}
-              </h3>
+              {advertisement.title && (
+                <h3 className="font-semibold text-gray-900 text-base mb-2">
+                  {advertisement.title}
+                </h3>
+              )}
               
               {/* Beschreibung - 3 Zeilen wie Bio */}
               {advertisement.description && (
@@ -339,9 +341,11 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
             // Standard-Layout für andere Platzierungen
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 text-sm mb-1">
-                  {advertisement.title}
-                </h3>
+                {advertisement.title && (
+                  <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                    {advertisement.title}
+                  </h3>
+                )}
                 
                 {advertisement.description && (
                   <p className="text-gray-600 text-xs mb-3 line-clamp-2">

@@ -260,7 +260,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     console.log('✨ AuthContext user state change profile load effect.');
-    console.log('🔍 User state change effect deps:', { user: !!user, userProfile: !!userProfile, loading });
+    console.log('🔍 User state change effect deps:', { 
+      user: !!user, 
+      userProfile: !!userProfile, 
+      loading: loading,
+      userId: user?.id || 'none'
+    });
 
     const loadProfileIfMissing = async () => {
        if (user && !userProfile && mounted && !loading) { 
@@ -276,7 +281,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
            console.log('🔍 User signed out, clearing profile.');
            setUserProfile(null); // Ensure profile is cleared if user becomes null
        }
-         console.log('🔍 User state change effect finished.', { user: !!user, userProfile: !!userProfile });
+         console.log('🔍 User state change effect finished.', { 
+           user: !!user, 
+           userProfile: !!userProfile,
+           userType: userProfile?.user_type || 'none'
+         });
     };
 
     loadProfileIfMissing();
@@ -364,8 +373,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProfileState = (newProfile: any | null) => {
-    console.log('🔄 Manually updating profile state:', newProfile);
-    console.log('📊 Current userProfile before update:', userProfile);
+    console.log('🔄 Manually updating profile state:', {
+      hasNewProfile: !!newProfile,
+      newUserType: newProfile?.user_type || 'none',
+      newUserId: newProfile?.id || 'none'
+    });
+    console.log('📊 Current userProfile before update:', {
+      hasProfile: !!userProfile,
+      userType: userProfile?.user_type || 'none',
+      userId: userProfile?.id || 'none'
+    });
 
     // Verhindere, dass die UI zwischenzeitlich null rendert:
     // Mergen wir das neue Profil mit dem alten, wo sinnvoll, statt komplett null zu setzen

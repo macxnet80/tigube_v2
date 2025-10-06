@@ -5,8 +5,10 @@ import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { BetreuerAdvancedFilters } from '../components/ui/BetreuerAdvancedFilters';
+import DienstleisterCrossSearchCard from '../components/ui/DienstleisterCrossSearchCard';
 import { cn } from '../lib/utils';
 import { searchCaretakers as searchCaretakersService, type CaretakerDisplayData, type SearchFilters } from '../lib/supabase/caretaker-search';
+import { searchRelatedDienstleister, type DienstleisterResult, type CrossSearchFilters } from '../lib/supabase/cross-search';
 import { DEFAULT_SERVICE_CATEGORIES } from '../lib/types/service-categories';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import useCurrentUsage from '../hooks/useCurrentUsage';
@@ -44,6 +46,7 @@ function SearchPage() {
   const [maxPrice, setMaxPrice] = useState(initialMaxPrice);
   const [showRelatedServices, setShowRelatedServices] = useState(searchParams.get('showRelatedServices') === 'true');
   const [caretakers, setCaretakers] = useState<Caretaker[]>([]);
+  const [relatedDienstleister, setRelatedDienstleister] = useState<DienstleisterResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [noResults, setNoResults] = useState(false);
@@ -313,17 +316,38 @@ function SearchPage() {
       
 
       setCaretakers(data || []);
-      setTotalResults(data?.length || 0);
+      
+      // Cross-Search: Lade verwandte Dienstleister wenn Feature aktiviert
+      let relatedServices: DienstleisterResult[] = [];
+      if (showRelatedServices) {
+        try {
+          const crossSearchFilters: CrossSearchFilters = {
+            location: filters.location,
+            petType: filters.petType,
+            service: filters.service,
+            serviceCategory: filters.serviceCategory,
+            minRating: filters.minRating,
+            maxPrice: filters.maxPrice
+          };
+          
+          relatedServices = await searchRelatedDienstleister(crossSearchFilters);
+          console.log(`🔍 Cross-Search: Found ${relatedServices.length} related Dienstleister`);
+        } catch (crossSearchError) {
+          console.error('❌ Cross-Search error:', crossSearchError);
+          // Fehler bei Cross-Search sollten die Hauptsuche nicht beeinträchtigen
+        }
+      }
+      
+      setRelatedDienstleister(relatedServices);
+      setTotalResults((data?.length || 0) + relatedServices.length);
       
       // Prüfe ob keine Ergebnisse gefunden wurden
-      if (!data || data.length === 0) {
+      if ((!data || data.length === 0) && relatedServices.length === 0) {
         setNoResults(true);
         setError(null);
-
       } else {
         setNoResults(false);
         setError(null);
-
       }
       
       // URL aktualisieren
@@ -393,6 +417,7 @@ function SearchPage() {
     setLocation('');
     setNoResults(false);
     setError(null);
+    setRelatedDienstleister([]);
   };
 
   const hasActiveFilters = selectedPetType || selectedService || selectedServiceCategory || selectedAvailabilityDays.length > 0 || selectedAvailabilityTime || selectedMinRating || selectedRadius || maxPrice < 100 || showRelatedServices || location.trim();
@@ -769,22 +794,63 @@ function SearchPage() {
         )}
 
         {/* Results Grid */}
-        {!loading && !error && caretakers.length > 0 && (
+        {!loading && !error && (caretakers.length > 0 || (showRelatedServices && relatedDienstleister.length > 0)) && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {(() => {
               const items = [];
               
+              // Add caretakers first
               caretakers.forEach((caretaker, index) => {
-                // Add caretaker card
                 items.push(
-                  <CaretakerCard key={caretaker.id} caretaker={caretaker} />
+                  <CaretakerCard key={`caretaker-${caretaker.id}`} caretaker={caretaker} />
                 );
                 
                 // Add advertisement card after every 5th caretaker (index 4, 9, 14, etc.)
                 if ((index + 1) % 5 === 0) {
                   items.push(
-                                          <AdvertisementBanner
-                        key={`ad-${index}`}
+                    <AdvertisementBanner
+                      key={`ad-caretaker-${index}`}
+                      placement="search_results"
+                      targetingOptions={{
+                        petTypes: selectedPetType ? [selectedPetType] : undefined,
+                        location: location || undefined,
+                        subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+                      }}
+                    />
+                  );
+                }
+              });
+
+              // Add related Dienstleister if showRelatedServices is enabled
+              if (showRelatedServices && relatedDienstleister.length > 0) {
+                // Add a separator/header for related services
+                if (caretakers.length > 0) {
+                  items.push(
+                    <div key="related-header" className="col-span-full">
+                      <div className="flex items-center my-6">
+                        <div className="flex-1 border-t border-gray-300"></div>
+                        <div className="px-4 text-sm font-medium text-gray-600 bg-gray-50 rounded-full">
+                          Verwandte Dienstleister
+                        </div>
+                        <div className="flex-1 border-t border-gray-300"></div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                relatedDienstleister.forEach((dienstleister, index) => {
+                  items.push(
+                    <DienstleisterCrossSearchCard 
+                      key={`dienstleister-${dienstleister.id}`} 
+                      dienstleister={dienstleister} 
+                    />
+                  );
+                  
+                  // Add advertisement after every 5th dienstleister
+                  if ((index + 1) % 5 === 0) {
+                    items.push(
+                      <AdvertisementBanner
+                        key={`ad-dienstleister-${index}`}
                         placement="search_results"
                         targetingOptions={{
                           petTypes: selectedPetType ? [selectedPetType] : undefined,
@@ -792,9 +858,10 @@ function SearchPage() {
                           subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
                         }}
                       />
-                  );
-                }
-              });
+                    );
+                  }
+                });
+              }
               
               // Add advertisement at the end if we have fewer than 5 caretakers or if the last caretaker wasn't at a 5th position
               if (caretakers.length < 5 || (caretakers.length % 5 !== 0)) {

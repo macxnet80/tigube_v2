@@ -2,6 +2,129 @@
 
 ## Technologie-Stack
 
+### Owner Dashboard Bug-Fix-Implementierung
+
+#### Datenbank-Abfrage-Optimierung
+```typescript
+// src/lib/supabase/db.ts - Optimierte ownerCaretakerService
+export const ownerCaretakerService = {
+  // Optimierte getFavoriteCaretakers mit separaten Abfragen
+  async getFavoriteCaretakers(ownerId: string) {
+    try {
+      // Explizite Session-Validierung
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        return { data: [], error: 'Not authenticated' };
+      }
+      const authenticatedUserId = session.user.id;
+
+      // 1. Lade Verbindungen
+      const { data: connections, error: connectionsError } = await supabase
+        .from('owner_caretaker_connections')
+        .select('caretaker_id, created_at')
+        .eq('owner_id', authenticatedUserId)
+        .eq('connection_type', 'favorite')
+        .order('created_at', { ascending: false });
+
+      if (connectionsError) throw connectionsError;
+
+      if (!connections || connections.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const caretakerIds = connections.map(c => c.caretaker_id);
+
+      // 2. Lade Caretaker-Profile separat
+      const { data: caretakerProfiles, error: profilesError } = await supabase
+        .from('caretaker_profiles')
+        .select('*')
+        .in('id', caretakerIds)
+        .eq('approval_status', 'approved');
+
+      if (profilesError) throw profilesError;
+
+      // 3. Lade User-Daten separat
+      const { data: userData, error: usersError } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, city, plz, profile_photo_url, user_type')
+        .in('id', caretakerProfiles.map(p => p.id));
+
+      if (usersError) throw usersError;
+
+      // 4. Kombiniere Daten in JavaScript
+      const caretakers = caretakerProfiles.map(profile => {
+        const user = userData?.find(u => u.id === profile.id);
+        return { ...profile, users: user };
+      });
+
+      // 5. Transformiere für Frontend
+      const transformedData = connections.map(connection => {
+        const caretaker: any = caretakers?.find((c: any) => c.id === connection.caretaker_id);
+        if (!caretaker) return null;
+
+        return {
+          id: caretaker.id,
+          name: (caretaker.users?.first_name && caretaker.users?.last_name)
+            ? `${caretaker.users.first_name} ${caretaker.users.last_name[0]}.`
+            : (caretaker.users?.first_name || 'Unbekannt'),
+          avatar: caretaker.users?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(caretaker.users?.first_name || 'U')}&background=f3f4f6&color=374151`,
+          location: caretaker.users?.city && caretaker.users?.plz ? `${caretaker.users.city} ${caretaker.users.plz}` : (caretaker.users?.city || 'Ort nicht angegeben'),
+          services: Array.isArray(caretaker.services_with_categories) 
+            ? caretaker.services_with_categories.map((service: any) => service.name || service)
+            : [],
+          rating: Number(caretaker.rating) || 0,
+          reviews_count: caretaker.review_count || 0,
+          hourly_rate: Number(caretaker.hourly_rate) || 0,
+          description: caretaker.short_about_me || 'Keine Beschreibung verfügbar.',
+          isCommercial: caretaker.is_commercial || false,
+          email: '',
+          phone: '',
+          user_id: caretaker.id,
+          saved_at: connection.created_at,
+          isFavorite: true
+        };
+      }).filter(Boolean);
+
+      return { data: transformedData || [], error: null };
+    } catch (error) {
+      console.error('Error getting favorite caretakers:', error);
+      return { data: [], error: (error as Error).message };
+    }
+  },
+
+  // Identische Implementierung für getSavedCaretakers
+  async getSavedCaretakers(ownerId: string) {
+    // ... gleiche Implementierung mit connection_type: 'saved'
+  }
+};
+```
+
+**Zweck**: Vollständige Überarbeitung der Owner Dashboard Datenabfragen
+**Verbesserungen**: 
+- Separate Abfragen statt komplexer JOINs für bessere RLS-Kompatibilität
+- Explizite Session-Validierung für auth.uid() Kontext
+- JavaScript-basierte Datenkombination für mehr Kontrolle
+- Verbesserte Fehlerbehandlung und Performance
+
+#### RLS-Policy-Kompatibilität
+```sql
+-- Bestehende RLS-Policies funktionieren mit separaten Abfragen
+CREATE POLICY "Users can view own connections" ON owner_caretaker_connections
+  FOR SELECT USING (auth.uid() = owner_id);
+
+CREATE POLICY "Users can view approved caretaker profiles" ON caretaker_profiles
+  FOR SELECT USING (approval_status = 'approved');
+
+CREATE POLICY "Public can view caretaker user info" ON users
+  FOR SELECT USING (user_type = 'caretaker' OR auth.uid() = id);
+```
+
+**Zweck**: Sicherstellung dass RLS-Policies mit optimierten Abfragen funktionieren
+**Vorteile**: 
+- Bessere Kompatibilität mit Row Level Security
+- Explizite Kontrolle über Datenzugriff
+- Konsistente Sicherheitsrichtlinien
+
 ### Frontend-Technologien
 
 #### Core Framework
@@ -1666,8 +1789,8 @@ CREATE POLICY "Admins can manage all advertisements"
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: Werbung-Integration und AdvertisementBanner vollständig dokumentiert  
-**Nächste Überprüfung**: Nach Implementierung des Buchungssystems
+**Status**: Owner Dashboard Bug-Fix-Implementierung vollständig dokumentiert, einschließlich Datenbank-Optimierung und RLS-Kompatibilität  
+**Nächste Überprüfung**: Nach umfangreichen Tests der Dashboard-Fixes
 
 ## Layout-Consistency-Implementierung
 
@@ -2015,6 +2138,453 @@ if (lowestPrice === 0) {
 
 **Zweck**: Abwärtskompatibilität während der Umstellung
 **Status**: ✅ Abgeschlossen, neue Struktur ist aktiv
+
+## UI-Modal-System-Implementierung
+
+### ConfirmationModal-Komponente
+
+#### Komponenten-Implementierung
+```typescript
+// src/components/ui/ConfirmationModal.tsx
+import React from 'react';
+import { AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react';
+
+export interface ConfirmationModalProps {
+  isOpen: boolean;
+  type?: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading?: boolean;
+}
+
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+  isOpen,
+  type = 'info',
+  title,
+  message,
+  confirmText = 'Bestätigen',
+  cancelText = 'Abbrechen',
+  onConfirm,
+  onCancel,
+  loading = false
+}) => {
+  if (!isOpen) return null;
+
+  const getIcon = () => {
+    switch (type) {
+      case 'warning':
+        return <AlertTriangle className="h-8 w-8 text-yellow-600" />;
+      case 'error':
+        return <XCircle className="h-8 w-8 text-red-600" />;
+      case 'success':
+        return <CheckCircle className="h-8 w-8 text-green-600" />;
+      default:
+        return <Info className="h-8 w-8 text-blue-600" />;
+    }
+  };
+
+  const getConfirmButtonClass = () => {
+    switch (type) {
+      case 'warning':
+        return 'bg-yellow-600 hover:bg-yellow-700';
+      case 'error':
+        return 'bg-red-600 hover:bg-red-700';
+      case 'success':
+        return 'bg-green-600 hover:bg-green-700';
+      default:
+        return 'bg-blue-600 hover:bg-blue-700';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 animate-fadeIn">
+        <div className="p-6">
+          <div className="flex items-center mb-4">
+            <div className="flex-shrink-0 mr-3">
+              {getIcon()}
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {title}
+            </h3>
+          </div>
+          
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            {message}
+          </p>
+          
+          <div className="flex space-x-3">
+            <button
+              onClick={onCancel}
+              disabled={loading}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              {cancelText}
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className={`flex-1 px-4 py-2 text-white rounded-lg disabled:opacity-50 transition-colors ${getConfirmButtonClass()}`}
+            >
+              {loading ? 'Wird ausgeführt...' : confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ConfirmationModal;
+```
+
+**Zweck**: Wiederverwendbare Modal-Komponente für alle Bestätigungsdialoge
+**Features**: 
+- 4 Modal-Typen mit entsprechenden Icons und Farben
+- Anpassbare Titel, Nachrichten und Button-Texte
+- Loading-State für asynchrone Operationen
+- Elegante fadeIn-Animation
+- Responsive Design und Accessibility
+
+#### CSS-Animationen
+```css
+/* src/index.css - Animation für Modal */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+```
+
+**Zweck**: Sanfte Einblend-Animation für bessere UX
+**Implementation**: CSS-basierte Animation mit transform und opacity
+
+### Browser-Alert-Ersetzung
+
+#### AdvertisementManagementPanel-Integration
+```typescript
+// src/components/admin/AdvertisementManagementPanel.tsx
+import ConfirmationModal from '../ui/ConfirmationModal';
+import { useToast } from '../../hooks/useToast';
+import ToastContainer from '../ui/ToastContainer';
+
+const AdvertisementManagementPanel: React.FC<AdvertisementManagementPanelProps> = ({ currentAdminId }) => {
+  // Modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'info' | 'warning' | 'error' | 'success';
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  } | null>(null);
+  
+  const { addToast, toasts, removeToast } = useToast();
+
+  // Modal helper functions
+  const showConfirmModal = (
+    type: 'info' | 'warning' | 'error' | 'success',
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
+    setConfirmModal({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  };
+
+  const hideConfirmModal = () => {
+    setConfirmModal(null);
+  };
+
+  // Ersetzung von alert() durch Modal
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validierung - Vorher: alert()
+    if (!formData.title?.trim()) {
+      showConfirmModal(
+        'warning',
+        'Titel erforderlich',
+        'Bitte geben Sie einen Titel für die Werbeanzeige ein.',
+        () => hideConfirmModal()
+      );
+      return;
+    }
+
+    if (!formData.link_url || !formData.link_url.trim()) {
+      showConfirmModal(
+        'warning',
+        'Link-URL erforderlich',
+        'Bitte geben Sie eine Link-URL ein.',
+        () => hideConfirmModal()
+      );
+      return;
+    }
+
+    // ... weitere Validierungen mit Modals
+  };
+
+  // Ersetzung von window.confirm() durch Modal
+  const handleDelete = async (id: string) => {
+    showConfirmModal(
+      'warning',
+      'Werbeanzeige löschen',
+      'Sind Sie sicher, dass Sie diese Werbeanzeige löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.',
+      async () => {
+        hideConfirmModal();
+        try {
+          const { error } = await supabase
+            .from('advertisements')
+            .delete()
+            .eq('id', id);
+
+          if (error) throw error;
+
+          // Erfolg mit Toast statt alert()
+          addToast({
+            type: 'success',
+            title: 'Erfolgreich gelöscht',
+            message: 'Werbeanzeige wurde erfolgreich gelöscht.',
+            duration: 5000
+          });
+
+          loadAdvertisements();
+        } catch (error) {
+          console.error('Error deleting advertisement:', error);
+          showConfirmModal(
+            'error',
+            'Fehler beim Löschen',
+            'Fehler beim Löschen der Werbeanzeige. Bitte versuchen Sie es später erneut.',
+            () => hideConfirmModal()
+          );
+        }
+      }
+    );
+  };
+
+  // Status-Toggle mit Toast-Feedback
+  const handleToggleStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('advertisements')
+        .update({ is_active: !currentStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Toast-Benachrichtigung für Status-Änderung
+      addToast({
+        type: 'success',
+        title: !currentStatus ? 'Aktiviert' : 'Deaktiviert',
+        message: `Werbeanzeige wurde ${!currentStatus ? 'aktiviert' : 'deaktiviert'}.`,
+        duration: 3000
+      });
+
+      loadAdvertisements();
+    } catch (error) {
+      console.error('Error toggling advertisement status:', error);
+      showConfirmModal(
+        'error',
+        'Fehler beim Status-Update',
+        'Fehler beim Ändern des Status. Bitte versuchen Sie es später erneut.',
+        () => hideConfirmModal()
+      );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Komponenten-Inhalt */}
+      
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <ConfirmationModal
+          isOpen={confirmModal.isOpen}
+          type={confirmModal.type}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={hideConfirmModal}
+        />
+      )}
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+    </div>
+  );
+};
+```
+
+**Zweck**: Vollständige Ersetzung von Browser-Alerts durch UI-Modals
+**Verbesserungen**: 
+- Validierungsfehler: alert() → ConfirmationModal
+- Lösch-Bestätigung: window.confirm() → ConfirmationModal
+- Erfolgsmeldungen: alert() → Toast-Benachrichtigungen
+- Fehlermeldungen: alert() → ConfirmationModal
+- Status-Updates: Stille Operationen → Toast-Feedback
+
+### Modal-State-Management
+
+#### TypeScript-Interfaces
+```typescript
+// Modal-State-Interfaces
+interface ModalState {
+  isOpen: boolean;
+  type: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  message: string;
+  onConfirm: () => void;
+}
+
+interface ConfirmModalHelpers {
+  showConfirmModal: (
+    type: ModalState['type'],
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => void;
+  hideConfirmModal: () => void;
+}
+```
+
+**Zweck**: Typisierte Modal-Verwaltung für bessere Entwicklererfahrung
+**Features**: Strikte Typisierung für alle Modal-Operationen
+
+#### useConfirmModal Hook (Geplant)
+```typescript
+// src/hooks/useConfirmModal.ts (Zukünftige Implementierung)
+import { useState, useCallback } from 'react';
+
+interface ModalState {
+  isOpen: boolean;
+  type: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  message: string;
+  onConfirm: () => void;
+}
+
+export const useConfirmModal = () => {
+  const [modalState, setModalState] = useState<ModalState | null>(null);
+
+  const showModal = useCallback((
+    type: ModalState['type'],
+    title: string,
+    message: string,
+    onConfirm: () => void
+  ) => {
+    setModalState({
+      isOpen: true,
+      type,
+      title,
+      message,
+      onConfirm
+    });
+  }, []);
+
+  const hideModal = useCallback(() => {
+    setModalState(null);
+  }, []);
+
+  const showInfo = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showModal('info', title, message, onConfirm || hideModal);
+  }, [showModal, hideModal]);
+
+  const showWarning = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showModal('warning', title, message, onConfirm || hideModal);
+  }, [showModal, hideModal]);
+
+  const showError = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showModal('error', title, message, onConfirm || hideModal);
+  }, [showModal, hideModal]);
+
+  const showSuccess = useCallback((title: string, message: string, onConfirm?: () => void) => {
+    showModal('success', title, message, onConfirm || hideModal);
+  }, [showModal, hideModal]);
+
+  return {
+    modalState,
+    showInfo,
+    showWarning,
+    showError,
+    showSuccess,
+    hideModal
+  };
+};
+```
+
+**Zweck**: Wiederverwendbares Modal-State-Management
+**Features**: 
+- Typisierte Modal-Verwaltung
+- Einfache API für verschiedene Modal-Typen
+- Memoized Callbacks für Performance
+- Wiederverwendbar in verschiedenen Komponenten
+
+### UX-Verbesserungen
+
+#### Vorher vs. Nachher Vergleich
+```typescript
+// VORHER: Browser-Alerts
+if (!formData.title?.trim()) {
+  alert('Bitte geben Sie einen Titel ein.');
+  return;
+}
+
+if (window.confirm('Werbeanzeige löschen?')) {
+  // Lösch-Logik
+  alert('Erfolgreich gelöscht');
+}
+
+// NACHHER: UI-Modals + Toast
+if (!formData.title?.trim()) {
+  showConfirmModal(
+    'warning',
+    'Titel erforderlich',
+    'Bitte geben Sie einen Titel für die Werbeanzeige ein.',
+    () => hideConfirmModal()
+  );
+  return;
+}
+
+showConfirmModal(
+  'warning',
+  'Werbeanzeige löschen',
+  'Sind Sie sicher, dass Sie diese Werbeanzeige löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.',
+  async () => {
+    hideConfirmModal();
+    // Lösch-Logik
+    addToast({
+      type: 'success',
+      title: 'Erfolgreich gelöscht',
+      message: 'Werbeanzeige wurde erfolgreich gelöscht.'
+    });
+  }
+);
+```
+
+**Verbesserungen**: 
+- **Konsistente UI**: Modals folgen dem Design-System der Anwendung
+- **Mehr Kontext**: Detaillierte Nachrichten statt kurzer Browser-Alerts
+- **Bessere Accessibility**: Screen-Reader-freundlich und keyboard-navigierbar
+- **Responsive Design**: Mobile-optimiert im Gegensatz zu Browser-Alerts
+- **Nicht-blockierend**: Toast-Benachrichtigungen unterbrechen den Workflow nicht
+- **Animationen**: Sanfte Übergänge für bessere UX
 
 ## Toast-Notification-System-Implementierung
 
@@ -2478,5 +3048,5 @@ interface ToastOptions {
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: Toast-Notification-System und AdminApprovalService-Reparatur vollständig dokumentiert  
+**Status**: UI-Modal-System, Toast-Notification-System und AdminApprovalService-Reparatur vollständig dokumentiert  
 **Nächste Überprüfung**: Nach Implementierung des Buchungssystems

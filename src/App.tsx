@@ -2,7 +2,8 @@ import { Suspense, lazy } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import LoadingSpinner from './components/ui/LoadingSpinner';
-import ProtectedRoute from './components/auth/ProtectedRoute';
+import SafeProtectedRoute from './components/auth/SafeProtectedRoute';
+import ErrorBoundary from './components/auth/ErrorBoundary';
 
 // Lazy loaded pages
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -23,7 +24,7 @@ const HelpPage = lazy(() => import('./pages/HelpPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const OwnerDashboardPage = lazy(() => import('./pages/OwnerDashboardPage'));
 const CaretakerDashboardPage = lazy(() => import('./pages/CaretakerDashboardPage'));
-const DienstleisterDashboardPage = lazy(() => import('./pages/DienstleisterDashboardPage'));
+const DienstleisterProfilePage = lazy(() => import('./pages/DienstleisterProfilePage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const OwnerPublicProfilePage = lazy(() => import('./pages/OwnerPublicProfilePage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
@@ -37,9 +38,10 @@ const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
 
 function App() {
   return (
-    <Layout>
-      <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
+    <ErrorBoundary>
+      <Layout>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/launch" element={<LaunchPage />} />
           <Route path="/suche" element={<SearchPage />} />
@@ -47,10 +49,18 @@ function App() {
           <Route 
             path="/betreuer/:id" 
             element={
-              <ProtectedRoute>
+              <SafeProtectedRoute>
                 <BetreuerProfilePage />
-              </ProtectedRoute>
-            } 
+              </SafeProtectedRoute>
+            }
+          />
+          <Route 
+            path="/dienstleister/:id" 
+            element={
+              <SafeProtectedRoute>
+                <DienstleisterProfilePage />
+              </SafeProtectedRoute>
+            }
           />
           <Route path="/registrieren" element={<RegisterPage />} />
           <Route path="/anmelden" element={<LoginPage />} />
@@ -71,62 +81,54 @@ function App() {
           {/* Debug Routes (only in development) */}
           {import.meta.env.DEV && (
             <>
-
             </>
           )}
           
           <Route 
             path="/dashboard-owner" 
             element={
-              <ProtectedRoute requireOwner={true}>
+              <SafeProtectedRoute requireOwner={true}>
                 <OwnerDashboardPage />
-              </ProtectedRoute>
+              </SafeProtectedRoute>
             } 
           />
           <Route
             path="/dashboard-caretaker"
             element={
-              <ProtectedRoute requireCaretaker={true}>
+              <SafeProtectedRoute requireCaretaker={true}>
                 <CaretakerDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard-dienstleister"
-            element={
-              <ProtectedRoute requireCaretaker={true}>
-                <DienstleisterDashboardPage />
-              </ProtectedRoute>
+              </SafeProtectedRoute>
             }
           />
           <Route 
             path="/nachrichten" 
             element={
-              <ProtectedRoute>
+              <SafeProtectedRoute>
                 <MessagesPage />
-              </ProtectedRoute>
+              </SafeProtectedRoute>
             } 
           />
           <Route 
             path="/nachrichten/:conversationId" 
             element={
-              <ProtectedRoute>
+              <SafeProtectedRoute>
                 <MessagesPage />
-              </ProtectedRoute>
+              </SafeProtectedRoute>
             } 
           />
           <Route 
             path="/owner/:userId" 
             element={
-              <ProtectedRoute>
+              <SafeProtectedRoute>
                 <OwnerPublicProfilePage />
-              </ProtectedRoute>
+              </SafeProtectedRoute>
             } 
           />
           <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
-    </Layout>
+          </Routes>
+        </Suspense>
+      </Layout>
+    </ErrorBoundary>
   );
 }
 
