@@ -112,3 +112,6 @@ export const DienstleisterKategorieCard: React.FC<DienstleisterKategorieCardProp
     </div>
   );
 };
+
+
+

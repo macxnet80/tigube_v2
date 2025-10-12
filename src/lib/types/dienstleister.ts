@@ -133,3 +133,6 @@ export interface DienstleisterRegistrierung {
   oeffnungszeiten?: Record<string, any>;
   kontakt_info?: Record<string, any>;
 }
+
+
+
