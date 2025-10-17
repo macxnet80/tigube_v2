@@ -9,7 +9,7 @@ import ErrorBoundary from './components/auth/ErrorBoundary';
 const HomePage = lazy(() => import('./pages/HomePage'));
 const LaunchPage = lazy(() => import('./pages/LaunchPage'));
 const SearchPage = lazy(() => import('./pages/SearchPage'));
-const DienstleisterSearchPage = lazy(() => import('./pages/DienstleisterSearchPage'));
+const DienstleisterSearchPage = lazy(() => import('./pages/DienstleisterPage'));
 const BetreuerProfilePage = lazy(() => import('./pages/BetreuerProfilePage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));

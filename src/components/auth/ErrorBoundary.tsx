@@ -21,7 +21,10 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error('ErrorBoundary caught an error:', error?.message || 'Unknown error', {
+      componentStack: errorInfo?.componentStack || 'N/A',
+      errorBoundary: errorInfo?.errorBoundary || 'N/A'
+    });
   }
 
   render() {
@@ -49,6 +52,8 @@ class ErrorBoundary extends Component<Props, State> {
 }
 
 export default ErrorBoundary;
+
+
 
 
 

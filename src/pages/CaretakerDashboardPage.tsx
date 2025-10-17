@@ -116,10 +116,10 @@ function CaretakerDashboardPage() {
   useEffect(() => {
     if (userProfile) {
       console.log('📞 Lade Kontaktdaten aus userProfile:', {
-        phone_number: userProfile.phone_number,
-        plz: userProfile.plz,
-        street: userProfile.street,
-        city: userProfile.city
+        phone_number: userProfile.phone_number || 'N/A',
+        plz: userProfile.plz || 'N/A',
+        street: userProfile.street || 'N/A',
+        city: userProfile.city || 'N/A'
       });
       
       const newCaretakerData = {
@@ -687,8 +687,8 @@ function CaretakerDashboardPage() {
   useEffect(() => {
     if (profile) {
       console.log('📝 Lade Texte aus Profil:', {
-        short_about_me: profile.short_about_me,
-        long_about_me: profile.long_about_me
+        short_about_me: profile.short_about_me || 'N/A',
+        long_about_me: profile.long_about_me || 'N/A'
       });
       
       // Lade Texte immer aus der Datenbank, falls vorhanden
@@ -1193,7 +1193,7 @@ function CaretakerDashboardPage() {
             
             for (const day of ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']) {
               const daySlots = dbAvailability[day];
-              console.log(`📅 ${day} Slots:`, daySlots);
+              console.log(`📅 ${day} Slots:`, Array.isArray(daySlots) ? daySlots : 'N/A');
               
               if (Array.isArray(daySlots)) {
                 validatedAvailability[day] = daySlots

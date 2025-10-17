@@ -184,7 +184,11 @@ function RegisterPage() {
           if (!freshProfileError && freshProfile) {
               // Profile erfolgreich geladen und ist vollständig
             updateProfileState(freshProfile);
-              console.log(`✅ Profile state updated successfully on attempt ${attempts}:`, freshProfile);
+              console.log(`✅ Profile state updated successfully on attempt ${attempts}:`, {
+                id: freshProfile?.id || 'N/A',
+                user_type: freshProfile?.user_type || 'N/A',
+                first_name: freshProfile?.first_name || 'N/A'
+              });
               profileUpdated = true;
               
               // Zusätzliche Pause für React State Update
