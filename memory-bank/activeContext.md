@@ -12,12 +12,9 @@
 - ✅ **IMPLEMENTIERT**: JOIN-Query-Problem durch separate Abfragen gelöst
 - ✅ **IMPLEMENTIERT**: RLS-Policy-Kompatibilität für Owner-Dashboard sichergestellt
 - ✅ **IMPLEMENTIERT**: Debug-Logs aus Owner Dashboard entfernt
-- ✅ **IMPLEMENTIERT**: Vollständiges Verifizierungssystem für Caretaker
-- ✅ **IMPLEMENTIERT**: VerificationService mit Dokument-Upload und -Verwaltung
-- ✅ **IMPLEMENTIERT**: Verifizierungs-Tab im CaretakerDashboardPage
-- ✅ **IMPLEMENTIERT**: Admin-Verwaltung für Verifizierungsanfragen
-- ✅ **IMPLEMENTIERT**: RLS-Policies für sicheren Admin-Zugriff
-- ✅ **IMPLEMENTIERT**: Verifizierungsstatus-Anzeige in Dashboard-Übersicht
+- ✅ **IMPLEMENTIERT**: Admin-Bereich vollständig aus Projekt entfernt
+- ✅ **IMPLEMENTIERT**: Build-Konfiguration bereinigt (Vite, Vercel, Redirects)
+- ✅ **IMPLEMENTIERT**: /dienstleister Route in Live-Umgebung repariert
 - ✅ **IMPLEMENTIERT**: Toast-Integration für Verifizierungs-Feedback
 - ✅ **IMPLEMENTIERT**: Vereinfachte Dokumentenspeicherung (ohne Verschlüsselung)
 - ✅ **IMPLEMENTIERT**: Terminologie-Update von "Tierbesitzer" zu "Tierhalter" (59 Vorkommen)

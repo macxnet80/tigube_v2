@@ -14,8 +14,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: 'index.html',
-        admin: 'admin.html'
+        main: 'index.html'
       },
       output: {
         manualChunks: undefined,
