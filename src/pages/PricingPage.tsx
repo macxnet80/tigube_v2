@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { PricingGrid } from '../components/ui/SubscriptionCard';
 import { UsageLimitIndicator } from '../components/ui/UsageLimitIndicator';
-import { UpgradePrompt } from '../components/ui/UpgradePrompt';
 import { useAuth } from '../lib/auth/AuthContext';
 import { useSubscription } from '../lib/auth/useSubscription';
 import { useCurrentUsage } from '../hooks/useCurrentUsage';
 import { StripeService } from '../lib/stripe/stripeService';
 import { config } from '../lib/stripe/stripeConfig';
 import Button from '../components/ui/Button';
+import { useTracking } from '../lib/tracking';
 
 export default function PricingPage() {
   console.log('🎯 PricingPage: Component loaded successfully');
@@ -15,6 +15,7 @@ export default function PricingPage() {
   try {
     const { user, userProfile } = useAuth();
     const { subscription } = useSubscription();
+    const { trackEvent, trackSubscription } = useTracking();
   
     // Debug Stripe configuration on component mount
     React.useEffect(() => {
@@ -27,11 +28,8 @@ export default function PricingPage() {
   
     // Separate Usage Hooks für verschiedene Features
     const { currentUsage: contactUsage, isLoading: contactLoading } = useCurrentUsage('contact_request');
-    const { currentUsage: bookingUsage, isLoading: bookingLoading } = useCurrentUsage('booking_request');
     const { currentUsage: profileUsage, isLoading: profileLoading } = useCurrentUsage('profile_view');
     
-    const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-    const [selectedTrigger, setSelectedTrigger] = useState<'limit_reached' | 'feature_blocked' | 'general'>('general');
     
     // Setze den Default-Tab basierend auf dem User-Profil
     const [selectedUserType, setSelectedUserType] = useState<'owner' | 'caretaker'>('owner');
@@ -79,6 +77,9 @@ export default function PricingPage() {
         const planType = effectiveUserType === 'owner' ? 'premium' : 'professional';
         console.log('Plan type:', planType);
 
+        // Track subscription initiation
+        trackEvent('subscription_initiated', 'conversion', planType);
+        
         // Start Stripe checkout
         console.log('Calling StripeService.startCheckout...');
         await StripeService.startCheckout({
@@ -121,11 +122,6 @@ export default function PricingPage() {
       }
     };
 
-    const handleUpgradePrompt = (plan: 'premium') => {
-      console.log('Upgrade triggered for:', plan);
-      setShowUpgradeModal(false);
-      handleSelectPlan(plan);
-    };
 
     // Verwende den effektiven User-Type für die Anzeige
     const displayUserType = effectiveUserType;
@@ -172,9 +168,9 @@ export default function PricingPage() {
               </div>
 
               {/* Loading State */}
-              {(contactLoading || bookingLoading || profileLoading) ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                  {[1, 2, 3].map((i) => (
+              {(contactLoading || profileLoading) ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                  {[1, 2].map((i) => (
                     <div key={i} className="bg-white rounded-lg border p-6 animate-pulse">
                       <div className="h-4 bg-gray-200 rounded mb-4"></div>
                       <div className="h-8 bg-gray-200 rounded mb-2"></div>
@@ -183,15 +179,10 @@ export default function PricingPage() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
                   <UsageLimitIndicator
                     featureType="contact_request"
                     currentUsage={contactUsage}
-                    showProgress={true}
-                  />
-                  <UsageLimitIndicator
-                    featureType="booking_request"
-                    currentUsage={bookingUsage}
                     showProgress={true}
                   />
                   <UsageLimitIndicator
@@ -205,72 +196,6 @@ export default function PricingPage() {
           </div>
         )}
 
-        {/* Demo Section für Upgrade-Prompts */}
-        <div className="py-12 bg-gray-100">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
-                Demo: Upgrade-Benachrichtigungen
-              </h2>
-              <p className="text-gray-600 mb-6">
-                So sehen Upgrade-Prompts in verschiedenen Situationen aus
-              </p>
-
-              {/* Demo Controls */}
-              <div className="flex flex-wrap justify-center gap-3 mb-8">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedTrigger('limit_reached');
-                    setShowUpgradeModal(true);
-                  }}
-                >
-                  Limit erreicht (Modal)
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedTrigger('feature_blocked')}
-                >
-                  Feature blockiert (Banner)
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedTrigger('general')}
-                >
-                  Allgemein (Inline)
-                </Button>
-              </div>
-            </div>
-
-            {/* Upgrade Prompt Examples */}
-            <div className="space-y-6">
-              {/* Banner Example */}
-                           {selectedTrigger === 'feature_blocked' && (
-                 <UpgradePrompt
-                   variant="banner"
-                   trigger="feature_blocked"
-                   featureType="premium_badge"
-                   userType={effectiveUserType}
-                   onClose={() => setSelectedTrigger('general')}
-                   onUpgrade={handleUpgradePrompt}
-                 />
-               )}
-
-               {/* Inline Example */}
-               {selectedTrigger === 'general' && (
-                 <UpgradePrompt
-                   variant="inline"
-                   trigger="general"
-                   userType={effectiveUserType}
-                   onUpgrade={handleUpgradePrompt}
-                 />
-               )}
-            </div>
-          </div>
-        </div>
 
         {/* FAQ Section */}
         <div className="py-12 bg-white">
@@ -331,17 +256,6 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Upgrade Modal */}
-               {showUpgradeModal && (
-           <UpgradePrompt
-             variant="modal"
-             trigger={selectedTrigger}
-             featureType="contact_request"
-             userType={effectiveUserType}
-             onClose={() => setShowUpgradeModal(false)}
-             onUpgrade={handleUpgradePrompt}
-           />
-         )}
       </div>
     );
   } catch (error) {

@@ -58,13 +58,13 @@ export function SubscriptionCard({
     `}>
       <div className={`
         relative bg-white rounded-xl border-2 p-6 h-full flex flex-col
-        ${highlighted ? 'border-blue-500 shadow-2xl transform scale-105' : 'border-gray-200 shadow-lg'}
+        ${highlighted ? 'border-primary-600 shadow-2xl transform scale-105' : 'border-gray-200 shadow-lg'}
         transition-all duration-300 hover:shadow-xl
       `}>
         {/* Popular Badge */}
         {highlighted && (
           <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-            <span className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+            <span className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-1 rounded-full text-sm font-medium">
               Am beliebtesten
             </span>
           </div>
@@ -271,7 +271,7 @@ function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker
         description: 'Grundausstattung für Betreuer',
         icon: <Users className="w-8 h-8 text-gray-600" />,
         features: [
-          { name: 'Buchungsanfragen', available: true, limit: '5 pro Monat' },
+          { name: 'Kontaktanfragen', available: true, limit: '3 pro Monat' },
           { name: 'Basis-Profil', available: true },
           { name: 'Bis zu 3 Umgebungsbilder', available: true },
           { name: 'Verfügbarkeitskalender', available: true },
@@ -287,7 +287,7 @@ function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker
         description: 'Für professionelle Betreuer',
         icon: <Crown className="w-8 h-8 text-purple-600" />,
         features: [
-          { name: 'Buchungsanfragen', available: true, highlight: 'Unlimited' },
+          { name: 'Kontaktanfragen', available: true, highlight: 'Unlimited' },
           { name: 'Basis-Profil', available: true },
           { name: 'Bis zu 3 Umgebungsbilder', available: true },
           { name: 'Verfügbarkeitskalender', available: true },
@@ -431,7 +431,7 @@ function FeatureComparisonTable({ userType }: { userType: 'owner' | 'caretaker' 
     { name: 'Werbung', basic: 'Mit Werbung', premium: 'Werbefrei' },
     { name: 'Support', basic: 'E-Mail Support', premium: 'Premium Chat' },
     ...(userType === 'caretaker' ? [
-      { name: 'Buchungsanfragen', basic: '3/Monat', premium: 'Unlimited' },
+      { name: 'Kontaktanfragen', basic: '3/Monat', premium: 'Unlimited' },
       { name: 'Priorität in Suche', basic: 'Normal', premium: 'Höchste' },
       { name: 'Umgebungsbilder', basic: '❌', premium: '✅ (6 max)' }
     ] : [

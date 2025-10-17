@@ -234,6 +234,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (!mounted) { console.log('🚫 Mounted check failed during onAuthStateChange listener'); return; }
 
+
           const currentUser = session?.user ?? null;
           setUser(currentUser); // Update user state immediately
           // Profile loading will be handled by the effect that depends on the user state

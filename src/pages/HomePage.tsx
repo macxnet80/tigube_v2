@@ -3,10 +3,12 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Search, MapPin, Clock, Shield, Heart, Dog, Cat, Rabbit, Calendar, Briefcase, PawPrint, CheckCircle, X, ChevronDown, Sparkles, Gift, Users } from 'lucide-react';
 import Button from '../components/ui/Button';
 import MultiDaySelector from '../components/ui/MultiDaySelector';
+import { useTracking } from '../lib/tracking';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { trackSearch, trackEvent } = useTracking();
   const [searchStarted, setSearchStarted] = useState(false);
   const [showMessage, setShowMessage] = useState(!!location.state?.message);
   const [formLocation, setFormLocation] = useState('');
@@ -27,6 +29,12 @@ export default function HomePage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Track search event
+    const searchTerm = `${service} ${formLocation}`.trim();
+    trackSearch(searchTerm);
+    trackEvent('search_initiated', 'engagement', 'homepage_search');
+    
     const queryParams = new URLSearchParams();
     if (service) queryParams.append('service', service);
     if (formLocation) queryParams.append('location', formLocation);

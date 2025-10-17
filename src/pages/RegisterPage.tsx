@@ -5,11 +5,13 @@ import Button from '../components/ui/Button';
 import { auth, supabase } from '../lib/supabase/client';
 import { userService } from '../lib/supabase/db';
 import { useAuth } from '../lib/auth/AuthContext';
+import { useTracking } from '../lib/tracking';
 
 function RegisterPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { updateProfileState, isAuthenticated, userProfile, loading: authLoading } = useAuth();
+  const { trackRegistration, trackEvent } = useTracking();
   const initialType = searchParams.get('type') || 'owner';
   
   // Redirect if already authenticated and have profile
@@ -221,6 +223,10 @@ function RegisterPage() {
           console.warn('⚠️ Konnte onboardingData nicht in sessionStorage setzen:', e);
         }
 
+        // Track successful registration
+        trackRegistration(userType);
+        trackEvent('registration_completed', 'conversion', userType);
+        
         const dashboardPath = userType === 'owner' ? '/dashboard-owner' : '/dashboard-caretaker';
         console.log('✅ Registration completed. Redirecting to dashboard for onboarding:', dashboardPath);
         window.location.href = dashboardPath;

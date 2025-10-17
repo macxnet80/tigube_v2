@@ -8,6 +8,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AvailabilityDisplay from '../components/ui/AvailabilityDisplay';
 import { ReviewForm } from '../components/ui/ReviewForm';
 import { caretakerSearchService, ownerCaretakerService } from '../lib/supabase/db';
+import { useTracking } from '../lib/tracking';
 
 import { formatCurrency } from '../lib/utils';
 import { cn } from '../lib/utils';
@@ -68,6 +69,7 @@ function BetreuerProfilePage() {
   const { isAuthenticated, user, userProfile } = useAuth();
   const { checkFeature, canSendContactRequest, trackUsage, subscription } = useFeatureAccess();
   const { shortTermAvailable } = useShortTermAvailability();
+  const { trackProfileView, trackContact, trackEvent } = useTracking();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   const [caretaker, setCaretaker] = useState<Caretaker | null>(null);
@@ -120,6 +122,10 @@ function BetreuerProfilePage() {
             short_term_available: user && data.userId === user.id ? shortTermAvailable : data.short_term_available
           };
           setCaretaker(updatedData);
+          
+          // Track profile view
+          trackProfileView('betreuer', id);
+          trackEvent('profile_viewed', 'engagement', 'betreuer_profile');
         }
       } catch (err) {
         console.error('Error fetching caretaker:', err);
@@ -287,6 +293,10 @@ function BetreuerProfilePage() {
       });
 
       if (conversation && !error) {
+        // Track contact event
+        trackContact('message', caretaker.id);
+        trackEvent('contact_initiated', 'engagement', 'betreuer_contact');
+        
         // Navigiere direkt in die Konversation
         navigate(`/nachrichten/${conversation.id}`);
       } else {
