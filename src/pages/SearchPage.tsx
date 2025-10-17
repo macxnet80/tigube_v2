@@ -12,7 +12,6 @@ import { searchRelatedDienstleister, type DienstleisterResult, type CrossSearchF
 import { DEFAULT_SERVICE_CATEGORIES } from '../lib/types/service-categories';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import useCurrentUsage from '../hooks/useCurrentUsage';
-import { useTracking } from '../lib/tracking';
 
 // Using the type from the service
 type Caretaker = CaretakerDisplayData;
@@ -25,7 +24,6 @@ function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { contactLimit, subscription } = useFeatureAccess();
   const { currentUsage: contactUsage } = useCurrentUsage('contact_request');
-  const { trackSearch, trackEvent } = useTracking();
   const isFirstRender = useRef(true);
   
   // Initialize filters from URL params
@@ -319,10 +317,7 @@ function SearchPage() {
 
       setCaretakers(data || []);
       
-      // Track search results
-      const searchTerm = `${location} ${selectedService} ${selectedPetType}`.trim();
-      trackSearch(searchTerm, data?.length || 0);
-      trackEvent('search_completed', 'engagement', 'search_results', data?.length || 0);
+      // Search completed
       
       // Cross-Search: Lade verwandte Dienstleister wenn Feature aktiviert
       let relatedServices: DienstleisterResult[] = [];

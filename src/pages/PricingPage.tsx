@@ -7,7 +7,6 @@ import { useCurrentUsage } from '../hooks/useCurrentUsage';
 import { StripeService } from '../lib/stripe/stripeService';
 import { config } from '../lib/stripe/stripeConfig';
 import Button from '../components/ui/Button';
-import { useTracking } from '../lib/tracking';
 
 export default function PricingPage() {
   console.log('🎯 PricingPage: Component loaded successfully');
@@ -15,7 +14,6 @@ export default function PricingPage() {
   try {
     const { user, userProfile } = useAuth();
     const { subscription } = useSubscription();
-    const { trackEvent, trackSubscription } = useTracking();
   
     // Debug Stripe configuration on component mount
     React.useEffect(() => {
@@ -77,8 +75,7 @@ export default function PricingPage() {
         const planType = effectiveUserType === 'owner' ? 'premium' : 'professional';
         console.log('Plan type:', planType);
 
-        // Track subscription initiation
-        trackEvent('subscription_initiated', 'conversion', planType);
+        // Subscription initiated
         
         // Start Stripe checkout
         console.log('Calling StripeService.startCheckout...');

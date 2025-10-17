@@ -4,13 +4,11 @@ import { CheckCircle, Loader, Crown, Star, AlertCircle } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { StripeService } from '../lib/stripe/stripeService';
 import { useAuth } from '../lib/auth/AuthContext';
-import { useTracking } from '../lib/tracking';
 
 export default function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, userProfile, refreshSubscription } = useAuth();
-  const { trackSubscription, trackConversion, trackEvent } = useTracking();
   const [isValidating, setIsValidating] = useState(true);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [validationResult, setValidationResult] = useState<{
@@ -142,11 +140,7 @@ export default function PaymentSuccessPage() {
               }
             });
             
-            // Track successful subscription
-            const value = result.session.amount_total / 100; // Convert from cents to euros
-            trackSubscription(planType, value);
-            trackConversion('subscription_completed', value);
-            trackEvent('payment_success', 'conversion', planType, value);
+            // Subscription successful
           } else {
             setValidationResult(result);
           }
