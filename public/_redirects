@@ -1,2 +1,6 @@
+# Cleverreach Newsletter Redirects
+/cleverreach*    /cleverreach    200
+/newsletter/*    /newsletter/redirect    200
+
 # SPA fallback for all routes
 /*    /index.html   200 

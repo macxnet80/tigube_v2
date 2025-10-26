@@ -31,6 +31,7 @@ const PricingPage = lazy(() => import('./pages/PricingPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const BlogListPage = lazy(() => import('./pages/BlogListPage'));
 const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
+const CleverreachRedirectPage = lazy(() => import('./pages/CleverreachRedirectPage'));
 
 // Debug components (only in development)
 
@@ -77,6 +78,10 @@ function App() {
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
           <Route path="/blog" element={<BlogListPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
+          <Route path="/cleverreach" element={<CleverreachRedirectPage />} />
+          <Route path="/newsletter/redirect" element={<CleverreachRedirectPage />} />
+          <Route path="/newsletter/confirm" element={<CleverreachRedirectPage />} />
+          <Route path="/newsletter/unsubscribe" element={<CleverreachRedirectPage />} />
           
           {/* Debug Routes (only in development) */}
           {import.meta.env.DEV && (
