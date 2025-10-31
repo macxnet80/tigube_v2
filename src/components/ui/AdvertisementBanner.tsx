@@ -135,27 +135,29 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
       if (data && data.length > 0) {
         // Versuche, eine Werbung mit der passenden Platzierung zu finden
         const placementSpecificAd = data.find(ad => {
-          // Prüfe, ob das Format zur Platzierung passt
-          if (placement === 'profile_sidebar' && ad.display_width === 300 && ad.display_height === 600) {
-            return true; // Profile Banner Sidebar Format
-          }
-          if (placement === 'profile_top' && ad.display_width === 728 && ad.display_height === 90) {
-            return true; // Profile Banner Top Format
-          }
-          if (placement === 'search_filters' && ad.display_width === 970 && ad.display_height === 90) {
-            return true; // Search Filter Banner Format
-          }
-          if (placement === 'search_filter_box' && ad.display_width === 384 && ad.display_height === 480) {
-            return true; // Search Card Filter Box Format
-          }
-          if (placement === 'search_results' && ad.display_width === 384 && ad.display_height === 480) {
-            return true; // Search Card Results Format (gleiche Größe wie search_filter_box)
-          }
-          if (placement === 'owner_dashboard' && ad.display_width === 970 && ad.display_height === 90) {
-            return true; // Owner Dashboard Banner Format
-          }
-          if (placement === 'caretaker_dashboard' && ad.display_width === 970 && ad.display_height === 90) {
-            return true; // Caretaker Dashboard Banner Format
+          // Prüfe, ob das Format zur Platzierung passt (nur wenn Format-Informationen vorhanden sind)
+          if (ad.display_width && ad.display_height) {
+            if (placement === 'profile_sidebar' && ad.display_width === 300 && ad.display_height === 600) {
+              return true; // Profile Banner Sidebar Format
+            }
+            if (placement === 'profile_top' && ad.display_width === 728 && ad.display_height === 90) {
+              return true; // Profile Banner Top Format
+            }
+            if (placement === 'search_filters' && ad.display_width === 970 && ad.display_height === 90) {
+              return true; // Search Filter Banner Format
+            }
+            if (placement === 'search_filter_box' && ad.display_width === 384 && ad.display_height === 480) {
+              return true; // Search Card Filter Box Format
+            }
+            if (placement === 'search_results' && ad.display_width === 384 && ad.display_height === 480) {
+              return true; // Search Card Results Format (gleiche Größe wie search_filter_box)
+            }
+            if (placement === 'owner_dashboard' && ad.display_width === 970 && ad.display_height === 90) {
+              return true; // Owner Dashboard Banner Format
+            }
+            if (placement === 'caretaker_dashboard' && ad.display_width === 970 && ad.display_height === 90) {
+              return true; // Caretaker Dashboard Banner Format
+            }
           }
           return false;
         });
@@ -163,8 +165,17 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
         if (placementSpecificAd) {
           filteredData = [placementSpecificAd];
         } else {
-          // Kein Fallback mehr - zeige keine Werbung, wenn keine passende gefunden wird
-          filteredData = [];
+          // Fallback: Wenn keine passende Werbung mit Format-Informationen gefunden wird,
+          // verwende die erste verfügbare Werbung für diesen ad_type (falls keine Format-Info vorhanden)
+          const adWithoutFormat = data.find(ad => !ad.display_width || !ad.display_height);
+          if (adWithoutFormat) {
+            filteredData = [adWithoutFormat];
+          } else if (data.length > 0) {
+            // Als letzter Fallback: verwende die erste verfügbare Werbung
+            filteredData = [data[0]];
+          } else {
+            filteredData = [];
+          }
         }
       }
 
@@ -287,11 +298,24 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
       >
         {/* Image - für search_results quadratisch wie Profil-Karten */}
         {advertisement.image_url && (
-          <div className={`relative w-full ${placement === 'search_results' ? 'aspect-square' : 'h-56'} bg-gray-100`}>
+          <div 
+            className={`relative w-full ${
+              placement === 'search_results' 
+                ? 'aspect-square' 
+                : placement === 'search_filter_box' 
+                  ? 'aspect-[384/480]' 
+                  : ''
+            } bg-gray-100`}
+            style={
+              placement !== 'search_results' && placement !== 'search_filter_box' 
+                ? { height: '168px' } 
+                : undefined
+            }
+          >
             <img
               src={advertisement.image_url}
               alt={advertisement.title}
-              className={`w-full h-full object-contain object-center ${placement === 'search_results' ? 'rounded-t-xl' : ''}`}
+              className={`w-full h-full object-contain object-center ${placement === 'search_results' || placement === 'search_filter_box' ? 'rounded-t-xl' : ''}`}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
