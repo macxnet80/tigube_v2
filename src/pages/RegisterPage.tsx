@@ -214,7 +214,22 @@ function RegisterPage() {
         
         // Setze Onboarding-Flag für das Dashboard und leite direkt weiter
         try {
-          const onboardingData = { userType, userName: formStep1.firstName };
+          const onboardingData: any = { userType, userName: formStep1.firstName };
+          
+          // Für Dienstleister: Kategorie-Informationen hinzufügen
+          if (userType === 'dienstleister') {
+            const selectedCat = categories.find(cat => cat.id === selectedCategory);
+            onboardingData.categoryId = selectedCategory;
+            onboardingData.categoryName = selectedCat?.name || 'Betreuer';
+            onboardingData.specificUserType = selectedCat?.name.toLowerCase() === 'betreuer' ? 'caretaker' :
+                                            selectedCat?.name.toLowerCase() === 'tierarzt' ? 'tierarzt' :
+                                            selectedCat?.name.toLowerCase() === 'hundetrainer' ? 'hundetrainer' :
+                                            selectedCat?.name.toLowerCase() === 'tierfriseur' ? 'tierfriseur' :
+                                            selectedCat?.name.toLowerCase() === 'physiotherapeut' ? 'physiotherapeut' :
+                                            selectedCat?.name.toLowerCase() === 'ernährungsberater' ? 'ernaehrungsberater' :
+                                            selectedCat?.name.toLowerCase() === 'tierfotograf' ? 'tierfotograf' : 'sonstige';
+          }
+          
           sessionStorage.setItem('onboardingData', JSON.stringify(onboardingData));
           console.log('✅ Onboarding data set for:', userType, onboardingData);
         } catch (e) {

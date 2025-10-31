@@ -108,17 +108,28 @@ function CaretakerDashboardPage() {
     So: false,
   });
 
+  // Onboarding State für Kategorie-Informationen
+  const [onboardingCategoryName, setOnboardingCategoryName] = useState<string | undefined>();
+  const [onboardingSpecificUserType, setOnboardingSpecificUserType] = useState<string | undefined>();
+
   // Onboarding nach Dashboard-Load starten (nur einmal, via sessionStorage)
   useEffect(() => {
     if (!authLoading && user) {
       try {
         const raw = sessionStorage.getItem('onboardingData');
         if (raw) {
-          const parsed = JSON.parse(raw) as { userType?: 'owner' | 'caretaker' | 'dienstleister'; userName?: string };
+          const parsed = JSON.parse(raw) as { 
+            userType?: 'owner' | 'caretaker' | 'dienstleister'; 
+            userName?: string;
+            categoryName?: string;
+            specificUserType?: string;
+          };
           
           // Akzeptiere sowohl 'caretaker' als auch 'dienstleister' für das Onboarding
           if (parsed.userType === 'caretaker' || parsed.userType === 'dienstleister') {
             setOnboardingUserName(parsed.userName || userProfile?.first_name || '');
+            setOnboardingCategoryName(parsed.categoryName);
+            setOnboardingSpecificUserType(parsed.specificUserType);
             setShowOnboarding(true);
             // Setze Flag, dass User gerade registriert wurde
             sessionStorage.setItem('wasJustRegistered', 'true');
@@ -2015,6 +2026,8 @@ function CaretakerDashboardPage() {
           isOpen={showOnboarding}
           userType="caretaker"
           userName={onboardingUserName}
+          categoryName={onboardingCategoryName}
+          specificUserType={onboardingSpecificUserType}
           onComplete={() => {
             
             setShowOnboarding(false);
@@ -4169,6 +4182,8 @@ function CaretakerDashboardPage() {
         isOpen={showOnboarding}
         userType="caretaker"
         userName={onboardingUserName}
+        categoryName={onboardingCategoryName}
+        specificUserType={onboardingSpecificUserType}
         onComplete={() => setShowOnboarding(false)}
         onSkip={() => {
           

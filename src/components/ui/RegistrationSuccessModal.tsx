@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft, Heart, Search, MessageCircle, Star, PawPrint, Shield } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Heart, Search, MessageCircle, Star, PawPrint, Shield, Stethoscope, GraduationCap, Scissors, Camera, UtensilsCrossed, Activity } from 'lucide-react';
 import Button from './Button';
 
 interface OnboardingStep {
@@ -14,6 +14,8 @@ interface RegistrationSuccessModalProps {
   isOpen: boolean;
   userType: 'owner' | 'caretaker';
   userName: string;
+  categoryName?: string; // z.B. "Tierarzt", "Hundetrainer", "Betreuer"
+  specificUserType?: string; // z.B. "tierarzt", "hundetrainer", "caretaker"
   onComplete: () => void;
   onSkip?: () => void;
 }
@@ -22,6 +24,8 @@ const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> = ({
   isOpen,
   userType,
   userName,
+  categoryName,
+  specificUserType,
   onComplete,
   onSkip
 }) => {
@@ -65,12 +69,13 @@ const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> = ({
     }
   ];
 
-  const caretakerSteps: OnboardingStep[] = [
+  // Basis-Steps für allgemeine Betreuer
+  const getBaseCaretakerSteps = (serviceTypeName: string = 'Tierbetreuer'): OnboardingStep[] => [
     {
       id: 'welcome',
       title: `Willkommen bei tigube!`,
       subtitle: `Hi ${userName}! 👋`,
-      description: 'Großartig, dass du dabei bist! Als Tierbetreuer kannst du deine Leidenschaft für Tiere zum Beruf machen.',
+      description: `Großartig, dass du dabei bist! Als ${serviceTypeName} kannst du deine Leidenschaft für Tiere zum Beruf machen.`,
       icon: <PawPrint className="w-12 h-12 text-primary-500" />
     },
     {
@@ -96,7 +101,227 @@ const RegistrationSuccessModal: React.FC<RegistrationSuccessModalProps> = ({
     }
   ];
 
-  const steps = userType === 'owner' ? ownerSteps : caretakerSteps;
+  // Tierarzt-spezifische Steps
+  const tierarztSteps: OnboardingStep[] = [
+    {
+      id: 'welcome',
+      title: `Willkommen bei tigube!`,
+      subtitle: `Hi ${userName}! 👋`,
+      description: 'Großartig, dass du dabei bist! Als Tierarzt kannst du Tierhaltern eine professionelle medizinische Betreuung anbieten.',
+      icon: <Stethoscope className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'profile',
+      title: 'Erstelle dein Praxenprofil',
+      subtitle: 'Zeige deine Expertise',
+      description: 'Vervollständige dein Profil mit Praxisinformationen, Spezialisierungen und Öffnungszeiten. Je detaillierter, desto mehr Tierhalter finden dich.',
+      icon: <Star className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'connect',
+      title: 'Erreiche Tierhalter in deiner Nähe',
+      subtitle: 'Neue Patienten finden',
+      description: 'Tierhalter suchen nach vertrauensvollen Tierärzten für ihre Tiere. Stelle deine Dienste vor und gewinne neue Patienten.',
+      icon: <MessageCircle className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'grow',
+      title: 'Baue deine Praxis auf',
+      subtitle: 'Vertrauen aufbauen',
+      description: 'Durch positive Bewertungen und Empfehlungen baust du deine Reputation auf und erhältst mehr Anfragen für Sprechstunden und Hausbesuche.',
+      icon: <Heart className="w-12 h-12 text-primary-500" />
+    }
+  ];
+
+  // Hundetrainer-spezifische Steps
+  const hundetrainerSteps: OnboardingStep[] = [
+    {
+      id: 'welcome',
+      title: `Willkommen bei tigube!`,
+      subtitle: `Hi ${userName}! 👋`,
+      description: 'Großartig, dass du dabei bist! Als Hundetrainer hilfst du Hundebesitzern dabei, ihre Vierbeiner optimal zu erziehen und zu fördern.',
+      icon: <GraduationCap className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'profile',
+      title: 'Erstelle dein Trainerprofil',
+      subtitle: 'Zeige deine Methoden',
+      description: 'Präsentiere deine Trainingsmethoden, Zertifikate und Erfolgsgeschichten. Je überzeugender, desto mehr Hundebesitzer wenden sich an dich.',
+      icon: <Star className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'connect',
+      title: 'Finde Hundebesitzer, die Hilfe suchen',
+      subtitle: 'Neue Kunden gewinnen',
+      description: 'Hundebesitzer suchen nach erfahrenen Trainern für Erziehung, Verhaltenstraining oder Spezialkurse. Stelle dich ihnen vor.',
+      icon: <MessageCircle className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'grow',
+      title: 'Baue deine Trainingspraxis auf',
+      subtitle: 'Erfolge teilen',
+      description: 'Durch erfolgreiche Trainings und positive Bewertungen baust du deine Reputation auf und erhältst mehr Anfragen für Einzel- und Gruppentraining.',
+      icon: <Heart className="w-12 h-12 text-primary-500" />
+    }
+  ];
+
+  // Tierfriseur-spezifische Steps
+  const tierfriseurSteps: OnboardingStep[] = [
+    {
+      id: 'welcome',
+      title: `Willkommen bei tigube!`,
+      subtitle: `Hi ${userName}! 👋`,
+      description: 'Großartig, dass du dabei bist! Als Tierfriseur hilfst du Tierhaltern dabei, ihre Lieblinge gut gepflegt zu halten.',
+      icon: <Scissors className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'profile',
+      title: 'Erstelle dein Salon-Profil',
+      subtitle: 'Zeige deine Dienstleistungen',
+      description: 'Präsentiere deine Dienstleistungen wie Fellpflege, Trimmen oder professionelles Baden. Zeige Beispiele deiner Arbeit.',
+      icon: <Star className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'connect',
+      title: 'Erreiche Tierhalter in deiner Region',
+      subtitle: 'Neue Kunden finden',
+      description: 'Tierhalter suchen nach zuverlässigen Friseuren für ihre Vierbeiner. Stelle deine Services vor und gewinne neue Stammkunden.',
+      icon: <MessageCircle className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'grow',
+      title: 'Baue deinen Tierfriseur-Service auf',
+      subtitle: 'Zufriedene Kunden begeistern',
+      description: 'Durch hervorragende Arbeit und positive Bewertungen baust du deine Reputation auf und erhältst mehr Terminanfragen.',
+      icon: <Heart className="w-12 h-12 text-primary-500" />
+    }
+  ];
+
+  // Ernährungsberater-spezifische Steps
+  const ernaehrungsberaterSteps: OnboardingStep[] = [
+    {
+      id: 'welcome',
+      title: `Willkommen bei tigube!`,
+      subtitle: `Hi ${userName}! 👋`,
+      description: 'Großartig, dass du dabei bist! Als Ernährungsberater hilfst du Tierhaltern dabei, ihre Tiere optimal zu ernähren.',
+      icon: <UtensilsCrossed className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'profile',
+      title: 'Erstelle dein Beraterprofil',
+      subtitle: 'Zeige dein Wissen',
+      description: 'Präsentiere deine Expertise in Tierernährung, Diätpläne und spezielle Ernährungsbedürfnisse. Je überzeugender, desto mehr Anfragen.',
+      icon: <Star className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'connect',
+      title: 'Hilf Tierhaltern bei der Ernährung',
+      subtitle: 'Beratungsanfragen erhalten',
+      description: 'Tierhalter suchen nach Experten für die optimale Ernährung ihrer Tiere. Stelle deine Beratungsleistungen vor.',
+      icon: <MessageCircle className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'grow',
+      title: 'Baue deine Beratungspraxis auf',
+      subtitle: 'Erfolgreiche Ernährungskonzepte',
+      description: 'Durch erfolgreiche Ernährungspläne und positive Bewertungen baust du deine Reputation auf und erhältst mehr Beratungsanfragen.',
+      icon: <Heart className="w-12 h-12 text-primary-500" />
+    }
+  ];
+
+  // Tierfotograf-spezifische Steps
+  const tierfotografSteps: OnboardingStep[] = [
+    {
+      id: 'welcome',
+      title: `Willkommen bei tigube!`,
+      subtitle: `Hi ${userName}! 👋`,
+      description: 'Großartig, dass du dabei bist! Als Tierfotograf hältst du besondere Momente von Tieren in wunderschönen Bildern fest.',
+      icon: <Camera className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'profile',
+      title: 'Erstelle dein Fotografen-Profil',
+      subtitle: 'Zeige deine Portfolios',
+      description: 'Präsentiere deine besten Tierfotos und Shootings. Zeige verschiedene Stile und Tierarten, die du fotografierst.',
+      icon: <Star className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'connect',
+      title: 'Erreiche Tierhalter, die Fotos suchen',
+      subtitle: 'Neue Aufträge finden',
+      description: 'Tierhalter suchen nach professionellen Fotografen für ihre Vierbeiner. Stelle deine Fotoshootings und Preise vor.',
+      icon: <MessageCircle className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'grow',
+      title: 'Baue deine Fotografen-Praxis auf',
+      subtitle: 'Bewegende Momente festhalten',
+      description: 'Durch beeindruckende Fotos und positive Bewertungen baust du deine Reputation auf und erhältst mehr Anfragen für Fotoshootings.',
+      icon: <Heart className="w-12 h-12 text-primary-500" />
+    }
+  ];
+
+  // Physiotherapeut-spezifische Steps
+  const physiotherapeutSteps: OnboardingStep[] = [
+    {
+      id: 'welcome',
+      title: `Willkommen bei tigube!`,
+      subtitle: `Hi ${userName}! 👋`,
+      description: 'Großartig, dass du dabei bist! Als Physiotherapeut hilfst du Tieren dabei, sich nach Verletzungen oder Operationen zu erholen.',
+      icon: <Activity className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'profile',
+      title: 'Erstelle dein Therapeuten-Profil',
+      subtitle: 'Zeige deine Behandlungen',
+      description: 'Präsentiere deine Therapiemethoden, Spezialisierungen und Erfolgsgeschichten. Je überzeugender, desto mehr Tierhalter vertrauen dir.',
+      icon: <Star className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'connect',
+      title: 'Erreiche Tierhalter mit Reha-Bedarf',
+      subtitle: 'Neue Patienten finden',
+      description: 'Tierhalter suchen nach erfahrenen Physiotherapeuten für ihre verletzten oder rekonvaleszenten Tiere. Stelle deine Therapien vor.',
+      icon: <MessageCircle className="w-12 h-12 text-primary-500" />
+    },
+    {
+      id: 'grow',
+      title: 'Baue deine Therapiepraxis auf',
+      subtitle: 'Heilungserfolge teilen',
+      description: 'Durch erfolgreiche Behandlungen und positive Bewertungen baust du deine Reputation auf und erhältst mehr Anfragen für Physiotherapie.',
+      icon: <Heart className="w-12 h-12 text-primary-500" />
+    }
+  ];
+
+  // Bestimme die passenden Steps basierend auf der Dienstleistung
+  const getCaretakerSteps = (): OnboardingStep[] => {
+    if (!categoryName && !specificUserType) {
+      return getBaseCaretakerSteps('Tierbetreuer');
+    }
+
+    const category = categoryName?.toLowerCase() || '';
+    const specificType = specificUserType?.toLowerCase() || '';
+
+    // Spezifische Zuordnung basierend auf Kategorie oder User-Typ
+    if (category.includes('tierarzt') || specificType === 'tierarzt') {
+      return tierarztSteps;
+    } else if (category.includes('hundetrainer') || specificType === 'hundetrainer') {
+      return hundetrainerSteps;
+    } else if (category.includes('tierfriseur') || specificType === 'tierfriseur') {
+      return tierfriseurSteps;
+    } else if (category.includes('ernährungsberater') || specificType === 'ernaehrungsberater') {
+      return ernaehrungsberaterSteps;
+    } else if (category.includes('tierfotograf') || specificType === 'tierfotograf') {
+      return tierfotografSteps;
+    } else if (category.includes('physiotherapeut') || specificType === 'physiotherapeut') {
+      return physiotherapeutSteps;
+    } else {
+      // Fallback: Basis-Steps mit dem Namen der Kategorie
+      return getBaseCaretakerSteps(categoryName || 'Tierbetreuer');
+    }
+  };
+
+  const steps = userType === 'owner' ? ownerSteps : getCaretakerSteps();
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
