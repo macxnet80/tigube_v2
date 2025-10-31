@@ -7,6 +7,7 @@ import { useNotifications } from '../../lib/notifications/NotificationContext';
 import { useSubscription } from '../../lib/auth/useSubscription';
 
 import NotificationBadge from '../ui/NotificationBadge';
+import PremiumBadge from '../ui/PremiumBadge';
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -87,9 +88,16 @@ function Header() {
                 <NavLink to="/suche" isActive={isActive('/suche')}>
                   Betreuer finden
                 </NavLink>
-                <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
-                  Wo finde ich...?
-                </NavLink>
+                <div className="relative inline-block">
+                  <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
+                    Wo finde ich...?
+                  </NavLink>
+                  {!isPremiumUser && (
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
+                      <PremiumBadge size="sm" />
+                    </div>
+                  )}
+                </div>
                 <NavLink to="/blog" isActive={isActive('/blog')}>
                   tigube-Welt
                 </NavLink>
@@ -123,9 +131,14 @@ function Header() {
             <NavLink to="/suche" isActive={isActive('/suche')}>
             Betreuer finden
             </NavLink>
-            <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
-            Wo finde ich...?
-            </NavLink>
+            <div className="relative inline-block">
+              <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
+                Wo finde ich...?
+              </NavLink>
+              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
+                <PremiumBadge size="sm" />
+              </div>
+            </div>
             <NavLink to="/mitgliedschaften" isActive={isActive('/mitgliedschaften') || isActive('/preise')}>
             Preise
             </NavLink>
@@ -182,9 +195,16 @@ function Header() {
                   <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
                     Betreuer finden
                   </MobileNavLink>
-                  <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
-                    Wo finde ich...?
-                  </MobileNavLink>
+                  <div className="relative px-3 py-2">
+                    <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
+                      Wo finde ich...?
+                    </MobileNavLink>
+                    {!isPremiumUser && (
+                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
+                        <PremiumBadge size="sm" />
+                      </div>
+                    )}
+                  </div>
                   <MobileNavLink to="/blog" isActive={isActive('/blog')} onClick={() => setIsMenuOpen(false)}>
                     tigube-Welt
                   </MobileNavLink>
@@ -225,9 +245,14 @@ function Header() {
               <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
                     Betreuer finden
               </MobileNavLink>
-              <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
-                    Wo finde ich...?
-              </MobileNavLink>
+              <div className="relative px-3 py-2">
+                <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
+                  Wo finde ich...?
+                </MobileNavLink>
+                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
+                  <PremiumBadge size="sm" />
+                </div>
+              </div>
               <MobileNavLink 
                 to="/mitgliedschaften" 
                 isActive={isActive('/mitgliedschaften') || isActive('/preise')} 

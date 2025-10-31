@@ -2977,14 +2977,10 @@ function OwnerDashboardPage() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="text-center p-4 bg-white rounded-lg border">
                     <div className="text-2xl font-bold text-blue-600">Unlimited</div>
                     <div className="text-sm text-gray-600">Kontaktanfragen</div>
-                  </div>
-                  <div className="text-center p-4 bg-white rounded-lg border">
-                    <div className="text-2xl font-bold text-purple-600">Unlimited</div>
-                    <div className="text-sm text-gray-600">Buchungen</div>
                   </div>
                   <div className="text-center p-4 bg-white rounded-lg border">
                     <div className="text-2xl font-bold text-green-600">Werbefrei</div>

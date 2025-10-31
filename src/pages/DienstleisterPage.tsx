@@ -1,44 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, Star, Filter, X, ChevronDown, PawPrint, Briefcase, Clock, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MapPin, Star, X, ChevronDown, Briefcase, Search } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { cn } from '../lib/utils';
+import DienstleisterCard from '../components/ui/DienstleisterCard';
+import { DienstleisterService } from '../lib/services/dienstleisterService';
+import { useAuth } from '../lib/auth/AuthContext';
+import { useSubscription } from '../lib/auth/useSubscription';
+import type { DienstleisterProfil, DienstleisterKategorie } from '../lib/types/dienstleister';
 
 export default function DienstleisterPage() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const { isPremiumUser, subscriptionLoading } = useSubscription();
+  const isFirstRender = useRef(true);
+  
   // Filter States
   const [location, setLocation] = useState('');
-  const [selectedKategorie, setSelectedKategorie] = useState('');
-  const [selectedService, setSelectedService] = useState('');
+  const [selectedKategorieId, setSelectedKategorieId] = useState<number | undefined>(undefined);
   const [selectedMinRating, setSelectedMinRating] = useState('');
   const [maxPrice, setMaxPrice] = useState(100);
-  const [showFilters, setShowFilters] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
-
-  // Kategorie-Optionen
-  const kategorieOptions = [
-    { value: '', label: 'Alle Kategorien' },
-    { value: 'betreuer', label: 'Betreuer' },
-    { value: 'tierarzt', label: 'Tierarzt' },
-    { value: 'hundetrainer', label: 'Hundetrainer' },
-    { value: 'tierfriseur', label: 'Tierfriseur' },
-    { value: 'physiotherapeut', label: 'Physiotherapeut' },
-    { value: 'ernaehrungsberater', label: 'Ernährungsberater' },
-    { value: 'tierfotograf', label: 'Tierfotograf' }
-  ];
-
-  // Service-Optionen
-  const serviceOptions = [
-    { value: '', label: 'Alle Services' },
-    { value: 'notfall', label: 'Notfall' },
-    { value: 'chirurgie', label: 'Chirurgie' },
-    { value: 'impfung', label: 'Impfung' },
-    { value: 'untersuchung', label: 'Untersuchung' },
-    { value: 'training', label: 'Training' },
-    { value: 'verhalten', label: 'Verhaltensberatung' },
-    { value: 'pflege', label: 'Pflege' },
-    { value: 'styling', label: 'Styling' }
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<DienstleisterProfil[]>([]);
+  const [kategorien, setKategorien] = useState<DienstleisterKategorie[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Bewertungs-Optionen
   const ratingOptions = [
@@ -49,32 +34,116 @@ export default function DienstleisterPage() {
     { value: '3.0', label: '3.0+ Sterne' }
   ];
 
+  // Kategorien laden (ohne "Betreuer", da die auf der SearchPage sind)
+  useEffect(() => {
+    const loadKategorien = async () => {
+      try {
+        const kats = await DienstleisterService.getKategorien();
+        // Filtere "Betreuer" heraus (id=1), da die auf der SearchPage sind
+        const filteredKats = kats.filter(kat => kat.id !== 1);
+        setKategorien(filteredKats);
+      } catch (err) {
+        console.error('Fehler beim Laden der Kategorien:', err);
+      }
+    };
+    loadKategorien();
+  }, []);
+
   const clearAllFilters = () => {
     setLocation('');
-    setSelectedKategorie('');
-    setSelectedService('');
+    setSelectedKategorieId(undefined);
     setSelectedMinRating('');
     setMaxPrice(100);
   };
 
-  const hasActiveFilters = location.trim() || selectedKategorie || selectedService || selectedMinRating || maxPrice < 100;
+  const hasActiveFilters = location.trim() || selectedKategorieId !== undefined || selectedMinRating || maxPrice < 100;
 
   const performSearch = async () => {
     setLoading(true);
-    // Hier würde die echte Suche implementiert werden
-    setTimeout(() => {
+    setError(null);
+    
+    try {
+      const filters: any = {};
+      
+      // Kategorie-Filter
+      if (selectedKategorieId) {
+        filters.kategorie_id = selectedKategorieId;
+      }
+      
+      // Standort-Filter
+      if (location.trim()) {
+        // Prüfe ob es eine PLZ ist (5-stellige Zahl)
+        if (/^\d{5}$/.test(location.trim())) {
+          filters.standort = { plz: location.trim() };
+        } else {
+          filters.standort = { ort: location.trim() };
+        }
+      }
+      
+      // Bewertungs-Filter
+      if (selectedMinRating) {
+        filters.bewertung = { min: parseFloat(selectedMinRating) };
+      }
+      
+      // Preis-Filter (nur wenn nicht default)
+      if (maxPrice < 100) {
+        filters.preis = { max: maxPrice };
+      }
+      
+      // Suche ausführen
+      const searchResult = await DienstleisterService.searchDienstleister(filters, 50, 0);
+      
+      // Nur Dienstleister anzeigen, keine Betreuer (user_type sollte 'dienstleister' sein)
+      // Die dienstleister_search_view sollte bereits nur Dienstleister enthalten,
+      // aber zur Sicherheit filtern wir nochmal nach user_type !== 'caretaker'
+      const filteredResults = (searchResult.dienstleister || []).filter(
+        (d: any) => d.user_type !== 'caretaker' && d.kategorie_id !== 1
+      );
+      
+      setResults(filteredResults);
+      setTotalCount(searchResult.total_count);
+    } catch (err) {
+      console.error('Fehler bei der Dienstleister-Suche:', err);
+      setError('Fehler beim Laden der Dienstleister. Bitte versuche es erneut.');
       setResults([]);
+      setTotalCount(0);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
+  // Live-Suche bei Filter-Änderungen
   useEffect(() => {
+    // Skip first render to avoid double search
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    
     const timeoutId = setTimeout(() => {
       performSearch();
     }, 300);
     
     return () => clearTimeout(timeoutId);
-  }, [location, selectedKategorie, selectedService, selectedMinRating, maxPrice]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, selectedKategorieId, selectedMinRating, maxPrice]);
+
+  // Premium-Check: Zeige Seite nur für Premium-User
+  if (authLoading || subscriptionLoading) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/anmelden" replace />;
+  }
+
+  if (!isPremiumUser) {
+    return <Navigate to="/mitgliedschaften" replace />;
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -107,33 +176,14 @@ export default function DienstleisterPage() {
                   <div className="relative">
                     <Briefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <select
-                      value={selectedKategorie}
-                      onChange={(e) => setSelectedKategorie(e.target.value)}
+                      value={selectedKategorieId || ''}
+                      onChange={(e) => setSelectedKategorieId(e.target.value ? parseInt(e.target.value) : undefined)}
                       className="w-full pl-9 pr-8 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm appearance-none bg-white"
                     >
-                      {kategorieOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                  </div>
-                </div>
-
-                {/* Service */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Service</label>
-                  <div className="relative">
-                    <PawPrint className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <select
-                      value={selectedService}
-                      onChange={(e) => setSelectedService(e.target.value)}
-                      className="w-full pl-9 pr-8 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm appearance-none bg-white"
-                    >
-                      {serviceOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
+                      <option value="">Alle Kategorien</option>
+                      {kategorien.map(kat => (
+                        <option key={kat.id} value={kat.id}>
+                          {kat.name}
                         </option>
                       ))}
                     </select>
@@ -213,13 +263,23 @@ export default function DienstleisterPage() {
               <div className="flex justify-center items-center py-12">
                 <LoadingSpinner />
               </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-600 mb-4">{error}</p>
+                <Button onClick={performSearch}>
+                  Erneut versuchen
+                </Button>
+              </div>
             ) : results.length > 0 ? (
               <div className="space-y-4">
                 <p className="text-sm text-gray-600">
-                  {results.length} Dienstleister gefunden
+                  {totalCount} {totalCount === 1 ? 'Dienstleister gefunden' : 'Dienstleister gefunden'}
+                  {location && ` in ${location}`}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Hier würden die Dienstleister-Cards gerendert werden */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {results.map((dienstleister) => (
+                    <DienstleisterCard key={dienstleister.id} dienstleister={dienstleister} />
+                  ))}
                 </div>
               </div>
             ) : (

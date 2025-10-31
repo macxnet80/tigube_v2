@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 // Typen für die Freigabe-Status
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
+export type ApprovalStatus = 'not_requested' | 'pending' | 'approved' | 'rejected'
 
 // Interface für Caretaker-Profile mit Freigabe-Informationen
 export interface CaretakerProfileWithApproval {

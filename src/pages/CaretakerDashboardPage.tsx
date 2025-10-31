@@ -114,11 +114,11 @@ function CaretakerDashboardPage() {
       try {
         const raw = sessionStorage.getItem('onboardingData');
         if (raw) {
-          const parsed = JSON.parse(raw) as { userType?: 'owner' | 'caretaker'; userName?: string };
+          const parsed = JSON.parse(raw) as { userType?: 'owner' | 'caretaker' | 'dienstleister'; userName?: string };
           
-          if (parsed.userType === 'caretaker') {
-            
-            setOnboardingUserName(parsed.userName || profileData?.first_name || '');
+          // Akzeptiere sowohl 'caretaker' als auch 'dienstleister' für das Onboarding
+          if (parsed.userType === 'caretaker' || parsed.userType === 'dienstleister') {
+            setOnboardingUserName(parsed.userName || userProfile?.first_name || '');
             setShowOnboarding(true);
             // Setze Flag, dass User gerade registriert wurde
             sessionStorage.setItem('wasJustRegistered', 'true');
@@ -1523,7 +1523,7 @@ function CaretakerDashboardPage() {
   const avatarUrl = getAvatarUrl();
 
   // Tab-Navigation für Übersicht/Fotos
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'kontaktdaten' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften' | 'verfuegbarkeit'>('uebersicht');
+  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'kontaktdaten' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften' | 'verfuegbarkeit'>('kunden');
   
   // Scroll-Position-Persistierung entfernt - Browser sollte das automatisch handhaben
   // Das Problem liegt woanders - wahrscheinlich an anderen useEffect-Hooks die Re-Renders verursachen
@@ -2107,7 +2107,7 @@ function CaretakerDashboardPage() {
           <div className="flex-1 w-full">
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Name und Dienstleistung */}
-              <div className="flex-1">
+              <div className="flex-1 relative">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <h1 className="text-2xl font-bold">{fullName}</h1>
@@ -2218,91 +2218,94 @@ function CaretakerDashboardPage() {
                     </span>
                   </div>
                   
-                  <div className="flex flex-wrap gap-2">
-                    {profile?.is_verified && (
+                  {/* Verifiziert-Badge */}
+                  {profile?.is_verified && (
+                    <div className="mb-2">
                       <span className="bg-primary-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full flex items-center">
                         <Verified className="h-2.5 w-2.5 mr-1" /> Verifiziert
                       </span>
-                    )}
-
-
-                    {/* Kurzfristig Verfügbar Toggle */}
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600">Kurzfristig verfügbar</span>
-                      <button
-                        onClick={handleShortTermAvailabilityToggle}
-                        disabled={shortTermLoading}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
-                          shortTermAvailable
-                            ? 'bg-green-500'
-                            : 'bg-gray-300'
-                        } ${shortTermLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                        title={shortTermAvailable ? 'Kurzfristig verfügbar - Klicken zum Deaktivieren' : 'Nicht kurzfristig verfügbar - Klicken zum Aktivieren'}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            shortTermAvailable ? 'translate-x-6' : 'translate-x-1'
-                          }`}
-                        />
-                        {shortTermLoading && (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
-                          </div>
-                        )}
-                      </button>
                     </div>
+                  )}
 
-                    {/* Profil-Freigabe Button */}
-                    {profile?.approval_status !== 'approved' && (
+                  {/* Rechte Seite: Kurzfristig verfügbar und Freigabe-Button untereinander, rechts oben am Rand */}
+                  <div className="absolute top-0 right-0 flex flex-col items-end gap-2">
+                      {/* Kurzfristig Verfügbar Toggle */}
                       <div className="flex items-center gap-2">
-                        {profile?.approval_status === 'pending' ? (
-                          <button
-                            disabled
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-lg cursor-not-allowed"
-                          >
-                            <Clock className="h-4 w-4" />
-                            Profil wird überprüft
-                          </button>
-                        ) : profile?.approval_status === 'rejected' ? (
-                          <button
-                            onClick={handleRequestApproval}
-                            disabled={approvalLoading}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {approvalLoading ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
-                                Wird gesendet...
-                              </>
-                            ) : (
-                              <>
-                                <Shield className="h-4 w-4" />
-                                Erneut zur Freigabe geben
-                              </>
-                            )}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={handleRequestApproval}
-                            disabled={approvalLoading}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-700 text-sm font-medium rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {approvalLoading ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
-                                Wird gesendet...
-                              </>
-                            ) : (
-                              <>
-                                <Shield className="h-4 w-4" />
-                                Profil zur Freigabe geben
-                              </>
-                            )}
-                          </button>
-                        )}
+                        <span className="text-sm text-gray-600">Kurzfristig verfügbar</span>
+                        <button
+                          onClick={handleShortTermAvailabilityToggle}
+                          disabled={shortTermLoading}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                            shortTermAvailable
+                              ? 'bg-green-500'
+                              : 'bg-gray-300'
+                          } ${shortTermLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          title={shortTermAvailable ? 'Kurzfristig verfügbar - Klicken zum Deaktivieren' : 'Nicht kurzfristig verfügbar - Klicken zum Aktivieren'}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              shortTermAvailable ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                          {shortTermLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
+                            </div>
+                          )}
+                        </button>
                       </div>
-                    )}
-                  </div>
+
+                      {/* Profil-Freigabe Button */}
+                      {profile?.approval_status !== 'approved' && (
+                        <div className="flex items-center gap-2">
+                          {profile?.approval_status === 'pending' ? (
+                            <button
+                              disabled
+                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-lg cursor-not-allowed"
+                            >
+                              <Clock className="h-4 w-4" />
+                              Profil wird überprüft
+                            </button>
+                          ) : profile?.approval_status === 'rejected' ? (
+                            <button
+                              onClick={handleRequestApproval}
+                              disabled={approvalLoading}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {approvalLoading ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                  Wird gesendet...
+                                </>
+                              ) : (
+                                <>
+                                  <Shield className="h-4 w-4" />
+                                  Erneut zur Freigabe geben
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={handleRequestApproval}
+                              disabled={approvalLoading}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-700 text-sm font-medium rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {approvalLoading ? (
+                                <>
+                                  <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                                  Wird gesendet...
+                                </>
+                              ) : (
+                                <>
+                                  <Shield className="h-4 w-4" />
+                                  Profil zur Freigabe geben
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                 </div>
               </div>
               {/* Kontaktdaten entfernt – jetzt eigener Tab */}
@@ -2328,6 +2331,20 @@ function CaretakerDashboardPage() {
         <aside className="md:col-span-1">
           <nav className="bg-white rounded-xl shadow p-4 md:sticky md:top-4">
             <ul className="space-y-1">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('kunden')}
+                  aria-current={activeTab === 'kunden' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'kunden'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Kunden
+                </button>
+              </li>
               <li>
                 <button
                   type="button"
@@ -2396,20 +2413,6 @@ function CaretakerDashboardPage() {
                   }`}
                 >
                   Über mich
-                </button>
-              </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('kunden')}
-                  aria-current={activeTab === 'kunden' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'kunden'
-                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Kunden
                 </button>
               </li>
               <li>
@@ -3132,15 +3135,13 @@ function CaretakerDashboardPage() {
       {activeTab === 'texte' && (
         <div className="mb-8">
           {/* Kurze Beschreibung */}
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Info className="w-5 h-5" /> Kurze Beschreibung</h2>
           <div className="bg-white rounded-xl shadow p-6 mb-8 relative">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Kurze Beschreibung</h2>
-              {!editShortDesc && (
-                <button className="p-2 text-gray-400 hover:text-primary-600 absolute top-4 right-4" onClick={() => { setEditShortDesc(true); setShortDescDraft(shortDescription); }} title="Bearbeiten">
-                  <Edit className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
+            {!editShortDesc && (
+              <button className="absolute top-4 right-4 p-2 text-gray-400 hover:text-primary-600" onClick={() => { setEditShortDesc(true); setShortDescDraft(shortDescription); }} title="Bearbeiten">
+                <Edit className="h-3.5 w-3.5" />
+              </button>
+            )}
             {!editShortDesc ? (
               <div className="text-gray-700 min-h-[32px] whitespace-pre-wrap break-words">
                 {shortDescription ? (
@@ -3176,15 +3177,13 @@ function CaretakerDashboardPage() {
           </div>
 
           {/* Über mich */}
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><User className="w-5 h-5" /> Über mich</h2>
           <div className="bg-white rounded-xl shadow p-6 mb-8 relative">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Über mich</h2>
-              {!editAboutMe && (
-                <button className="p-2 text-gray-400 hover:text-primary-600 absolute top-4 right-4" onClick={() => { setEditAboutMe(true); setAboutMeDraft(aboutMe); }} title="Bearbeiten">
-                  <Edit className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
+            {!editAboutMe && (
+              <button className="absolute top-4 right-4 p-2 text-gray-400 hover:text-primary-600" onClick={() => { setEditAboutMe(true); setAboutMeDraft(aboutMe); }} title="Bearbeiten">
+                <Edit className="h-3.5 w-3.5" />
+              </button>
+            )}
             {!editAboutMe ? (
               <div className="text-gray-700 min-h-[32px] whitespace-pre-wrap break-words">
                 {aboutMe ? (
@@ -3259,7 +3258,7 @@ function CaretakerDashboardPage() {
       )}
       {activeTab === 'bewertungen' && (
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-2 flex items-center gap-2 text-gray-900">Bewertungen</h2>
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900"><Star className="w-5 h-5" /> Bewertungen</h2>
           <div className="bg-white rounded-xl shadow p-6">
             {reviewsLoading ? (
               <div className="text-gray-400">Bewertungen werden geladen...</div>
@@ -3374,11 +3373,9 @@ function CaretakerDashboardPage() {
       {activeTab === 'sicherheit' && (
         <div className="space-y-8">
           {/* E-Mail-Adresse ändern */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Mail className="h-6 w-6 text-primary-600" />
-              <h2 className="text-xl font-semibold text-gray-900">E-Mail-Adresse ändern</h2>
-            </div>
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900"><Mail className="w-5 h-5" /> E-Mail-Adresse ändern</h2>
+            <div className="bg-white rounded-xl shadow p-6">
             
             <form
               onSubmit={async (e) => {
@@ -3535,14 +3532,13 @@ function CaretakerDashboardPage() {
                 </button>
               </div>
             </form>
+            </div>
           </div>
 
           {/* Passwort ändern */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <KeyRound className="h-6 w-6 text-primary-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Passwort ändern</h2>
-            </div>
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900"><KeyRound className="w-5 h-5" /> Passwort ändern</h2>
+            <div className="bg-white rounded-xl shadow p-6">
             
             <form onSubmit={handlePasswordChange} className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -3680,16 +3676,13 @@ function CaretakerDashboardPage() {
                 </button>
               </div>
             </form>
+            </div>
           </div>
 
-
-
           {/* Konto löschen */}
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Trash2 className="h-6 w-6 text-red-600" />
-              <h2 className="text-xl font-semibold text-red-900">Gefährlicher Bereich</h2>
-            </div>
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-red-900"><Trash2 className="w-5 h-5" /> Gefährlicher Bereich</h2>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6">
             
             <div className="mb-6">
               <h3 className="text-lg font-medium text-red-900 mb-2">Konto löschen</h3>
@@ -3763,6 +3756,7 @@ function CaretakerDashboardPage() {
                 </div>
               )}
             </div>
+            </div>
           </div>
         </div>
       )}
@@ -3774,11 +3768,9 @@ function CaretakerDashboardPage() {
       {activeTab === 'verifizierung' && (
         <div className="space-y-8">
           {/* Verifizierungsstatus */}
-          <div className="bg-white rounded-xl shadow p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <Shield className="h-6 w-6 text-primary-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Verifizierungsstatus</h2>
-            </div>
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900"><Shield className="w-5 h-5" /> Verifizierungsstatus</h2>
+            <div className="bg-white rounded-xl shadow p-6">
             
             {verificationLoading ? (
               <div className="flex items-center justify-center py-8">
@@ -3801,15 +3793,14 @@ function CaretakerDashboardPage() {
                 </div>
               </div>
             )}
+            </div>
           </div>
 
           {/* Dokument-Upload */}
           {verificationStatus === 'not_submitted' || verificationStatus === 'rejected' ? (
-            <div className="bg-white rounded-xl shadow p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <Upload className="h-6 w-6 text-primary-600" />
-                <h2 className="text-xl font-semibold text-gray-900">Dokumente hochladen</h2>
-              </div>
+            <div>
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900"><Upload className="w-5 h-5" /> Dokumente hochladen</h2>
+              <div className="bg-white rounded-xl shadow p-6">
 
               <div className="space-y-6">
                 {/* Ausweis Upload (Pflichtfeld) */}
@@ -3897,6 +3888,7 @@ function CaretakerDashboardPage() {
                     )}
                   </Button>
                 </div>
+              </div>
               </div>
             </div>
           ) : (
@@ -4063,14 +4055,15 @@ function CaretakerDashboardPage() {
           ) : (
             <>
               {/* Basic Status Card */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900"><Star className="w-5 h-5" /> Basic Mitgliedschaft</h2>
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 bg-gray-400 rounded-full flex items-center justify-center">
                       <Star className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900">Basic Mitgliedschaft</h2>
                       <p className="text-sm text-gray-600">Kostenlose Version mit Einschränkungen</p>
                     </div>
                   </div>
@@ -4152,7 +4145,8 @@ function CaretakerDashboardPage() {
                   </div>
                 </div>
               </div>
-            </>
+            </div>
+          </>
           )}
         </div>
       )}

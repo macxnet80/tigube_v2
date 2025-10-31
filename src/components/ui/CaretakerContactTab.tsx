@@ -69,13 +69,15 @@ function CaretakerContactTab() {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow p-6">
-      <div className="flex items-center justify-between mb-4 relative">
-        <h2 className="text-xl font-semibold text-gray-900">Kontaktdaten</h2>
+    <div className="mb-8">
+      <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2">
+        <Phone className="w-5 h-5" /> Kontaktdaten
+      </h2>
+      <div className="bg-white rounded-xl shadow p-6 relative">
         {!editing && (
           <button
             type="button"
-            className="p-2 text-gray-400 hover:text-primary-600 transition-colors"
+            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-primary-600 transition-colors"
             onClick={() => setEditing(true)}
             aria-label="Kontaktdaten bearbeiten"
             title="Bearbeiten"
@@ -83,7 +85,6 @@ function CaretakerContactTab() {
             <Edit className="h-3.5 w-3.5" />
           </button>
         )}
-      </div>
 
       {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
 
@@ -164,6 +165,7 @@ function CaretakerContactTab() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

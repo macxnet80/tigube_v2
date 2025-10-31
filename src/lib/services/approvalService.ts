@@ -183,7 +183,7 @@ export class ApprovalService {
       }
 
       return {
-        status: data.approval_status || 'pending',
+        status: (data.approval_status || 'not_requested') as ApprovalStatus,
         requestedAt: data.approval_requested_at,
         approvedAt: data.approval_approved_at,
         approvedBy: data.approval_approved_by,
