@@ -83,11 +83,7 @@ function App() {
           <Route path="/newsletter/confirm" element={<CleverreachRedirectPage />} />
           <Route path="/newsletter/unsubscribe" element={<CleverreachRedirectPage />} />
           
-          {/* Debug Routes (only in development) */}
-          {import.meta.env.DEV && (
-            <>
-            </>
-          )}
+          {/* Test-Dashboard entfernt */}
           
           <Route 
             path="/dashboard-owner" 

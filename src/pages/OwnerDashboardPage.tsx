@@ -18,6 +18,7 @@ import { PremiumBadge } from '../components/ui/PremiumBadge';
 import { useSubscription } from '../lib/auth/useSubscription';
 import RegistrationSuccessModal from '../components/ui/RegistrationSuccessModal';
 import ProfileImageCropper from '../components/ui/ProfileImageCropper';
+import OwnerContactTab from '../components/ui/OwnerContactTab';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 
 
@@ -134,7 +135,7 @@ function OwnerDashboardPage() {
   const [petError, setPetError] = useState<string | null>(null);
   const [showAddPet, setShowAddPet] = useState(false);
   const [newPet, setNewPet] = useState<PetFormData>({ name: '', type: '', typeOther: '', breed: '', birthDate: '', weight: '', image: '', description: '', gender: '', neutered: false });
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'tiere' | 'einstellungen' | 'mitgliedschaft'>('uebersicht');
+  const [activeTab, setActiveTab] = useState<'uebersicht' | 'tiere' | 'kontaktdaten' | 'einstellungen' | 'mitgliedschaft'>('uebersicht');
   const [editData, setEditData] = useState(false);
   const [ownerData, setOwnerData] = useState({
     phoneNumber: '',
@@ -192,6 +193,9 @@ function OwnerDashboardPage() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [showImageCropper, setShowImageCropper] = useState(false);
+  // Stabilität wie im Caretaker-Dashboard
+  const [optimisticAvatarUrl, setOptimisticAvatarUrl] = useState<string | null>(null);
+  const [renderProfile, setRenderProfile] = useState<any>(null);
   
   // Pet Image Cropper States
   const [showPetImageCropper, setShowPetImageCropper] = useState(false);
@@ -548,9 +552,10 @@ function OwnerDashboardPage() {
     avatar_url: null
   };
 
-  const profile = userProfile || fallbackProfile;
+  const profile = renderProfile || userProfile || fallbackProfile;
   const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unbekannter Benutzer';
-  const avatarUrl = profile.profile_photo_url
+  const avatarUrl = optimisticAvatarUrl
+    || profile.profile_photo_url
     || profile.avatar_url
     || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=f3f4f6&color=374151`;
 
@@ -1243,12 +1248,21 @@ function OwnerDashboardPage() {
       const file = new File([blob], `profile-${user.id}-${Date.now()}.jpg`, { type: 'image/jpeg' });
       
       const url = await uploadProfilePhoto(file);
+      // Optimistisch sofort anzeigen und Modal schließen
+      setOptimisticAvatarUrl(url);
+      setShowImageCropper(false);
+
       const { data, error } = await userService.updateUserProfile(user.id, { profilePhotoUrl: url });
       if (error) throw error;
-      if (data && data[0]) updateProfileState(data[0]);
-      setShowImageCropper(false); // Modal schließen nach erfolgreichem Upload
+      if (data && data[0]) {
+        // Lokalen Snapshot aktualisieren; kein globaler Reload nötig
+        setRenderProfile(data[0]);
+        updateProfileState(data[0]);
+      }
     } catch (e: any) {
       setAvatarError('Fehler beim Hochladen des Profilbilds!');
+      // Optimistische URL zurücksetzen bei Fehler
+      setOptimisticAvatarUrl(null);
       throw e; // Damit ProfileImageCropper den Fehler mitbekommt
     } finally {
       setAvatarUploading(false);
@@ -1488,153 +1502,7 @@ function OwnerDashboardPage() {
 
                 </div>
                 
-                {/* Zweite Spalte: Kontaktdaten */}
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Kontaktdaten</h3>
-                    <button
-                      type="button"
-                      className="p-2 text-gray-400 hover:text-primary-600 transition-colors"
-                      aria-label="Kontaktdaten bearbeiten"
-                      onClick={() => setEditData(!editData)}
-                    >
-                      <Edit className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  
-                  {/* Kontaktdaten */}
-                  <div className="space-y-3">
-                    {!editData ? (
-                      <>
-                        <div className="flex items-center gap-3">
-                          <MapPin className="h-4 w-4 text-gray-500" />
-                          <div className="text-gray-700">
-                            {userProfile?.street && (
-                              <div>{userProfile.street}</div>
-                            )}
-                            <div>
-                              {userProfile?.plz && userProfile?.city
-                                ? `${userProfile.plz} ${userProfile.city}`
-                                : userProfile?.plz
-                                ? userProfile.plz
-                                : userProfile?.city
-                                ? userProfile.city
-                                : '—'}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Phone className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-700">{userProfile?.phone_number || '—'}</span>
-                        </div>
-                        {userProfile?.date_of_birth && (
-                          <div className="flex items-center gap-3">
-                            <Calendar className="h-4 w-4 text-gray-500" />
-                            <span className="text-gray-700">
-                              {new Date(userProfile.date_of_birth).toLocaleDateString('de-DE')}
-                            </span>
-                          </div>
-                        )}
-                        {userProfile?.gender && (
-                          <div className="flex items-center gap-3">
-                            <User className="h-4 w-4 text-gray-500" />
-                            <span className="text-gray-700">
-                              {userProfile.gender === 'male' ? 'Männlich' : 
-                               userProfile.gender === 'female' ? 'Weiblich' : 
-                               userProfile.gender === 'other' ? 'Divers' : 
-                               userProfile.gender === 'prefer_not_to_say' ? 'Keine Angabe' : userProfile.gender}
-                            </span>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Straße & Hausnummer</label>
-                          <input
-                            type="text"
-                            className="input w-full"
-                            value={ownerData.street}
-                            onChange={e => setOwnerData(d => ({ ...d, street: e.target.value }))}
-                            placeholder="Straße und Hausnummer"
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
-                            <input
-                              type="text"
-                              className="input w-full"
-                              value={ownerData.plz}
-                              onChange={e => setOwnerData(d => ({ ...d, plz: e.target.value }))}
-                              placeholder="PLZ"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Ort</label>
-                            <input
-                              type="text"
-                              className="input w-full"
-                              value={ownerData.location}
-                              onChange={e => setOwnerData(d => ({ ...d, location: e.target.value }))}
-                              placeholder="Ort"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Telefonnummer</label>
-                          <input
-                            type="tel"
-                            className="input w-full"
-                            value={ownerData.phoneNumber}
-                            onChange={e => handlePhoneNumberChange(e.target.value, 'phoneNumber')}
-                            placeholder="+49 123 456789"
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Geburtsdatum</label>
-                            <input
-                              type="date"
-                              className="input w-full"
-                              value={ownerData.dateOfBirth}
-                              onChange={e => setOwnerData(d => ({ ...d, dateOfBirth: e.target.value }))}
-                              max={new Date().toISOString().split('T')[0]}
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Geschlecht</label>
-                            <select
-                              className="input w-full"
-                              value={ownerData.gender}
-                              onChange={e => setOwnerData(d => ({ ...d, gender: e.target.value }))}
-                            >
-                              <option value="">Bitte wählen</option>
-                              <option value="male">Männlich</option>
-                              <option value="female">Weiblich</option>
-                              <option value="other">Divers</option>
-                              <option value="prefer_not_to_say">Keine Angabe</option>
-                            </select>
-                          </div>
-                        </div>
-                        <div className="flex gap-2 pt-2">
-                          <button
-                            className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 text-sm"
-                            onClick={handleSaveOwnerData}
-                          >
-                            Speichern
-                          </button>
-                          <button
-                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
-                            onClick={handleCancelEdit}
-                          >
-                            Abbrechen
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                {/* Kontaktdaten entfernt – jetzt eigener Tab */}
               </div>
             </div>
           </div>
@@ -1677,6 +1545,16 @@ function OwnerDashboardPage() {
               >
                 <PawPrint className="h-4 w-4 inline mr-2" />
                 Meine Tiere
+              </button>
+              <button
+                onClick={() => setActiveTab('kontaktdaten')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === 'kontaktdaten'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Kontaktdaten
               </button>
               <button
                 onClick={() => setActiveTab('einstellungen')}
@@ -1880,6 +1758,10 @@ function OwnerDashboardPage() {
               </div>
             </div>
           </>
+        )}
+
+        {activeTab === 'kontaktdaten' && (
+          <OwnerContactTab />
         )}
 
         {activeTab === 'tiere' && (

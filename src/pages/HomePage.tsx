@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Search, MapPin, Clock, Shield, Heart, Dog, Cat, Rabbit, Calendar, Briefcase, PawPrint, CheckCircle, X, ChevronDown, Sparkles, Gift, Users } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Search, MapPin, Clock, Heart, Briefcase, PawPrint, CheckCircle, X, ChevronDown, UserCheck } from 'lucide-react';
 import Button from '../components/ui/Button';
 import MultiDaySelector from '../components/ui/MultiDaySelector';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchStarted, setSearchStarted] = useState(false);
   const [showMessage, setShowMessage] = useState(!!location.state?.message);
   const [formLocation, setFormLocation] = useState('');
   const [service, setService] = useState('');
@@ -71,10 +70,10 @@ export default function HomePage() {
             {/* Linke Seite: Text */}
             <div className="space-y-6 animate-fade-in">
               <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900">
-                Liebevolle Betreuung für <span className="text-primary-600">dein Haustier</span>
+                Finde liebevolle <span className="text-primary-600">Tierbetreuung</span> in deiner Nähe
               </h1>
               <p className="text-lg md:text-xl text-gray-700 max-w-xl">
-                Finde vertrauensvolle und erfahrene Tierbetreuer in deiner Nähe. Dein Liebling verdient die beste Pflege, wenn du nicht da bist.
+                tigube verbindet Tierhalter:innen mit geprüften, engagierten Betreuungspersonen. Egal ob Hund, Katze oder Kleintier – hier findest du zuverlässige Hilfe für Alltag, Urlaub & Notfälle.
               </p>
               <form onSubmit={handleSearch} className="bg-white rounded-xl p-4 shadow-md grid grid-cols-1 md:grid-cols-4 gap-4 max-w-xl">
 
@@ -179,90 +178,208 @@ export default function HomePage() {
       <section className="py-16 bg-gray-50">
         <div className="container-custom">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">So funktioniert tigube</h2>
+            <h2 className="text-3xl font-bold mb-4">So funktioniert tigube?</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+            {/* Für Tierhalter:innen */}
+            <div className="bg-white rounded-xl p-8 shadow-md">
+              <h3 className="text-2xl font-bold mb-6 text-gray-900">Für Tierhalter:innen</h3>
+              <p className="text-gray-700 mb-6">
+                Finde zuverlässige Betreuung für dein Tier – einfach, sicher und transparent.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Einfach & kostenlos registrieren</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Betreuungspersonen nach Ort, Tierart & Verfügbarkeit filtern</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Alle Betreuer:innen geprüft & gebrieft</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Transparente Profile</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Ideal für Berufstätige, Urlaube, Notfälle oder den Alltag</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            {/* Für Betreuungspersonen */}
+            <div className="bg-white rounded-xl p-8 shadow-md">
+              <h3 className="text-2xl font-bold mb-6 text-gray-900">Für Betreuungspersonen</h3>
+              <p className="text-gray-700 mb-6">
+                Werde Teil unserer Community und biete deine Tierbetreuung an.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Sichtbar werden für lokale Tierhalter</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Eigene Betreuung anbieten & Profil gestalten</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Kostenlos starten – mit professioneller Unterstützung</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Verlässliches Matching & direkte Anfragen</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-6 h-6 text-primary-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-gray-900">Teil einer wachsenden Community</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Warum tigube? */}
+      <section className="py-16 bg-white">
+        <div className="container-custom">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Warum tigube?</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-            Die passende Betreuung für dein Tier zu finden, ist mit tigube ganz einfach.
-            Egal ob du erstmal nur stöbern oder direkt Kontakt aufnehmen willst – folge einfach diesen drei Schritten:
+              Vertrauen, Erfahrung und Leidenschaft für Tiere
             </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <StepCard
-              number="1"
-              title="Betreuer entdecken – kostenlos"
-              description="Durchstöbere Profile von verifizierten Tierbetreuern in deiner Nähe – ganz ohne Anmeldung.
-Filtere nach Service, Preis und Verfügbarkeit – und finde passende Angebote."
-              beta={false}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <FeatureCard
+              icon={<UserCheck className="w-8 h-8" />}
+              title="Geprüfte Betreuungspersonen"
+              description="Alle Tierbetreuer:innen werden vor Freischaltung sorgfältig ausgewählt, geprüft und geschult"
             />
-            <StepCard
-              number="2"
-              title="Direkt Kontakt aufnehmen"
-              description="Melde dich an, um direkt mit Betreuern zu chatten. 
-Mit dem Premium-Plan erhältst du unlimited Kontakte und weitere Features für die beste Betreuungserfahrung."
-              beta={false}
+            <FeatureCard
+              icon={<PawPrint className="w-8 h-8" />}
+              title="Für alle Tiere"
+              description="Ob Hund, Katze oder Meerschweinchen – bei tigube findest du passende Unterstützung"
             />
-            <StepCard
-              number="3"
-              title="Entspannt zurücklehnen"
-              description="Sobald dein Tier in Betreuung ist, kannst du dich entspannt zurücklehnen.
-Dank Profil-Bewertungen und sicheren Abläufen bekommst du genau die Fürsorge, die du dir wünschst – verlässlich & tiergerecht."
-              beta={false}
+            <FeatureCard
+              icon={<Clock className="w-8 h-8" />}
+              title="Alltag & Notfall"
+              description="Ob regelmäßig oder spontan – wir bringen euch zuverlässig zusammen"
+            />
+            <FeatureCard
+              icon={<Heart className="w-8 h-8" />}
+              title="Erfahrung aus der Praxis"
+              description="tigube wurde von echten Tierprofis entwickelt – mit Herz, Verstand und jahrzehntelanger Erfahrung"
             />
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Von Tiermenschen für Tiermenschen */}
+      <section className="py-16 bg-gray-50">
+        <div className="container-custom">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold mb-4">Von Tiermenschen für Tiermenschen</h2>
+          </div>
+          
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="p-8 lg:p-12">
+              {/* Bilder Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 mb-12">
+                <div className="relative aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                  <img
+                    src="/Image/tigube_Gabriel_Haaga.jpg"
+                    alt="Gabriel Haaga"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="relative aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                  <img
+                    src="/Image/tigube_Tamara_Pfaff.jpg"
+                    alt="Tamara Pfaff"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="relative aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                  <img
+                    src="/Image/Boxer_Hund_Luna.jpg"
+                    alt="Luna - Boxer Hund"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+              
+              {/* Text */}
+              <div className="max-w-3xl mx-auto">
+                <p className="text-gray-700 mb-4 text-lg leading-relaxed">
+                  Mara und Gabriel haben tigube gegründet, denn sie wissen aus erster Hand, wie schwer es sein kann, gute Betreuung für geliebte Vierbeiner zu finden.
+                </p>
+                <p className="text-gray-700 mb-4 text-lg leading-relaxed">
+                  Aus ihrer langjährigen Arbeit in der eigenen Hundepension und Katzenbetreuung entstand der Wunsch, eine digitale Lösung zu schaffen – zuverlässig, menschlich und professionell.
+                </p>
+                <p className="text-gray-700 text-lg leading-relaxed">
+                  Mit über einem Dutzend Aus- und Weiterbildungen (u. a. Hundetraining, Problemhundeberatung, Tierernährung, Sachkundenachweise, Tierschutzgesetz, …) bringen sie nicht nur Fachwissen, sondern echte Leidenschaft mit.
+                </p>
+              </div>
+            </div>
+            <div className="bg-primary-50 px-8 lg:px-12 py-6">
+              <p className="text-center text-gray-700 italic">
+                tigube ist das Ergebnis dieser Vision: eine Plattform, die Vertrauen schafft – und Tierliebe mit Alltag vereinbar macht.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Häufige Fragen */}
       <section className="py-16 bg-white">
         <div className="container-custom">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Das sagen unsere Kunden</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-            Zahlreiche Tierhalter vertrauen auf tigube. So berichten sie über ihre Erfahrungen:
-            </p>
+            <h2 className="text-3xl font-bold mb-4">Häufige Fragen</h2>
           </div>
           
-          <div className="relative">
-            {/* Preview Overlay */}
-            <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-10 flex items-center justify-center rounded-xl">
-              <div className="text-center p-8 max-w-md">
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-bold px-4 py-2 rounded-full inline-block mb-4 animate-pulse">
-                  🔜 Bald verfügbar
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Echte Bewertungen folgen!</h3>
-                <p className="text-gray-600 text-sm">
-                  Sobald die ersten Beta-Tester ihre Erfahrungen gemacht haben, erscheinen hier echte Bewertungen von Tierhaltern.
-                </p>
-                <div className="mt-4 text-xs text-gray-500">
-                  (Vorschau: So werden Bewertungen später aussehen)
-                </div>
-              </div>
-            </div>
-            
-            {/* Mock Testimonials (als Vorschau) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 opacity-60">
-              <TestimonialCard
-                quote="Maria war großartig mit meinem ängstlichen Hund aus dem Tierschutz! Sie hat bei jedem Spaziergang Fotos geschickt und alle Anweisungen perfekt befolgt."
-                author="Laura S."
-                location="Berlin"
-                imageSrc="https://images.pexels.com/photos/3680219/pexels-photo-3680219.jpeg?auto=compress&cs=tinysrgb&w=100"
-                rating={5}
-              />
-              <TestimonialCard
-                quote="Einen vertrauenswürdigen Katzensitter zu finden war früher so stressig. Dank tigube kann ich jetzt sorgenfrei reisen, weil meine Katzen in guten Händen sind."
-                author="Michael T."
-                location="München"
-                imageSrc="https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=100"
-                rating={5}
-              />
-              <TestimonialCard
-                quote="Unser Betreuer Thomas behandelt unseren Hund wie seinen eigenen. Die Buchung ist unkompliziert und das gute Gefühl unbezahlbar."
-                author="Sophie K."
-                location="Hamburg"
-                imageSrc="https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=100"
-                rating={5}
-              />
-            </div>
+          <div className="max-w-3xl mx-auto space-y-6">
+            <FAQItem
+              question="Welche Tiere kann ich betreuen lassen?"
+              answer="tigube vermittelt Betreuung für Hunde, Katzen und andere Kleintiere."
+            />
+            <FAQItem
+              question="Wie finde ich jemanden in meiner Nähe?"
+              answer="Mit deiner Postleitzahl und Filtern zur Tierart und Verfügbarkeit findest du passende Betreuung in deiner Umgebung."
+            />
+            <FAQItem
+              question="Wie wird sichergestellt, dass die Sitter:innen geeignet sind?"
+              answer="Alle Betreuungspersonen durchlaufen einen strukturierten Check und ein Onboarding durch das tigube-Team."
+            />
+            <FAQItem
+              question="Kann ich selbst Tierbetreuung anbieten?"
+              answer="Ja! Registriere dich als Dienstleister und erstelle dein Profil."
+            />
           </div>
         </div>
       </section>
@@ -274,10 +391,10 @@ Dank Profil-Bewertungen und sicheren Abläufen bekommst du genau die Fürsorge, 
             <div className="grid grid-cols-1 lg:grid-cols-5">
               <div className="lg:col-span-3 p-8 md:p-12">
                 <div className="flex items-center gap-2 mb-4">
-                  <h2 className="text-3xl font-bold">Bereit für Premium-Features?</h2>
+                  <h2 className="text-3xl font-bold">Bereit für mehr (Planungs-) Sicherheit im Alltag – für dich und dein Tier?</h2>
                 </div>
                 <p className="text-gray-600 mb-8 max-w-xl">
-                  Starte kostenlos mit grundlegenden Features oder upgrade zu Premium für unlimited Kontakte, erweiterte Filter und vieles mehr.
+                  tigube bringt zusammen, was zusammengehört.
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <Button 
@@ -296,7 +413,7 @@ Dank Profil-Bewertungen und sicheren Abläufen bekommst du genau die Fürsorge, 
                   </Button>
                 </div>
                 <p className="text-sm text-gray-500 mt-4">
-                  ✅ Sofortiger Zugang • ✅ Kostenlose Grundfunktionen • ✅ Jederzeit kündbar
+                  Kostenlose Registrierung • Keine versteckten Gebühren • Jederzeit kündbar
                 </p>
               </div>
               <div className="lg:col-span-2 relative hidden lg:block">
@@ -314,117 +431,48 @@ Dank Profil-Bewertungen und sicheren Abläufen bekommst du genau die Fürsorge, 
   );
 }
 
-interface ServiceCardProps {
+interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-  price: string;
 }
 
-function ServiceCard({ icon, title, description, price }: ServiceCardProps) {
+function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
-    <div className="card p-6 hover:translate-y-[-4px] transition-all duration-300">
-      <div className="rounded-full bg-primary-50 p-4 inline-flex mb-4">
+    <div className="text-center p-6">
+      <div className="rounded-full bg-primary-50 p-4 inline-flex mb-4 text-primary-600">
         {icon}
       </div>
-      <h3 className="text-xl font-semibold mb-2">{title}</h3>
-      <p className="text-gray-600 mb-4">{description}</p>
-      <p className="text-primary-600 font-medium">{price}</p>
+      <h3 className="text-xl font-semibold mb-3 text-gray-900">{title}</h3>
+      <p className="text-gray-600">{description}</p>
     </div>
   );
 }
 
-function Home(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-      <polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  );
+interface FAQItemProps {
+  question: string;
+  answer: string;
 }
 
-interface StepCardProps {
-  number: string;
-  title: string;
-  description: string;
-  beta?: boolean;
-}
+function FAQItem({ question, answer }: FAQItemProps) {
+  const [isOpen, setIsOpen] = useState(false);
 
-function StepCard({ number, title, description, beta = false }: StepCardProps) {
   return (
-    <div className="flex flex-col items-center text-center p-6 relative">
-      {beta && (
-        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-bold px-2 py-1 rounded-full transform rotate-12 shadow-md z-10">
-          ✨ GRATIS
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+      >
+        <span className="font-semibold text-gray-900">{question}</span>
+        <ChevronDown
+          className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+        />
+      </button>
+      {isOpen && (
+        <div className="px-6 py-4 bg-gray-50">
+          <p className="text-gray-700">{answer}</p>
         </div>
       )}
-      <div className={`rounded-full ${beta ? 'bg-gradient-to-r from-primary-500 to-primary-600' : 'bg-primary-500'} text-white w-12 h-12 flex items-center justify-center font-bold text-xl mb-4 ${beta ? 'shadow-lg' : ''}`}>
-        {number}
-      </div>
-      <h3 className="text-xl font-semibold mb-2">{title}</h3>
-      <p className={`${beta ? 'text-gray-700' : 'text-gray-600'}`}>{description}</p>
     </div>
-  );
-}
-
-interface TestimonialCardProps {
-  quote: string;
-  author: string;
-  location: string;
-  imageSrc: string;
-  rating: number;
-}
-
-function TestimonialCard({ quote, author, location, imageSrc, rating }: TestimonialCardProps) {
-  return (
-    <div className="card p-6">
-      <div className="flex space-x-1 mb-4">
-        {[...Array(rating)].map((_, i) => (
-          <Star key={i} className="h-5 w-5 text-accent-500 fill-accent-500" />
-        ))}
-      </div>
-      <p className="text-gray-700 mb-6">{quote}</p>
-      <div className="flex items-center">
-        <img
-          src={imageSrc}
-          alt={author}
-          className="w-12 h-12 rounded-full mr-4 object-cover"
-        />
-        <div>
-          <p className="font-medium">{author}</p>
-          <p className="text-sm text-gray-600">{location}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Star(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      {...props}
-    >
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-    </svg>
   );
 }

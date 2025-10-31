@@ -26,6 +26,7 @@ import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityConte
 import { useToast } from '../hooks/useToast';
 import ToastContainer from '../components/ui/ToastContainer';
 import { VerificationService, type VerificationDocument } from '../lib/services/verificationService';
+import CaretakerContactTab from '../components/ui/CaretakerContactTab';
 
 
 function CaretakerDashboardPage() {
@@ -34,7 +35,12 @@ function CaretakerDashboardPage() {
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const { isPremiumUser } = useSubscription();
   const { maxEnvironmentImages } = useFeatureAccess();
-  const [profile, setProfile] = useState<any>(null);
+  // Saniertes Initialprofil, verhindert Nullzugriffe in der UI während kurzer Übergänge
+  const [profile, setProfile] = useState<any>({ services_with_categories: [], animal_types: [] });
+  // Optimistische Avatar-URL für sofortige Anzeige nach Upload
+  const [optimisticAvatarUrl, setOptimisticAvatarUrl] = useState<string | null>(null);
+  // Stabiles Render-Profil (Snapshot), verhindert UI-Flackern bei kurzzeitigem Context-Reload
+  const [renderProfile, setRenderProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profileLoadAttempts, setProfileLoadAttempts] = useState(0);
@@ -51,14 +57,21 @@ function CaretakerDashboardPage() {
   // Payment Success Modal
   const { paymentSuccess, isValidating: paymentValidating, closeModal } = usePaymentSuccess();
   const [editData, setEditData] = useState(false);
-  const [caretakerData, setCaretakerData] = useState({
+  // EINFACHER ANSATZ: Ein einziger State für alle Daten
+  const [dashboardData, setDashboardData] = useState({
+    // Grunddaten
     phoneNumber: '',
-    email: user?.email || '',
+    email: '',
     plz: '',
     street: '',
     city: '',
     dateOfBirth: '',
-    gender: ''
+    gender: '',
+    firstName: '',
+    lastName: '',
+    // Flags
+    isLoading: true,
+    isEditing: false
   });
   const [emailError, setEmailError] = useState<string | null>(null);
   
@@ -76,6 +89,13 @@ function CaretakerDashboardPage() {
   const [uploadingDocuments, setUploadingDocuments] = useState(false);
   const [ausweisFile, setAusweisFile] = useState<File | null>(null);
   const [zertifikatFiles, setZertifikatFiles] = useState<File[]>([]);
+  // Synchronisiere den Snapshot immer, wenn userProfile sich ändert (auch nach Upload),
+  // damit Änderungen aus dem Backend in der UI ankommen – ohne das Rendering zu leeren
+  useEffect(() => {
+    if (userProfile) {
+      setRenderProfile(userProfile);
+    }
+  }, [userProfile]);
 
   // Overnight availability state
   const [overnightAvailability, setOvernightAvailability] = useState<Record<string, boolean>>({
@@ -95,19 +115,19 @@ function CaretakerDashboardPage() {
         const raw = sessionStorage.getItem('onboardingData');
         if (raw) {
           const parsed = JSON.parse(raw) as { userType?: 'owner' | 'caretaker'; userName?: string };
-          console.log('🔍 Checking onboarding data:', parsed);
+          
           if (parsed.userType === 'caretaker') {
-            console.log('✅ Starting caretaker onboarding for:', parsed.userName);
-            setOnboardingUserName(parsed.userName || userProfile?.first_name || '');
+            
+            setOnboardingUserName(parsed.userName || profileData?.first_name || '');
             setShowOnboarding(true);
             // Setze Flag, dass User gerade registriert wurde
             sessionStorage.setItem('wasJustRegistered', 'true');
-            console.log('🎯 Onboarding state set - showOnboarding:', true, 'userName:', parsed.userName);
+            
           }
           sessionStorage.removeItem('onboardingData');
         }
       } catch (e) {
-        console.warn('⚠️ Konnte onboardingData nicht lesen:', e);
+        
       }
     }
   }, [authLoading, user, userProfile]);
@@ -115,25 +135,19 @@ function CaretakerDashboardPage() {
   // Lade Kontaktdaten wenn userProfile verfügbar ist
   useEffect(() => {
     if (userProfile) {
-      console.log('📞 Lade Kontaktdaten aus userProfile:', {
-        phone_number: userProfile.phone_number || 'N/A',
-        plz: userProfile.plz || 'N/A',
-        street: userProfile.street || 'N/A',
-        city: userProfile.city || 'N/A'
-      });
       
       const newCaretakerData = {
-        phoneNumber: userProfile.phone_number || '',
+        phoneNumber: profileData.phone_number || '',
         email: user?.email || '',
-        plz: userProfile.plz || '',
-        street: userProfile.street || '',
-        city: userProfile.city || '',
-        dateOfBirth: userProfile.date_of_birth || '',
-        gender: userProfile.gender || ''
+        plz: profileData.plz || '',
+        street: profileData.street || '',
+        city: profileData.city || '',
+        dateOfBirth: profileData.date_of_birth || '',
+        gender: profileData.gender || ''
       };
       
-      console.log('📞 Setze caretakerData:', newCaretakerData);
-      setCaretakerData(newCaretakerData);
+      
+      setDashboardData(prev => ({ ...prev, ...newCaretakerData }));
     }
   }, [userProfile, user?.email]);
 
@@ -155,7 +169,7 @@ function CaretakerDashboardPage() {
   const handleSaveAvailability = async (newAvailability: AvailabilityState) => {
     if (!user || !profile) return;
     
-    console.log('🔄 Speichere Verfügbarkeit:', newAvailability);
+    
     
     try {
       // Konvertiere TimeSlot-Objekte zu String-Array für Datenbank
@@ -164,7 +178,7 @@ function CaretakerDashboardPage() {
         dbAvailability[day] = slots.map(slot => `${slot.start}-${slot.end}`);
       }
       
-      console.log('📊 DB-Format Verfügbarkeit:', dbAvailability);
+      
       
       const result = await caretakerProfileService.saveProfile(user.id, {
         availability: dbAvailability,
@@ -175,11 +189,16 @@ function CaretakerDashboardPage() {
         return;
       }
       
-      console.log('✅ Verfügbarkeit erfolgreich gespeichert:', result.data);
+      
       
       // Lokalen State aktualisieren
       setAvailability(newAvailability);
       setProfile((prev: any) => ({ ...prev, availability: dbAvailability }));
+      
+      // AuthContext auch aktualisieren, falls verfügbar
+      if (result.data) {
+        updateProfileState(result.data);
+      }
     } catch (error) {
       console.error('❌ Exception beim Speichern der Verfügbarkeit:', error);
     }
@@ -458,8 +477,7 @@ function CaretakerDashboardPage() {
     if (!user || !profile) return;
     
     try {
-      console.log('🔄 Speichere Leistungen...');
-      console.log('📊 Services Draft:', servicesDraft);
+      
       
       // Sammle alle aktiven Services (Standard + Custom)
       const allActiveServices: CategorizedService[] = [];
@@ -511,7 +529,7 @@ function CaretakerDashboardPage() {
         allActiveServices.push(travelService);
       }
       
-      console.log('📊 Konvertierte Services:', allActiveServices);
+      
       
       // Nur die Leistungs-Felder speichern (neue Struktur)
       const { data, error } = await caretakerProfileService.saveProfile(user.id, {
@@ -525,7 +543,7 @@ function CaretakerDashboardPage() {
         return;
       }
       
-      console.log('✅ Leistungen erfolgreich gespeichert:', data);
+      
       
       // Aktualisiere das Profil mit den neuen Daten
       setProfile((prev: any) => ({
@@ -594,8 +612,7 @@ function CaretakerDashboardPage() {
     }
     
     try {
-      console.log('🔄 Speichere Qualifikationen...');
-      console.log('📊 Qualifications Draft:', qualificationsDraft);
+      
       
       // Nur die Qualifikations-Felder speichern
       const { data, error } = await caretakerProfileService.saveProfile(user.id, {
@@ -614,7 +631,7 @@ function CaretakerDashboardPage() {
         return;
       }
       
-      console.log('✅ Qualifikationen erfolgreich gespeichert:', data);
+      
       
       // Aktualisiere das Profil mit den neuen Daten
       setProfile((prev: any) => ({
@@ -686,10 +703,6 @@ function CaretakerDashboardPage() {
   // Initialisiere Text-Drafts wenn Profil geladen wird
   useEffect(() => {
     if (profile) {
-      console.log('📝 Lade Texte aus Profil:', {
-        short_about_me: profile.short_about_me || 'N/A',
-        long_about_me: profile.long_about_me || 'N/A'
-      });
       
       // Lade Texte immer aus der Datenbank, falls vorhanden
       if (profile.short_about_me !== undefined) {
@@ -709,7 +722,7 @@ function CaretakerDashboardPage() {
     if (!user || !profile) return;
     
     try {
-      console.log('🔄 Speichere kurze Beschreibung...');
+      
       
       // Nur das shortAboutMe Feld speichern
       const { data, error } = await caretakerProfileService.saveProfile(user.id, {
@@ -721,7 +734,7 @@ function CaretakerDashboardPage() {
         return;
       }
       
-      console.log('✅ Kurze Beschreibung erfolgreich gespeichert:', data);
+      
       
       setShortDescription(newText);
       setProfile((prev: any) => ({ ...prev, short_about_me: newText }));
@@ -738,7 +751,7 @@ function CaretakerDashboardPage() {
     if (!user || !profile) return;
     
     try {
-      console.log('🔄 Speichere Über mich Beschreibung...');
+      
       
       // Nur das longAboutMe Feld speichern
       const { data, error } = await caretakerProfileService.saveProfile(user.id, {
@@ -750,7 +763,7 @@ function CaretakerDashboardPage() {
         return;
       }
       
-      console.log('✅ Über mich Beschreibung erfolgreich gespeichert:', data);
+      
       
       setAboutMe(newText);
       setProfile((prev: any) => ({ ...prev, long_about_me: newText }));
@@ -812,7 +825,7 @@ function CaretakerDashboardPage() {
         approval_requested_at: new Date().toISOString()
       }));
       
-      console.log('✅ Freigabe erfolgreich angefordert');
+      
       
       // Erfolgs-Benachrichtigung anzeigen
       showSuccess(
@@ -841,7 +854,7 @@ function CaretakerDashboardPage() {
   const handleOvernightAvailabilityChange = async (newOvernightAvailability: Record<string, boolean>) => {
     if (!user || !profile) return;
     
-    console.log('🔄 Speichere Übernachtungs-Verfügbarkeit:', newOvernightAvailability);
+    
     
     // Sofort lokalen State aktualisieren für bessere UX
     setOvernightAvailability(newOvernightAvailability);
@@ -861,7 +874,7 @@ function CaretakerDashboardPage() {
         return;
       }
       
-      console.log('✅ Übernachtungs-Verfügbarkeit erfolgreich gespeichert:', data);
+      
     } catch (error) {
       console.error('❌ Exception beim Speichern der Übernachtungs-Verfügbarkeit:', error);
       // Bei Exception: State zurücksetzen
@@ -895,12 +908,12 @@ function CaretakerDashboardPage() {
   // Hilfsfunktion: Upload eines einzelnen Bildes zu Supabase Storage
   async function uploadPhotoToSupabase(file: File, userId: string): Promise<string | null> {
     try {
-      console.log('🔄 Starte Upload für Datei:', file.name, 'User:', userId);
+      
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
       
-      console.log('📁 Dateiname:', fileName);
+      
       
       const { error: uploadError } = await supabase.storage.from('caretaker-home-photos').upload(fileName, file, { upsert: true });
       
@@ -910,12 +923,12 @@ function CaretakerDashboardPage() {
         return null;
       }
       
-      console.log('✅ Upload erfolgreich, hole Public URL...');
+      
       
       const { data: urlData } = supabase.storage.from('caretaker-home-photos').getPublicUrl(fileName);
       const publicUrl = urlData?.publicUrl || null;
       
-      console.log('🔗 Public URL:', publicUrl);
+      
       
       return publicUrl;
     } catch (error) {
@@ -979,7 +992,7 @@ function CaretakerDashboardPage() {
         return;
       }
       
-      console.log('✅ Fotos erfolgreich gespeichert:', data);
+      
       setPhotos(newPhotoList);
       setProfile((p: any) => ({ ...p, home_photos: newPhotoList }));
     } catch (error) {
@@ -1009,7 +1022,7 @@ function CaretakerDashboardPage() {
           return;
         }
         
-        console.log('✅ Foto erfolgreich gelöscht:', data);
+        
         setPhotos(newPhotoList);
         setProfile((p: any) => ({ ...p, home_photos: newPhotoList }));
       } catch (error) {
@@ -1033,7 +1046,7 @@ function CaretakerDashboardPage() {
         // Wenn kein Profil existiert, lege ein Default-Profil an, damit das Dashboard rendern kann
         let ensuredProfile = data as any;
         if (!ensuredProfile) {
-          console.log('No caretaker profile found, creating default profile for user:', user.id);
+          
           // Default-Verfügbarkeit in DB-Format erzeugen
           const dbDefaultAvailability: Record<string, string[]> = {};
           for (const [day, slots] of Object.entries(defaultAvailability)) {
@@ -1067,7 +1080,7 @@ function CaretakerDashboardPage() {
           if (createError) {
             console.error('Failed to create default caretaker profile:', createError);
             // Fallback: Erstelle ein lokales Profil-Objekt ohne DB-Speicherung
-            console.log('🔄 Creating fallback profile object');
+            
             const fallbackProfile = {
               id: user.id,
               user_id: user.id,
@@ -1164,13 +1177,13 @@ function CaretakerDashboardPage() {
           
           // Lade Übernachtungs-Verfügbarkeit
           const dbOvernightAvailability = (ensuredProfile as any).overnight_availability;
-          console.log('📥 Lade Übernachtungs-Verfügbarkeit aus DB:', dbOvernightAvailability);
+          
           
           if (dbOvernightAvailability && typeof dbOvernightAvailability === 'object') {
-            console.log('✅ Übernachtungs-Verfügbarkeit gefunden, setze State:', dbOvernightAvailability);
+            
             setOvernightAvailability(dbOvernightAvailability);
           } else {
-            console.log('⚠️ Keine Übernachtungs-Verfügbarkeit in DB, setze Standard-Werte');
+            
             // Fallback: Standard-Werte setzen
             setOvernightAvailability({
               Mo: false,
@@ -1185,7 +1198,7 @@ function CaretakerDashboardPage() {
           
           // Verfügbarkeit aus der Datenbank laden und validieren
           const dbAvailability = (ensuredProfile as any).availability;
-          console.log('📥 Lade Verfügbarkeit aus DB:', dbAvailability);
+          
           
           if (dbAvailability && typeof dbAvailability === 'object') {
             // Konvertiere String-Array-Daten zu TimeSlot-Objekten
@@ -1193,7 +1206,7 @@ function CaretakerDashboardPage() {
             
             for (const day of ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']) {
               const daySlots = dbAvailability[day];
-              console.log(`📅 ${day} Slots:`, Array.isArray(daySlots) ? daySlots : 'N/A');
+              
               
               if (Array.isArray(daySlots)) {
                 validatedAvailability[day] = daySlots
@@ -1216,11 +1229,11 @@ function CaretakerDashboardPage() {
               }
             }
             
-            console.log('✅ Validierte Verfügbarkeit:', validatedAvailability);
+            
             setAvailability(validatedAvailability);
           } else {
             // Falls keine Verfügbarkeit in der DB, verwende leere Verfügbarkeit
-            console.log('⚠️ Keine Verfügbarkeit in DB gefunden, verwende Default');
+            
             setAvailability(defaultAvailability);
           }
       } catch (err) {
@@ -1240,7 +1253,7 @@ function CaretakerDashboardPage() {
   useEffect(() => {
     const ensureProfileLoaded = async () => {
       if (user && !userProfile && !authLoading && profileLoadAttempts < 5) {
-        console.log(`🔄 CaretakerDashboard: userProfile missing, attempt ${profileLoadAttempts + 1}/5`);
+        
         setProfileLoadAttempts(prev => prev + 1);
         
         // Verzögerung zwischen Versuchen
@@ -1251,9 +1264,10 @@ function CaretakerDashboardPage() {
           const { data: freshProfile, error } = await userService.getUserProfile(user.id);
           
           if (!error && freshProfile) {
-            console.log('✅ CaretakerDashboard: Profile manually reloaded:', freshProfile);
-                         // Zwinge einen Re-Render durch setzen der careTakerData
-             setCaretakerData({
+            
+                         // Zwinge einen Re-Render durch setzen der dashboardData
+             setDashboardData(prev => ({
+               ...prev,
                phoneNumber: freshProfile.phone_number || '',
                email: user.email || '',
                plz: freshProfile.plz || '',
@@ -1261,7 +1275,7 @@ function CaretakerDashboardPage() {
                city: freshProfile.city || '',
                dateOfBirth: freshProfile.date_of_birth || '',
                gender: freshProfile.gender || ''
-             });
+             }));
           }
         } catch (error) {
           console.error('❌ CaretakerDashboard: Failed to manually reload profile:', error);
@@ -1271,6 +1285,39 @@ function CaretakerDashboardPage() {
 
     ensureProfileLoaded();
   }, [user, userProfile, profileLoadAttempts]); // authLoading entfernt - verursacht Re-Renders beim Tab-Wechsel
+
+  // EINFACHER ANSATZ: Lade Daten einmal beim Start
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      if (!user || !userProfile) {
+        
+        return;
+      }
+
+      
+      
+      setDashboardData({
+        phoneNumber: profileData.phone_number || '',
+        email: user.email || '',
+        plz: profileData.plz || '',
+        street: profileData.street || '',
+        city: profileData.city || '',
+        dateOfBirth: profileData.date_of_birth || '',
+        gender: profileData.gender || '',
+        firstName: profileData.first_name || '',
+        lastName: profileData.last_name || '',
+        isLoading: false,
+        isEditing: false
+      });
+      
+      
+    };
+
+    loadDashboardData();
+  }, [user, userProfile]);
+
+  // Entfernt: Real-time Subscription verursacht Konflikte mit Frontend-Save-Operationen
+  // Stattdessen verlassen wir uns auf die AuthContext Real-time Updates
 
   // Profilbild-Upload - Robuste Version wie im OwnerDashboard
   async function uploadProfilePhoto(file: File): Promise<string> {
@@ -1290,173 +1337,147 @@ function CaretakerDashboardPage() {
 
   const handleCroppedImageSave = async (croppedImageUrl: string) => {
     if (!user) return;
-    
-    console.log('🔄 Starte Profilbild-Upload für User:', user.id);
+    console.log('🖼️ Starting profile image save...');
     setAvatarUploading(true);
     setAvatarError(null);
-    
+
     try {
       // Konvertiere Data URL zu Blob
-      console.log('📸 Konvertiere Data URL zu Blob...');
+      console.log('📸 Converting image to blob...');
       const response = await fetch(croppedImageUrl);
       if (!response.ok) {
         throw new Error('Fehler beim Laden des Bildes');
       }
-      
+
       const blob = await response.blob();
       if (!blob || blob.size === 0) {
         throw new Error('Ungültiges Bild: Leere Datei');
       }
       const file = new File([blob], `profile-${user.id}-${Date.now()}.jpg`, { type: 'image/jpeg' });
-      
-      console.log('📤 Lade Bild zu Supabase hoch...');
+
+      console.log('☁️ Uploading to Supabase...');
       const url = await uploadProfilePhoto(file);
-      console.log('✅ Bild erfolgreich hochgeladen:', url);
-      
-      console.log('💾 Aktualisiere User-Profil in der Datenbank...');
+
+      // WICHTIG: Optimistische URL sofort setzen und Modal schließen
+      setOptimisticAvatarUrl(url);
+      setShowImageCropper(false);
+
+      console.log('💾 Updating profile in database...');
       const { data, error } = await userService.updateUserProfile(user.id, { profilePhotoUrl: url });
-      
+
       if (error) {
         console.error('❌ Fehler beim Aktualisieren des Profils:', error);
-        // NICHT throw error - das würde das Dashboard zum Absturz bringen
         setAvatarError('Fehler beim Aktualisieren des Profils: ' + error.message);
         return;
       }
-      
+
       if (data && data[0]) {
-        console.log('✅ Profil erfolgreich aktualisiert:', data[0]);
-        // Verwende updateProfileState wie im OwnerDashboardPage - das funktioniert dort stabil
-        updateProfileState(data[0]);
-      } else {
-        console.warn('⚠️ Keine Daten beim Update zurückgegeben');
-        // Trotzdem das Modal schließen, da das Bild hochgeladen wurde
-        console.log('🔄 Verwende Fallback: Aktualisiere nur den lokalen State');
+        // Aktualisiere nur den lokalen Snapshot, kein globaler Context-Reload
+        console.log('✅ Profile updated successfully');
+        setRenderProfile(data[0]);
       }
-      
-      console.log('🎯 Schließe Image Cropper Modal');
-      setShowImageCropper(false);
-      
+
+      console.log('✅ Profile image save completed');
     } catch (e: any) {
       console.error('❌ Fehler beim Profilbild-Upload:', e);
       setAvatarError('Fehler beim Hochladen des Profilbilds: ' + (e.message || 'Unbekannter Fehler'));
-      // NICHT throw e - das würde das Dashboard zum Absturz bringen
+      // Bei Fehler: optimistische URL zurücksetzen
+      setOptimisticAvatarUrl(null);
     } finally {
-      console.log('🏁 Beende Upload-Prozess');
+      console.log('🏁 Finishing profile image save');
       setAvatarUploading(false);
     }
   };
 
-  const handlePhoneNumberChange = (value: string) => {
-    const phoneRegex = /^[+\d\s-]*$/;
-    if (phoneRegex.test(value)) {
-      setCaretakerData(d => ({ ...d, phoneNumber: value }));
-    }
+  // NEUE EINFACHE INPUT-HANDLER
+  const handleInputChange = (field: string, value: string) => {
+    
+    setDashboardData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
-  const handleEmailChange = (value: string) => {
-    setCaretakerData(d => ({ ...d, email: value }));
-    if (value.trim() === '') {
-      setEmailError('E-Mail-Adresse ist ein Pflichtfeld');
-    } else if (!/^\S+@\S+\.\S+$/.test(value)) {
-      setEmailError('Bitte gib eine gültige E-Mail-Adresse ein');
-    } else {
-      setEmailError(null);
-    }
-  };
-  const handleSaveCaretakerData = async () => {
+  // NEUER EINFACHER SAVE-HANDLER
+  const handleSaveDashboardData = async () => {
     if (!user) return;
 
     try {
-      console.log('🔄 Speichere Kontaktdaten...');
-      console.log('📊 Aktuelle Daten:', caretakerData);
-      console.log('📊 UserProfile:', userProfile);
-
-      // Prepare data for updateProfile
-      const dataToUpdate: { [key: string]: any } = {};
-
-      // Only include fields that have changed
-      if (caretakerData.phoneNumber !== (userProfile?.phone_number || '')) {
-        dataToUpdate.phoneNumber = caretakerData.phoneNumber;
-        console.log('📝 PhoneNumber geändert:', caretakerData.phoneNumber);
-      }
       
-      if (caretakerData.email !== (userProfile?.email || '')) {
-        dataToUpdate.email = caretakerData.email;
-        console.log('📝 Email geändert:', caretakerData.email);
-      }
+
+      // Daten für Update vorbereiten
+      const dataToUpdate = {
+        phoneNumber: dashboardData.phoneNumber,
+        email: dashboardData.email,
+        plz: dashboardData.plz,
+        street: dashboardData.street,
+        city: dashboardData.city,
+        dateOfBirth: dashboardData.dateOfBirth || null,
+        gender: dashboardData.gender || null,
+        firstName: dashboardData.firstName,
+        lastName: dashboardData.lastName
+      };
+
       
-      if (caretakerData.street !== (userProfile?.street || '')) {
-        dataToUpdate.street = caretakerData.street;
-        console.log('📝 Street geändert:', caretakerData.street);
-      }
-      
-      if (caretakerData.dateOfBirth !== (userProfile?.date_of_birth || '')) {
-        dataToUpdate.dateOfBirth = caretakerData.dateOfBirth || null;
-        console.log('📝 DateOfBirth geändert:', caretakerData.dateOfBirth);
-      }
-      
-      if (caretakerData.gender !== (userProfile?.gender || '')) {
-        dataToUpdate.gender = caretakerData.gender || null;
-        console.log('📝 Gender geändert:', caretakerData.gender);
-      }
-
-      // Handle PLZ and City logic
-      const plzChanged = caretakerData.plz !== (userProfile?.plz || '');
-      const cityChanged = caretakerData.city !== (userProfile?.city || '');
-
-      if (plzChanged || cityChanged) {
-        // Add PLZ and City to dataToUpdate for users table
-        dataToUpdate.plz = caretakerData.plz;
-        dataToUpdate.city = caretakerData.city; // Verwende 'city' statt 'location'
-        console.log('📝 PLZ/City geändert:', caretakerData.plz, caretakerData.city);
-      }
-
-      // If no fields have changed, exit without saving
-      if (Object.keys(dataToUpdate).length === 0) {
-        console.log('ℹ️ Keine Änderungen, beende ohne Speichern');
-        setEditData(false);
-        return;
-      }
-
-      console.log('📤 Daten zum Speichern:', dataToUpdate);
 
       // Import userService
       const { userService } = await import('../lib/supabase/db');
 
-      // Call the service to update the user profile
+      // Speichere in DB
       const { data: updatedProfile, error: updateError } = await userService.updateUserProfile(user.id, dataToUpdate);
 
       if (updateError) {
-        console.error('❌ Fehler beim Speichern der Kontaktdaten:', updateError);
-        // Zeige Fehler an, aber stürze nicht ab
+        console.error('❌ Fehler beim Speichern:', updateError);
         alert('Fehler beim Speichern: ' + updateError.message);
         return;
       }
 
-      console.log('✅ Kontaktdaten erfolgreich gespeichert:', updatedProfile);
       
-      // Aktualisiere den lokalen State mit den neuen Daten
+      
       if (updatedProfile && updatedProfile[0]) {
-        updateProfileState(updatedProfile[0]);
-        console.log('🔄 Lokaler State aktualisiert');
+        const newProfile = updatedProfile[0];
+        
+        // AuthContext aktualisieren
+        updateProfileState(newProfile);
+        
+        // Dashboard-Daten mit DB-Response aktualisieren
+        setDashboardData(prev => ({
+          ...prev,
+          phoneNumber: newProfile.phone_number || '',
+          email: newProfile.email || user.email || '',
+          plz: newProfile.plz || '',
+          street: newProfile.street || '',
+          city: newProfile.city || '',
+          dateOfBirth: newProfile.date_of_birth || '',
+          gender: newProfile.gender || '',
+          firstName: newProfile.first_name || '',
+          lastName: newProfile.last_name || '',
+          isEditing: false
+        }));
+        
+        
       }
       
       setEditData(false);
     } catch (e) {
-      console.error('❌ Exception beim Speichern der Kontaktdaten:', e);
-      // Zeige Fehler an, aber stürze nicht ab
-      alert('Unerwarteter Fehler beim Speichern der Kontaktdaten');
+      console.error('❌ Exception beim Speichern:', e);
+      alert('Unerwarteter Fehler beim Speichern');
     }
   };
   const handleCancelEdit = () => {
-    setCaretakerData({
+    // Zurücksetzen auf ursprüngliche Werte
+    setDashboardData(prev => ({
+      ...prev,
       phoneNumber: userProfile?.phone_number || '',
       email: user?.email || '',
       plz: userProfile?.plz || '',
       street: userProfile?.street || '',
       city: userProfile?.city || '',
       dateOfBirth: userProfile?.date_of_birth || '',
-      gender: userProfile?.gender || ''
-    });
+      gender: userProfile?.gender || '',
+      firstName: userProfile?.first_name || '',
+      lastName: userProfile?.last_name || '',
+      isEditing: false
+    }));
     setEditData(false);
   };
 
@@ -1483,18 +1504,18 @@ function CaretakerDashboardPage() {
     return 'NN';
   }
 
-  // Profilquelle: userProfile (users-Tabelle) - wie im OwnerDashboardPage!
-  const profileData = userProfile || fallbackProfile;
+  // Profilquelle: bevorzugt stabilen Snapshot, dann Context, dann Fallback
+  const profileData = renderProfile || userProfile || fallbackProfile;
   const fullName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || profileData.email;
   const initials = getInitials(profileData.first_name, profileData.last_name);
   // Sichere Avatar-URL mit Fallback für fehlerhafte URLs
   const getAvatarUrl = () => {
-    const profileUrl = profileData.profile_photo_url || profileData.avatar_url;
-    if (profileUrl && 
-        !profileUrl.includes('undefined') && 
-        !profileUrl.includes('null') && 
-        profileUrl.trim() !== '') {
-      return profileUrl;
+    const preferredUrl = optimisticAvatarUrl || profileData.profile_photo_url || profileData.avatar_url;
+    if (preferredUrl && 
+        !preferredUrl.includes('undefined') && 
+        !preferredUrl.includes('null') && 
+        preferredUrl.trim() !== '') {
+      return preferredUrl;
     }
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=f3f4f6&color=374151&length=2`;
   };
@@ -1502,7 +1523,7 @@ function CaretakerDashboardPage() {
   const avatarUrl = getAvatarUrl();
 
   // Tab-Navigation für Übersicht/Fotos
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften'>('uebersicht');
+  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'kontaktdaten' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften' | 'verfuegbarkeit'>('uebersicht');
   
   // Scroll-Position-Persistierung entfernt - Browser sollte das automatisch handhaben
   // Das Problem liegt woanders - wahrscheinlich an anderen useEffect-Hooks die Re-Renders verursachen
@@ -1602,9 +1623,7 @@ function CaretakerDashboardPage() {
   const handleRespondToReview = async (reviewId: string) => {
     if (!responseText.trim()) return;
     
-    console.log('🔄 Speichere Antwort für Review:', reviewId);
-    console.log('📝 Antwort-Text:', responseText.trim());
-    console.log('👤 Aktueller User:', user?.id);
+    
     
     try {
       const { data, error } = await supabase
@@ -1616,7 +1635,7 @@ function CaretakerDashboardPage() {
         .eq('id', reviewId)
         .select();
       
-      console.log('✅ Update Result:', { data, error });
+      
       
       if (error) {
         console.error('❌ Fehler beim Speichern der Antwort:', error);
@@ -1645,7 +1664,7 @@ function CaretakerDashboardPage() {
   const handleEditResponse = async (reviewId: string) => {
     if (!responseText.trim()) return;
     
-    console.log('🔄 Bearbeite Antwort für Review:', reviewId);
+    
     
     try {
       const { data, error } = await supabase
@@ -1657,7 +1676,7 @@ function CaretakerDashboardPage() {
         .eq('id', reviewId)
         .select();
       
-      console.log('✅ Edit Result:', { data, error });
+      
       
       if (error) {
         console.error('❌ Fehler beim Bearbeiten der Antwort:', error);
@@ -1977,32 +1996,7 @@ function CaretakerDashboardPage() {
     }
   };
 
-  // Robusteres Loading mit Profile-Check
-  const isReallyLoading = authLoading || loading || (user && !profile && profileLoadAttempts < 3);
-  
-  if (isReallyLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center">
-          <LoadingSpinner />
-          {user && !profile && profileLoadAttempts > 0 && (
-            <p className="mt-4 text-gray-600">Lade Profil-Daten... (Versuch {profileLoadAttempts}/3)</p>
-          )}
-        </div>
-      </div>
-    );
-  }
-  
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Nicht angemeldet</h2>
-          <p className="text-gray-600">Bitte melde dich an, um dein Dashboard zu sehen.</p>
-        </div>
-      </div>
-    );
-  }
+  // Entfernt: kein Early-Return bei !user, um UI-Flackern bei kurzen Context-Updates zu vermeiden
   
   if (error) {
     return (
@@ -2022,11 +2016,11 @@ function CaretakerDashboardPage() {
           userType="caretaker"
           userName={onboardingUserName}
           onComplete={() => {
-            console.log('🎯 Onboarding completed, closing modal');
+            
             setShowOnboarding(false);
           }}
           onSkip={() => {
-            console.log('⏭️ Onboarding skipped');
+            
             setShowOnboarding(false);
           }}
         />
@@ -2037,7 +2031,7 @@ function CaretakerDashboardPage() {
   // Wenn kein Caretaker-Profil existiert, zeige trotzdem das Dashboard
   // Das Profil wird automatisch erstellt, wenn der User das erste Mal speichert
   if (!profile && !loading && !showOnboarding) {
-    console.log('⚠️ No profile found, showing dashboard with empty state');
+    
     // Erstelle ein leeres Profil-Objekt für das Dashboard
     const emptyProfile = {
       id: user?.id || '',
@@ -2074,8 +2068,7 @@ function CaretakerDashboardPage() {
       updated_at: new Date().toISOString()
     };
     
-    // Setze das leere Profil und zeige das Dashboard
-    setProfile(emptyProfile);
+    // Entfernt: Kein Profile-Reset mehr, Dashboard bleibt gefüllt
     setLoading(false);
   }
   return (
@@ -2083,13 +2076,13 @@ function CaretakerDashboardPage() {
       {/* Profilkarte */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
         <div className="flex flex-col lg:flex-row items-start gap-6">
-          <div className="relative w-32 h-32 mx-auto lg:mx-0 group">
+          <div className="relative w-40 h-40 lg:w-48 lg:h-48 mx-auto lg:mx-0 group flex items-center justify-center">
             <img
               src={avatarUrl}
               alt={fullName}
-              className="w-32 h-32 rounded-xl object-cover border-4 border-primary-100 shadow"
+              className="w-[95%] h-[95%] rounded-xl object-cover border-4 border-primary-100 shadow"
               onError={(e) => {
-                console.log('🖼️ Avatar-Load-Fehler, verwende Fallback');
+                
                 const target = e.target as HTMLImageElement;
                 const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=f3f4f6&color=374151&length=2`;
                 if (target.src !== fallbackUrl) {
@@ -2097,7 +2090,7 @@ function CaretakerDashboardPage() {
                 }
               }}
               onLoad={() => {
-                console.log('🖼️ Avatar erfolgreich geladen:', avatarUrl);
+                
               }}
             />
             {/* Overlay für Edit-Button (öffnet Cropper) */}
@@ -2132,7 +2125,7 @@ function CaretakerDashboardPage() {
                       </div>
                     </div>
                     {/* Crown-Icon für Premium-Status mit Hovereffekt */}
-                    {userProfile?.premium_badge && (
+                    {profileData?.premium_badge && (
                       <div className="group relative">
                         <div className="inline-flex items-center justify-center w-6 h-6 text-amber-500 hover:text-amber-600 transition-colors">
                           <Crown className="h-4 w-4" />
@@ -2208,13 +2201,8 @@ function CaretakerDashboardPage() {
                   <div className="mb-3">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 text-primary-800">
                       {(() => {
-                        // Verwende userProfile.user_type als primäre Quelle, dann profile.dienstleister_typ als Fallback
-                        const serviceType = userProfile?.user_type || profile?.dienstleister_typ || 'caretaker';
-                        console.log('🎯 Service Type Debug:', {
-                          userProfileType: userProfile?.user_type,
-                          profileDienstleisterTyp: profile?.dienstleister_typ,
-                          finalServiceType: serviceType
-                        });
+                        // Verwende Snapshot user_type als primäre Quelle, dann profile.dienstleister_typ als Fallback
+                        const serviceType = profileData?.user_type || profile?.dienstleister_typ || 'caretaker';
                         
                         switch (serviceType) {
                           case 'hundetrainer': return '🐕 Hundetrainer';
@@ -2317,151 +2305,7 @@ function CaretakerDashboardPage() {
                   </div>
                 </div>
               </div>
-              {/* Kontaktdaten */}
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Kontaktdaten</h3>
-                  <button
-                    type="button"
-                    className="p-2 text-gray-400 hover:text-primary-600 transition-colors"
-                    aria-label="Kontaktdaten bearbeiten"
-                    onClick={() => setEditData(!editData)}
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {!editData ? (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <MapPin className="h-4 w-4 text-gray-500" />
-                        <div className="text-gray-700">
-                          {caretakerData.street && caretakerData.street.trim() && (
-                            <div>{caretakerData.street}</div>
-                          )}
-                          <div>
-                            {caretakerData.plz && caretakerData.city && caretakerData.plz.trim() && caretakerData.city.trim() ?
-                              `${caretakerData.plz} ${caretakerData.city}` :
-                              caretakerData.plz && caretakerData.plz.trim() ? caretakerData.plz :
-                              caretakerData.city && caretakerData.city.trim() ? caretakerData.city :
-                              '—'
-                            }
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        <span className="text-gray-700">{caretakerData.phoneNumber && caretakerData.phoneNumber.trim() ? caretakerData.phoneNumber : '—'}</span>
-                      </div>
-                      {caretakerData.dateOfBirth && (
-                        <div className="flex items-center gap-3">
-                          <Calendar className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-700">
-                            {new Date(caretakerData.dateOfBirth).toLocaleDateString('de-DE')}
-                          </span>
-                        </div>
-                      )}
-                      {caretakerData.gender && (
-                        <div className="flex items-center gap-3">
-                          <User className="h-4 w-4 text-gray-500" />
-                          <span className="text-gray-700">
-                            {caretakerData.gender === 'male' ? 'Männlich' : 
-                             caretakerData.gender === 'female' ? 'Weiblich' : 
-                             caretakerData.gender === 'other' ? 'Divers' : 
-                             caretakerData.gender === 'prefer_not_to_say' ? 'Keine Angabe' : caretakerData.gender}
-                          </span>
-                        </div>
-                      )}
-
-                    </>
-                  ) : (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Straße & Hausnummer</label>
-                        <input
-                          type="text"
-                          className="input w-full"
-                          value={caretakerData.street}
-                          onChange={e => setCaretakerData(d => ({ ...d, street: e.target.value }))}
-                          placeholder="Straße und Hausnummer"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">PLZ</label>
-                          <input
-                            type="text"
-                            className="input w-full"
-                            value={caretakerData.plz}
-                            onChange={e => setCaretakerData(d => ({ ...d, plz: e.target.value }))}
-                            placeholder="PLZ"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Ort</label>
-                          <input
-                            type="text"
-                            className="input w-full"
-                            value={caretakerData.city}
-                            onChange={e => setCaretakerData(d => ({ ...d, city: e.target.value }))}
-                            placeholder="Ort"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Telefonnummer</label>
-                        <input
-                          type="tel"
-                          className="input w-full"
-                          value={caretakerData.phoneNumber}
-                          onChange={e => handlePhoneNumberChange(e.target.value)}
-                          placeholder="+49 123 456789"
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Geburtsdatum</label>
-                          <input
-                            type="date"
-                            className="input w-full"
-                            value={caretakerData.dateOfBirth}
-                            onChange={e => setCaretakerData(d => ({ ...d, dateOfBirth: e.target.value }))}
-                            max={new Date().toISOString().split('T')[0]}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Geschlecht</label>
-                          <select
-                            className="input w-full"
-                            value={caretakerData.gender}
-                            onChange={e => setCaretakerData(d => ({ ...d, gender: e.target.value }))}
-                          >
-                            <option value="">Bitte wählen</option>
-                            <option value="male">Männlich</option>
-                            <option value="female">Weiblich</option>
-                            <option value="other">Divers</option>
-                            <option value="prefer_not_to_say">Keine Angabe</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                                                  <button
-                            className="px-4 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 text-sm"
-                            onClick={handleSaveCaretakerData}
-                          >
-                            Speichern
-                          </button>
-                        <button
-                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
-                          onClick={handleCancelEdit}
-                        >
-                          Abbrechen
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              {/* Kontaktdaten entfernt – jetzt eigener Tab */}
             </div>
           </div>
         </div>
@@ -2479,104 +2323,162 @@ function CaretakerDashboardPage() {
         />
       </div>
 
-      {/* Tab-Navigation (jetzt unter der Profilkarte) */}
-      <div className="mb-8">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('uebersicht')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'uebersicht'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Übersicht
-            </button>
-            <button
-              onClick={() => setActiveTab('fotos')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'fotos'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Fotos
-            </button>
-            <button
-              onClick={() => setActiveTab('texte')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'texte'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Über mich
-            </button>
-            <button
-              onClick={() => setActiveTab('kunden')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'kunden'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Kunden
-            </button>
-            <button
-              onClick={() => setActiveTab('bewertungen')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'bewertungen'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Bewertungen
-            </button>
-            <button
-              onClick={() => setActiveTab('sicherheit')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'sicherheit'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Sicherheit
-            </button>
-            <button
-              onClick={() => setActiveTab('verifizierung')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'verifizierung'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Verifizierung
-            </button>
-            <button
-              onClick={() => setActiveTab('mitgliedschaften')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'mitgliedschaften'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Mitgliedschaft
-            </button>
+      {/* Sidebar-Navigation + Content-Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <aside className="md:col-span-1">
+          <nav className="bg-white rounded-xl shadow p-4 md:sticky md:top-4">
+            <ul className="space-y-1">
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('uebersicht')}
+                  aria-current={activeTab === 'uebersicht' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'uebersicht'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Leistungen & Qualifikationen
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('kontaktdaten')}
+                  aria-current={activeTab === 'kontaktdaten' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'kontaktdaten'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Kontaktdaten
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('verfuegbarkeit')}
+                  aria-current={activeTab === 'verfuegbarkeit' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'verfuegbarkeit'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Verfügbarkeit
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('fotos')}
+                  aria-current={activeTab === 'fotos' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'fotos'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Fotos
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('texte')}
+                  aria-current={activeTab === 'texte' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'texte'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Über mich
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('kunden')}
+                  aria-current={activeTab === 'kunden' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'kunden'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Kunden
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('bewertungen')}
+                  aria-current={activeTab === 'bewertungen' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'bewertungen'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Bewertungen
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('sicherheit')}
+                  aria-current={activeTab === 'sicherheit' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'sicherheit'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Sicherheit
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('verifizierung')}
+                  aria-current={activeTab === 'verifizierung' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'verifizierung'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Verifizierung
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('mitgliedschaften')}
+                  aria-current={activeTab === 'mitgliedschaften' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'mitgliedschaften'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Mitgliedschaft
+                </button>
+              </li>
+            </ul>
           </nav>
-        </div>
-      </div>
+        </aside>
+        <section className="md:col-span-3">
       {/* Tab-Inhalt */}
       {activeTab === 'uebersicht' && (
-        <>
-          {/* 2-Spalten Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Linke Spalte */}
-            <div className="space-y-8">
-              {/* Leistungen */}
-              <div>
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><PawPrint className="w-5 h-5" /> Leistungen</h2>
-                <div className="bg-white rounded-xl shadow p-6 relative">
+        <div className="space-y-8">
+          {/* Leistungen */}
+          <div>
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><PawPrint className="w-5 h-5" /> Leistungen</h2>
+            <div className="bg-white rounded-xl shadow p-6 relative">
               {!editServices && (
                 <button className="absolute top-4 right-4 p-2 text-gray-400 hover:text-primary-600" onClick={() => setEditServices(true)} title="Bearbeiten">
                   <Edit className="h-3.5 w-3.5" />
@@ -2588,8 +2490,8 @@ function CaretakerDashboardPage() {
                   <div className="mb-4">
                     <span className="font-semibold text-gray-900">Leistungen:</span>
                     <div className="mt-2 space-y-2">
-                      {profile.services_with_categories && Array.isArray(profile.services_with_categories) && profile.services_with_categories.length > 0 ? (
-                        profile.services_with_categories.map((service: any, index: number) => {
+                      {(profile?.services_with_categories && Array.isArray(profile.services_with_categories) && profile.services_with_categories.length > 0) ? (
+                        (profile?.services_with_categories ?? []).map((service: any, index: number) => {
                           const isStandardService = defaultServices.includes(service.name);
                           const isTravelCosts = service.name === 'Anfahrkosten';
                           
@@ -2637,13 +2539,14 @@ function CaretakerDashboardPage() {
                   <div className="mb-2">
                     <span className="font-semibold text-gray-900">Tierarten:</span>
                     <div className="flex flex-wrap gap-2 mt-1">
-                      {profile.animal_types?.length ? profile.animal_types.map((a: string) => (
+                      {(profile?.animal_types && profile.animal_types.length > 0) ? (profile.animal_types as string[]).map((a: string) => (
                         <span key={a} className="bg-primary-100 text-primary-700 border border-primary-300 px-2 py-1 rounded text-xs">{a}</span>
                       )) : <span className="text-gray-400">Keine Angaben</span>}
                     </div>
                   </div>
                 </>
               ) : (
+                // Edit-Modus-Leistungen
                 <form onSubmit={e => { e.preventDefault(); handleSaveServices(); }} className="space-y-6">
                   {/* Standard-Leistungen mit Checkboxen und Preisfeldern */}
                   <div>
@@ -2899,51 +2802,13 @@ function CaretakerDashboardPage() {
                   </div>
                 </form>
               )}
-                </div>
-              </div>
             </div>
+          </div>
 
-            {/* Rechte Spalte */}
-            <div className="space-y-8">
-              {/* Verifizierungsstatus */}
-              <div>
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Shield className="w-5 h-5" /> Verifizierungsstatus</h2>
-                <div className="bg-white rounded-xl shadow p-6">
-                  <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                    <div className={`${getVerificationStatusColor(verificationStatus)}`}>
-                      {getVerificationStatusIcon(verificationStatus)}
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        Status: {getVerificationStatusText(verificationStatus)}
-                      </p>
-                      {verificationRequest?.admin_comment && (
-                        <p className="text-sm text-gray-600 mt-1">
-                          Admin-Kommentar: {verificationRequest.admin_comment}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-4">
-                    <Link 
-                      to="#" 
-                      onClick={(e) => { e.preventDefault(); setActiveTab('verifizierung'); }}
-                      className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
-                    >
-                      {verificationStatus === 'not_submitted' || verificationStatus === 'rejected' 
-                        ? 'Dokumente hochladen' 
-                        : 'Verifizierung verwalten'
-                      }
-                      <ChevronRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              {/* Qualifikationen */}
-              <div>
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Shield className="w-5 h-5" /> Qualifikationen</h2>
-                <div className="bg-white rounded-xl shadow p-6 relative">
+          {/* Qualifikationen */}
+          <div>
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Shield className="w-5 h-5" /> Qualifikationen</h2>
+            <div className="bg-white rounded-xl shadow p-6 relative">
               {!editQualifications && (
                 <button className="absolute top-4 right-4 p-2 text-gray-400 hover:text-primary-600" onClick={() => setEditQualifications(true)} title="Bearbeiten">
                   <Edit className="h-3.5 w-3.5" />
@@ -2951,7 +2816,6 @@ function CaretakerDashboardPage() {
               )}
               {!editQualifications ? (
                 <>
-                  {/* Qualifikationen */}
                   <div className="mb-4">
                     <span className="font-semibold text-gray-900">Qualifikationen:</span>
                     <div className="mt-2 space-y-2">
@@ -3043,6 +2907,7 @@ function CaretakerDashboardPage() {
                   )}
                 </>
               ) : (
+                // Edit-Modus-Qualifikationen
                 <form onSubmit={e => { e.preventDefault(); handleSaveQualifications(); }} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Qualifikationen</label>
@@ -3116,36 +2981,31 @@ function CaretakerDashboardPage() {
                   </div>
                 </form>
               )}
-                </div>
-              </div>
             </div>
           </div>
-
-          {/* Verfügbarkeit - Linke Spalte */}
-          <div className="space-y-8">
-            {/* Verfügbarkeit */}
-            <div>
-              <h2 className="text-xl font-semibold mb-2 flex items-center gap-2 text-gray-900"><Calendar className="w-5 h-5" /> Verfügbarkeit</h2>
-              <div className="bg-white rounded-xl shadow p-6">
-                <AvailabilityScheduler
-                  availability={availability}
-                  onAvailabilityChange={handleSaveAvailability}
-                />
-              </div>
-            </div>
-
-            {/* Übernachtungs-Verfügbarkeit */}
-            <div>
-              <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Moon className="w-5 h-5" /> Übernachtungen</h2>
-              <div className="bg-white rounded-xl shadow p-6">
-                <OvernightAvailabilitySelector
-                  overnightAvailability={overnightAvailability}
-                  onOvernightAvailabilityChange={handleOvernightAvailabilityChange}
-                />
-              </div>
+        </div>
+      )}
+      {activeTab === 'verfuegbarkeit' && (
+        <div className="space-y-8 mb-8">
+          <div>
+            <h2 className="text-xl font-semibold mb-2 flex items-center gap-2 text-gray-900"><Calendar className="w-5 h-5" /> Verfügbarkeit</h2>
+            <div className="bg-white rounded-xl shadow p-6">
+              <AvailabilityScheduler
+                availability={availability}
+                onAvailabilityChange={handleSaveAvailability}
+              />
             </div>
           </div>
-        </>
+          <div>
+            <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Moon className="w-5 h-5" /> Übernachtungen</h2>
+            <div className="bg-white rounded-xl shadow p-6">
+              <OvernightAvailabilitySelector
+                overnightAvailability={overnightAvailability}
+                onOvernightAvailabilityChange={handleOvernightAvailabilityChange}
+              />
+            </div>
+          </div>
+        </div>
       )}
       {activeTab === 'fotos' && (
         <div className="mb-8">
@@ -3271,6 +3131,7 @@ function CaretakerDashboardPage() {
       )}
       {activeTab === 'texte' && (
         <div className="mb-8">
+          {/* Kurze Beschreibung */}
           <div className="bg-white rounded-xl shadow p-6 mb-8 relative">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Kurze Beschreibung</h2>
@@ -3281,7 +3142,7 @@ function CaretakerDashboardPage() {
               )}
             </div>
             {!editShortDesc ? (
-              <div className="text-gray-700 min-h-[32px]">
+              <div className="text-gray-700 min-h-[32px] whitespace-pre-wrap break-words">
                 {shortDescription ? (
                   <span>{shortDescription}</span>
                 ) : (
@@ -3313,6 +3174,8 @@ function CaretakerDashboardPage() {
               </form>
             )}
           </div>
+
+          {/* Über mich */}
           <div className="bg-white rounded-xl shadow p-6 mb-8 relative">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Über mich</h2>
@@ -3323,7 +3186,7 @@ function CaretakerDashboardPage() {
               )}
             </div>
             {!editAboutMe ? (
-              <div className="text-gray-700 min-h-[32px]">
+              <div className="text-gray-700 min-h-[32px] whitespace-pre-wrap break-words">
                 {aboutMe ? (
                   <span>{aboutMe}</span>
                 ) : (
@@ -3534,7 +3397,7 @@ function CaretakerDashboardPage() {
                   setEmailChangeLoading(false);
                   return;
                 }
-                if (newEmail.trim() === user?.email) {
+                if (newEmail.trim() === (user?.email || '')) {
                   setEmailChangeError('Die neue E-Mail-Adresse muss sich von der aktuellen unterscheiden.');
                   setEmailChangeLoading(false);
                   return;
@@ -3543,7 +3406,7 @@ function CaretakerDashboardPage() {
                 try {
                   // 1. Passwort prüfen
                   const { error: signInError } = await supabase.auth.signInWithPassword({
-                    email: user.email!,
+                    email: user?.email || '',
                     password: currentPasswordForEmail
                   });
                   if (signInError) {
@@ -3903,6 +3766,9 @@ function CaretakerDashboardPage() {
           </div>
         </div>
       )}
+      {activeTab === 'kontaktdaten' && (
+        <CaretakerContactTab />
+      )}
 
       {/* Verifizierung Tab */}
       {activeTab === 'verifizierung' && (
@@ -4087,7 +3953,7 @@ function CaretakerDashboardPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">Premium Mitgliedschaft</h2>
-                      <p className="text-sm text-gray-600">Aktiv seit {userProfile?.created_at ? new Date(userProfile.created_at).toLocaleDateString('de-DE') : 'Unbekannt'}</p>
+                      <p className="text-sm text-gray-600">Aktiv seit {profileData?.created_at ? new Date(profileData.created_at).toLocaleDateString('de-DE') : 'Unbekannt'}</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -4130,7 +3996,7 @@ function CaretakerDashboardPage() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      console.log('Navigating to /mitgliedschaften');
+                      
                       window.location.href = '/mitgliedschaften';
                     }}
                     className="flex items-center gap-2"
@@ -4234,7 +4100,7 @@ function CaretakerDashboardPage() {
                 <div className="flex gap-4">
                   <button
                     onClick={() => {
-                      console.log('Link clicked: navigating to /pricing');
+                      
                       window.location.href = '/pricing';
                     }}
                     className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
@@ -4245,7 +4111,7 @@ function CaretakerDashboardPage() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      console.log('Navigating to /pricing');
+                      
                       window.location.href = '/pricing';
                     }}
                     className="flex items-center gap-2"
@@ -4291,6 +4157,10 @@ function CaretakerDashboardPage() {
         </div>
       )}
 
+      {/* Ende Content-Bereich */}
+      </section>
+      </div>
+
       {/* Payment Success Modal */}
       <PaymentSuccessModal
         isOpen={paymentSuccess.isOpen}
@@ -4307,7 +4177,7 @@ function CaretakerDashboardPage() {
         userName={onboardingUserName}
         onComplete={() => setShowOnboarding(false)}
         onSkip={() => {
-          console.log('⏭️ Onboarding skipped');
+          
           setShowOnboarding(false);
         }}
       />

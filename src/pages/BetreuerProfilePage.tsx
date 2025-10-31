@@ -46,6 +46,7 @@ interface Caretaker {
   home_photos?: string[]; // Umgebungsbilder aus dem caretaker-home-photos Bucket
   short_term_available?: boolean;
   overnight_availability?: Record<string, boolean>; // Übernachtungs-Verfügbarkeit pro Wochentag
+  short_about_me?: string; // Kurze Beschreibung für die Profilseite
 }
 
 interface Review {
@@ -578,7 +579,9 @@ function BetreuerProfilePage() {
                   ))}
               </div>
               
-              <p className="text-gray-700 mb-6">{caretaker.bio}</p>
+              <p className="text-gray-700 mb-6 whitespace-pre-wrap break-words w-full lg:w-3/5">
+                {caretaker.bio}
+              </p>
               
               {/* Antwortzeit-Anzeige */}
               <div className="mb-4">
@@ -677,8 +680,20 @@ function BetreuerProfilePage() {
             {/* About Section */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h2 className="text-lg font-semibold mb-4">Über {displayName}</h2>
-              <p className="text-gray-700 leading-relaxed">{caretaker.fullBio || caretaker.bio}</p>
+              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
+                {caretaker.fullBio || caretaker.bio}
+              </p>
             </div>
+
+            {/* Kurze Beschreibung */}
+            {caretaker.short_about_me && (
+              <div className="bg-white rounded-xl p-6 shadow-sm max-w-2xl mx-auto w-full lg:w-3/5">
+                <h2 className="text-lg font-semibold mb-4">Kurze Beschreibung</h2>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
+                  {caretaker.short_about_me}
+                </p>
+              </div>
+            )}
 
             {/* Erfahrung */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -687,7 +702,7 @@ function BetreuerProfilePage() {
                 Erfahrung
               </h2>
               {caretaker.experience_description ? (
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{caretaker.experience_description}</p>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">{caretaker.experience_description}</p>
               ) : (
                 <p className="text-gray-500 italic">Keine Erfahrungsbeschreibung hinterlegt.</p>
               )}

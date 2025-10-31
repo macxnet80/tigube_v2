@@ -131,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Callback function to load the user profile and update state
   const loadUserProfile = useCallback(async (userId: string) => {
       console.log('🔍 Starting user profile load...', userId);
-      setUserProfile(null); // Clear previous profile state while loading
+      // Entfernt: userProfile nicht mehr auf null setzen, um UI-Flush zu vermeiden
       
       // Sehr einfache Profile-Loading ohne Retry-Logik
       let profile = null;
@@ -385,21 +385,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       userId: userProfile?.id || 'none'
     });
 
-    // Verhindere, dass die UI zwischenzeitlich null rendert:
-    // Mergen wir das neue Profil mit dem alten, wo sinnvoll, statt komplett null zu setzen
+    // Verhindere, dass die UI zwischenzeitlich null rendert
     if (newProfile === null && userProfile) {
-      // Ignoriere Null-Updates, wenn bereits ein Profil vorhanden ist
       console.warn('⚠️ Ignoring transient null profile update to avoid UI flicker.');
       return;
     }
 
-    // Robuste State-Aktualisierung
-    setUserProfile(newProfile);
+    // Robuste State-Aktualisierung: Merge statt komplettes Ersetzen,
+    // um Felder wie user_type nicht zu verlieren, wenn Teildaten (z.B. caretaker_profiles) kommen
+    setUserProfile((prev) => {
+      const merged = {
+        ...(prev || {}),
+        ...(newProfile || {}),
+      } as any;
 
-    // Zusätzlicher State-Update nach kurzer Verzögerung um React zu zwingen
+      // Wichtige Felder beibehalten, wenn sie im Update fehlen
+      if (prev?.user_type && (merged.user_type === undefined || merged.user_type === null)) {
+        merged.user_type = prev.user_type;
+      }
+      if (prev?.id && (merged.id === undefined || merged.id === null)) {
+        merged.id = prev.id;
+      }
+      return merged;
+    });
+
+    // Zusätzlicher State-Update nach kurzer Verzögerung (gleiches Merge), um React zu zwingen
     setTimeout(() => {
-      setUserProfile(newProfile);
-      console.log('✅ Profile state force-updated:', newProfile?.first_name);
+      setUserProfile((prev) => {
+        const merged = {
+          ...(prev || {}),
+          ...(newProfile || {}),
+        } as any;
+        if (prev?.user_type && (merged.user_type === undefined || merged.user_type === null)) {
+          merged.user_type = prev.user_type;
+        }
+        if (prev?.id && (merged.id === undefined || merged.id === null)) {
+          merged.id = prev.id;
+        }
+        return merged;
+      });
+      console.log('✅ Profile state force-updated (merged).');
     }, 50);
 
     console.log('✅ Profile state update completed');
@@ -425,15 +450,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user?.id]);
 
-  // Real-time subscription listener
+  // Real-time subscription listener für alle User-Profile-Änderungen
   useEffect(() => {
     if (!user?.id) return;
 
-    console.log('🎯 Setting up real-time user plan listener for user:', user.id);
+    console.log('🎯 Setting up real-time user profile listener for user:', user.id);
 
-    // Subscribe nur zu user changes (da subscription-Daten jetzt in users-Tabelle)
-    const subscriptionChannel = supabase
-      .channel(`user_plan_changes_${user.id}`)
+    // Subscribe zu allen user changes
+    const userChannel = supabase
+      .channel(`user_changes_${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -443,35 +468,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           filter: `id=eq.${user.id}`
         },
         (payload) => {
-          console.log('📡 User table change (plan related):', payload);
-          // Check if plan-related fields changed
+          console.log('📡 User table change detected:', payload);
           const { new: newUser, old: oldUser } = payload;
-          const planFields = ['plan_type', 'plan_expires_at', 'premium_badge', 'show_ads', 'max_contact_requests', 'max_bookings', 'search_priority'];
           
+          // Check if plan-related fields changed
+          const planFields = ['plan_type', 'plan_expires_at', 'premium_badge', 'show_ads', 'max_contact_requests', 'max_bookings', 'search_priority'];
           const hasPlanChange = planFields.some(field => 
             newUser[field] !== oldUser[field]
           );
           
           if (hasPlanChange) {
-            console.log('🔄 Plan-related user fields changed, refreshing...');
+            console.log('🔄 Plan-related fields changed, refreshing subscription...');
             refreshSubscription();
-            
-            // Also refresh user profile to get updated fields
-            if (userProfile) {
-              loadUserProfile(user.id);
-            }
           }
+          
+          // Immer das User-Profile neu laden bei jeder Änderung
+          console.log('🔄 User profile changed, reloading profile...');
+          loadUserProfile(user.id);
         }
       )
       .subscribe((status) => {
-        console.log('📡 Real-time user plan status:', status);
+        console.log('📡 Real-time user profile status:', status);
       });
 
     return () => {
-      console.log('🧹 Cleaning up real-time user plan listener');
-      subscriptionChannel.unsubscribe();
+      console.log('🧹 Cleaning up real-time user profile listener');
+      userChannel.unsubscribe();
     };
-  }, [user?.id, refreshSubscription, userProfile]);
+  }, [user?.id, refreshSubscription, loadUserProfile]);
 
   const value: AuthContextType = {
     user,

@@ -101,21 +101,35 @@ export const userService = {
     // Konvertiere camelCase zu snake_case für die Datenbank
     if (profileData.firstName !== undefined) updateData.first_name = profileData.firstName;
     if (profileData.lastName !== undefined) updateData.last_name = profileData.lastName;
-    if (profileData.phoneNumber !== undefined) updateData.phone_number = profileData.phoneNumber;
+    // Stelle sicher, dass phoneNumber auch als leerer String gespeichert wird (wenn undefined, nicht hinzufügen)
+    if (profileData.phoneNumber !== undefined) {
+      updateData.phone_number = profileData.phoneNumber;
+    }
     if (profileData.plz !== undefined) updateData.plz = profileData.plz;
     if (profileData.city !== undefined) updateData.city = profileData.city;
     if (profileData.street !== undefined) updateData.street = profileData.street;
-    if (profileData.dateOfBirth !== undefined) updateData.date_of_birth = profileData.dateOfBirth;
+    // Stelle sicher, dass dateOfBirth korrekt behandelt wird
+    if (profileData.dateOfBirth !== undefined) {
+      updateData.date_of_birth = profileData.dateOfBirth || null;
+    }
     if (profileData.gender !== undefined) updateData.gender = profileData.gender || null;
     if (profileData.profileCompleted !== undefined) updateData.profile_completed = profileData.profileCompleted;
     if (profileData.userType !== undefined) updateData.user_type = profileData.userType;
     if (profileData.profilePhotoUrl !== undefined) updateData.profile_photo_url = profileData.profilePhotoUrl;
+
+    console.log('📝 updateUserProfile: Update-Daten:', updateData);
 
     const { data, error } = await supabase
       .from('users')
       .update(updateData)
       .eq('id', userId)
       .select();
+
+    if (error) {
+      console.error('❌ updateUserProfile Fehler:', error);
+    } else {
+      console.log('✅ updateUserProfile erfolgreich:', data);
+    }
 
     return { data, error };
   },

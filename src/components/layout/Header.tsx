@@ -93,6 +93,7 @@ function Header() {
                 <NavLink to="/blog" isActive={isActive('/blog')}>
                   tigube-Welt
                 </NavLink>
+                {/* Test-Dashboard-Link entfernt */}
                 {!isPremiumUser && (
                   <NavLink to="/mitgliedschaften" isActive={isActive('/mitgliedschaften') || isActive('/preise')}>
                     Mitgliedschaften
@@ -187,6 +188,7 @@ function Header() {
                   <MobileNavLink to="/blog" isActive={isActive('/blog')} onClick={() => setIsMenuOpen(false)}>
                     tigube-Welt
                   </MobileNavLink>
+                  {/* Test-Dashboard-Link entfernt (mobil) */}
                   {!isPremiumUser && (
                     <MobileNavLink 
                       to="/mitgliedschaften" 
