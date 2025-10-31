@@ -18,6 +18,7 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [impressionTracked, setImpressionTracked] = useState(false);
   const [impressionId, setImpressionId] = useState<string | null>(null);
+  const [imageBlocked, setImageBlocked] = useState(false);
   const bannerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
 
@@ -286,7 +287,7 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
         }}
       >
         {/* Image - für search_results quadratisch wie Profil-Karten */}
-        {advertisement.image_url && (
+        {advertisement.image_url && !imageBlocked && (
           <div className={`relative w-full ${placement === 'search_results' ? 'aspect-square' : 'h-56'} bg-gray-100`}>
             <img
               src={advertisement.image_url}
@@ -296,24 +297,37 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
                 const target = e.target as HTMLImageElement;
                 const originalUrl = advertisement.image_url || '';
                 
+                // Prüfe, ob Ad-Blocker aktiv ist (ERR_BLOCKED_BY_CLIENT)
+                const isBlockedByClient = target.complete === false && !target.naturalWidth;
+                
                 // Versuche HTTPS-Version, falls URL HTTP ist (Mixed Content Problem)
-                if (originalUrl.startsWith('http://')) {
+                // Nur wenn noch nicht bereits versucht
+                if (originalUrl.startsWith('http://') && !target.src.includes('https://')) {
                   const httpsUrl = originalUrl.replace('http://', 'https://');
-                  console.warn('HTTP-URL blockiert, versuche HTTPS:', httpsUrl);
+                  console.warn('[Werbung] HTTP-URL blockiert, versuche HTTPS:', httpsUrl);
                   target.src = httpsUrl;
                   return; // Lade HTTPS-Version neu
                 }
                 
-                // Wenn HTTPS auch fehlschlägt oder andere Probleme auftreten
-                console.error('Fehler beim Laden des Werbebildes:', {
+                // Wenn blockiert durch Ad-Blocker, zeige Warnung (kein Error)
+                if (isBlockedByClient) {
+                  console.warn('[Werbung] Bild wurde vermutlich von Ad-Blocker blockiert:', originalUrl);
+                  setImageBlocked(true);
+                  return;
+                }
+                
+                // Andere Fehler nur als Warnung loggen (nicht als Error)
+                console.warn('[Werbung] Bild konnte nicht geladen werden:', {
                   url: originalUrl,
-                  error: target.error,
-                  message: 'Bild konnte nicht geladen werden. Mögliche Ursachen: CORS-Problem, Mixed Content (HTTP auf HTTPS), oder ungültige URL.'
+                  possibleReasons: 'CORS-Problem, Mixed Content, ungültige URL oder Ad-Blocker'
                 });
-                target.style.display = 'none';
+                setImageBlocked(true);
               }}
               onLoad={() => {
-                console.log('Werbebild erfolgreich geladen:', advertisement.image_url);
+                // Nur im Debug-Modus loggen
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('[Werbung] Bild erfolgreich geladen:', advertisement.image_url);
+                }
               }}
               loading="lazy"
             />
