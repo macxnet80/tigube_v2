@@ -26,3 +26,5 @@ WHERE approval_status IS NULL
 COMMENT ON COLUMN caretaker_profiles.approval_status IS 'Status of profile approval: not_requested, pending, approved, rejected';
 
 
+
+

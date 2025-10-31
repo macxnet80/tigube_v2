@@ -83,7 +83,8 @@ SELECT
   cp.updated_at
 FROM caretaker_profiles cp
 LEFT JOIN users u ON cp.id = u.id
-WHERE u.user_type = 'caretaker';
+WHERE u.user_type = 'caretaker'
+  AND cp.approval_status = 'approved';
 
 -- Add comments to document the changes
 COMMENT ON VIEW caretaker_search_view IS 'Updated view without services and prices columns - use services_with_categories instead';

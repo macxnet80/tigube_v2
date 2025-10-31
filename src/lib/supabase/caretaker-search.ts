@@ -268,6 +268,8 @@ export async function searchCaretakers(filters?: SearchFilters): Promise<Caretak
     }
 
     // Nur freigegebene Caretaker anzeigen
+    // Das View filtert bereits nach approval_status = 'approved', aber dieser Filter
+    // stellt sicher, dass auch bei View-Änderungen nur approved Betreuer angezeigt werden
     query = query.eq('approval_status', 'approved');
 
     // Preis-Filter wird client-seitig angewendet, da die Preise in JSON-Format sind

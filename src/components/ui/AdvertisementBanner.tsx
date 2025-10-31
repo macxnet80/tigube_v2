@@ -290,12 +290,32 @@ const AdvertisementBanner: React.FC<AdvertisementBannerProps> = ({
           <div className={`relative w-full ${placement === 'search_results' ? 'aspect-square' : 'h-56'} bg-gray-100`}>
             <img
               src={advertisement.image_url}
-              alt={advertisement.title}
+              alt={advertisement.title || 'Werbung'}
               className={`w-full h-full object-contain object-center ${placement === 'search_results' ? 'rounded-t-xl' : ''}`}
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
+                const originalUrl = advertisement.image_url || '';
+                
+                // Versuche HTTPS-Version, falls URL HTTP ist (Mixed Content Problem)
+                if (originalUrl.startsWith('http://')) {
+                  const httpsUrl = originalUrl.replace('http://', 'https://');
+                  console.warn('HTTP-URL blockiert, versuche HTTPS:', httpsUrl);
+                  target.src = httpsUrl;
+                  return; // Lade HTTPS-Version neu
+                }
+                
+                // Wenn HTTPS auch fehlschlägt oder andere Probleme auftreten
+                console.error('Fehler beim Laden des Werbebildes:', {
+                  url: originalUrl,
+                  error: target.error,
+                  message: 'Bild konnte nicht geladen werden. Mögliche Ursachen: CORS-Problem, Mixed Content (HTTP auf HTTPS), oder ungültige URL.'
+                });
                 target.style.display = 'none';
               }}
+              onLoad={() => {
+                console.log('Werbebild erfolgreich geladen:', advertisement.image_url);
+              }}
+              loading="lazy"
             />
           </div>
         )}

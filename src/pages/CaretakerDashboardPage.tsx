@@ -1131,6 +1131,15 @@ function CaretakerDashboardPage() {
 
         setProfile(ensuredProfile);
         
+        // Debug: Prüfe ob approval_notes geladen wurde
+        if (ensuredProfile?.approval_status === 'rejected') {
+          console.log('🔍 Profile loaded with rejected status:', {
+            approval_status: ensuredProfile?.approval_status,
+            approval_notes: ensuredProfile?.approval_notes,
+            has_notes: !!ensuredProfile?.approval_notes
+          });
+        }
+        
         // Texte-States werden automatisch durch den useEffect oben aktualisiert
           
           // short_term_available wird jetzt über den Context verwaltet
@@ -2270,7 +2279,7 @@ function CaretakerDashboardPage() {
 
                       {/* Profil-Freigabe Button */}
                       {profile?.approval_status !== 'approved' && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end gap-2">
                           {profile?.approval_status === 'pending' ? (
                             <button
                               disabled
@@ -2319,6 +2328,25 @@ function CaretakerDashboardPage() {
                         </div>
                       )}
                     </div>
+                    
+                    {/* Ablehnungsgrund anzeigen - außerhalb des absoluten Containers, damit er sichtbar ist */}
+                    {profile?.approval_status === 'rejected' && (
+                      <div className="mt-4 w-full">
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <div className="font-medium text-red-900 text-sm mb-2">
+                                Ablehnungsgrund:
+                              </div>
+                              <div className="text-red-700 text-sm whitespace-pre-wrap">
+                                {profile?.approval_notes || 'Keine Angabe verfügbar'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                 </div>
               </div>
               {/* Kontaktdaten entfernt – jetzt eigener Tab */}

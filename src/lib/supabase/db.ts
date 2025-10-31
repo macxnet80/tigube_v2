@@ -667,6 +667,7 @@ export const caretakerProfileService = {
         review_count,
         is_verified,
         approval_status,
+        approval_notes,
         created_at,
         updated_at
       `)
