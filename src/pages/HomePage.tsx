@@ -69,8 +69,10 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             {/* Linke Seite: Text */}
             <div className="space-y-6 animate-fade-in">
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900">
-                Finde liebevolle <span className="text-primary-600">Tierbetreuung</span> in deiner Nähe
+              <h1 className="text-6xl md:text-7xl font-bold leading-tight text-gray-900">
+                Finde liebevolle<br />
+                <span className="text-primary-600 font-bold">Tierbetreuung</span><br />
+                in deiner Nähe
               </h1>
               <p className="text-lg md:text-xl text-gray-700 max-w-xl">
                 tigube verbindet Tierhalter:innen mit geprüften, engagierten Betreuungspersonen. Egal ob Hund, Katze oder Kleintier – hier findest du zuverlässige Hilfe für Alltag, Urlaub & Notfälle.

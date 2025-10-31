@@ -25,3 +25,4 @@ WHERE approval_status IS NULL
 -- 4. Aktualisiere den Kommentar
 COMMENT ON COLUMN caretaker_profiles.approval_status IS 'Status of profile approval: not_requested, pending, approved, rejected';
 
+
