@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { MapPin, Star, Filter, X, ChevronDown, PawPrint, Briefcase, Clock } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { MapPin, Star, Filter, X, ChevronDown, PawPrint, Briefcase, Clock, Heart } from 'lucide-react';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
@@ -12,6 +12,8 @@ import { searchRelatedDienstleister, type DienstleisterResult, type CrossSearchF
 import { DEFAULT_SERVICE_CATEGORIES } from '../lib/types/service-categories';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import useCurrentUsage from '../hooks/useCurrentUsage';
+import { useAuth } from '../lib/auth/AuthContext';
+import { ownerCaretakerService } from '../lib/supabase/db';
 
 // Using the type from the service
 type Caretaker = CaretakerDisplayData;
@@ -891,6 +893,60 @@ function SearchPage() {
 }
 
 function CaretakerCard({ caretaker }: CaretakerCardProps) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  
+  const handleViewProfile = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    navigate(`/betreuer/${caretaker.id}`);
+  };
+
+  // Lade Favoriten-Status wenn User eingeloggt ist
+  useEffect(() => {
+    const fetchFavoriteStatus = async () => {
+      if (!user || !caretaker.id) return;
+      
+      try {
+        const { isFavorite: favoriteStatus } = await ownerCaretakerService.isFavorite(user.id, caretaker.id);
+        setIsFavorite(favoriteStatus);
+      } catch (error) {
+        console.error('Error fetching favorite status:', error);
+      }
+    };
+
+    fetchFavoriteStatus();
+  }, [user, caretaker.id]);
+
+  const handleFavoriteToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!user) {
+      navigate('/anmelden?redirect=' + encodeURIComponent(`/betreuer/${caretaker.id}`));
+      return;
+    }
+
+    setIsFavoriteLoading(true);
+
+    try {
+      const { isFavorite: newFavoriteStatus, error } = await ownerCaretakerService.toggleFavorite(user.id, caretaker.id);
+      
+      if (error) {
+        console.error('Fehler beim Aktualisieren der Favoriten:', error);
+        return;
+      }
+
+      setIsFavorite(newFavoriteStatus);
+    } catch (error) {
+      console.error('Unerwarteter Fehler beim Favorisieren:', error);
+    } finally {
+      setIsFavoriteLoading(false);
+    }
+  };
+
   // Funktion zum Ermitteln des besten Preises für die Anzeige
   const getDisplayPrice = (caretaker: Caretaker) => {
     // 1. Neue Struktur: Preise aus services_with_categories
@@ -947,7 +1003,10 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
   };
 
   return (
-    <div className="card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm h-full flex flex-col">
+    <div 
+      className="card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm h-full flex flex-col cursor-pointer"
+      onClick={handleViewProfile}
+    >
       <div className="relative flex flex-col h-full">
         {/* Quadratisches Bild */}
         <div className="relative w-full aspect-square">
@@ -964,6 +1023,23 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
           
           {/* Badges overlay */}
           <div className="absolute top-2 right-2 flex flex-col gap-1 items-center">
+            {/* Herz-Icon für Favoriten */}
+            {user && (
+              <button
+                onClick={handleFavoriteToggle}
+                disabled={isFavoriteLoading}
+                className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md hover:bg-white transition-colors disabled:opacity-50 z-10"
+                title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+              >
+                {isFavoriteLoading ? (
+                  <div className="w-4 h-4 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
+                ) : isFavorite ? (
+                  <Heart className="h-4 w-4 text-primary-500 fill-primary-500" />
+                ) : (
+                  <Heart className="h-4 w-4 text-gray-600 hover:text-primary-500" />
+                )}
+              </button>
+            )}
             {caretaker.verified && (
               <div className="bg-primary-500 text-white text-xs font-medium px-2 py-1 rounded-full text-center">
                 Verifiziert
@@ -1033,7 +1109,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
               variant="primary"
               size="sm"
               className="w-full"
-              onClick={() => window.location.href = `/betreuer/${caretaker.id}`}
+              onClick={handleViewProfile}
             >
               Profil ansehen
             </Button>

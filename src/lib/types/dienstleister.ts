@@ -68,6 +68,7 @@ export interface DienstleisterProfil {
   short_term_available: boolean;
   overnight_availability?: Record<string, any>;
   experience_years?: number;
+  experience_description?: string;
   qualifications?: string[];
   languages?: string[];
   service_radius?: number;

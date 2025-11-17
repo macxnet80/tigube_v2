@@ -33,7 +33,12 @@ export default function PaymentSuccessPage() {
   // Smart Dashboard Navigation
   const navigateToDashboard = () => {
     console.log('🧭 Navigating to dashboard, userProfile:', userProfile);
-    if (userProfile?.user_type === 'caretaker') {
+    const userType = userProfile?.user_type;
+    if (userType === 'caretaker' || userType === 'dienstleister' || 
+        userType === 'tierarzt' || userType === 'hundetrainer' || 
+        userType === 'tierfriseur' || userType === 'physiotherapeut' || 
+        userType === 'ernaehrungsberater' || userType === 'tierfotograf' || 
+        userType === 'sonstige') {
       navigate('/dashboard-caretaker');
     } else {
       // Default to owner dashboard for owners or when user_type is unclear

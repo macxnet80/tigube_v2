@@ -112,7 +112,7 @@ function HomePhotosSection({ homePhotos, caretakerName }: HomePhotosSectionProps
     return (
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
-          <Home className="h-5 w-5 text-gray-600" />
+          <Home className="h-5 w-5 text-primary-600" />
           <h2 className="text-lg font-semibold">Umgebungsbilder</h2>
         </div>
         <div className="text-center py-8">
@@ -127,7 +127,7 @@ function HomePhotosSection({ homePhotos, caretakerName }: HomePhotosSectionProps
     <>
       <div className="bg-white rounded-xl p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-6">
-          <Home className="h-5 w-5 text-gray-600" />
+          <Home className="h-5 w-5 text-primary-600" />
           <h2 className="text-lg font-semibold">Umgebungsbilder</h2>
           <span className="text-sm text-gray-500">({homePhotos.length})</span>
         </div>

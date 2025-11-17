@@ -16,7 +16,11 @@ function RegisterPage() {
   React.useEffect(() => {
     if (isAuthenticated && userProfile && !authLoading) {
       console.log('🔄 Already authenticated with profile, redirecting to dashboard...');
-      const dashboardPath = (userProfile.user_type === 'caretaker' || userProfile.user_type === 'dienstleister')
+      const dashboardPath = (userProfile.user_type === 'caretaker' || userProfile.user_type === 'dienstleister' || 
+                             userProfile.user_type === 'tierarzt' || userProfile.user_type === 'hundetrainer' || 
+                             userProfile.user_type === 'tierfriseur' || userProfile.user_type === 'physiotherapeut' || 
+                             userProfile.user_type === 'ernaehrungsberater' || userProfile.user_type === 'tierfotograf' || 
+                             userProfile.user_type === 'sonstige')
         ? '/dashboard-caretaker' 
         : '/dashboard-owner';
       navigate(dashboardPath, { replace: true });

@@ -28,7 +28,7 @@ export interface DienstleisterResult {
   beratungsarten: string[] | null;
   fachgebiete: string[] | null;
   freie_dienstleistung: string | null;
-  notfall_verfuegbar: boolean | null;
+  notfall_bereitschaft: boolean | null;
   portfolio_urls: string[] | null;
   stil_beschreibung: string | null;
   created_at: string | null;
@@ -243,7 +243,7 @@ export function calculateRelevanceScore(
   if (dienstleister.is_verified) score += 5;
 
   // Notfall-Service (wenn relevant)
-  if (dienstleister.notfall_verfuegbar && 
+  if (dienstleister.notfall_bereitschaft && 
       (filters.service?.includes('Notfall') || filters.serviceCategory === 'Notfall')) {
     score += 15;
   }

@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Search, MapPin, Clock, Heart, Briefcase, PawPrint, CheckCircle, X, ChevronDown, UserCheck } from 'lucide-react';
 import Button from '../components/ui/Button';
 import MultiDaySelector from '../components/ui/MultiDaySelector';
+import { useAuth } from '../lib/auth/AuthContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, userProfile, loading: authLoading } = useAuth();
   const [showMessage, setShowMessage] = useState(!!location.state?.message);
   const [formLocation, setFormLocation] = useState('');
   const [service, setService] = useState('');
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [selectedTime, setSelectedTime] = useState('');
+
+  // Redirect eingeloggte Benutzer zum Dashboard
+  useEffect(() => {
+    if (isAuthenticated && !authLoading && userProfile) {
+      const userType = userProfile.user_type;
+      const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' || 
+                             userType === 'tierarzt' || userType === 'hundetrainer' || 
+                             userType === 'tierfriseur' || userType === 'physiotherapeut' || 
+                             userType === 'ernaehrungsberater' || userType === 'tierfotograf' || 
+                             userType === 'sonstige')
+        ? '/dashboard-caretaker' 
+        : '/dashboard-owner';
+      
+      console.log('🏠 HomePage redirect - userType:', userType, 'dashboardPath:', dashboardPath);
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [isAuthenticated, authLoading, userProfile, navigate]);
 
 
 

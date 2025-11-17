@@ -2,9 +2,32 @@
 
 ## 🎯 Aktueller Stand
 
-**Version**: 0.9.3  
-**Status**: Owner Dashboard Bug-Fix - Betreuer und Favoriten werden korrekt angezeigt  
+**Version**: 0.9.4  
+**Status**: Dienstleister-Favoriten-System vollständig implementiert  
 **Letztes Update**: 08.02.2025
+
+### ✅ Version 0.9.4 - Dienstleister-Favoriten-System und UI-Verbesserungen
+
+#### Dienstleister-Favoriten-System (Vollständig implementiert)
+- **Favoriten-Integration**: Vollständige Integration mit ownerCaretakerService für Dienstleister ✅
+- **Herz-Icon**: Favoriten-Buttons zu Betreuer- und Dienstleister-Karten hinzugefügt ✅
+- **Dienstleistung-Badge**: Kategorie-Anzeige in Favoriten-Karten im Owner Dashboard ✅
+- **Anfahrkosten-Filter**: "Anfahrkosten" werden aus Leistungen in Favoriten-Karten ausgeblendet ✅
+- **Konsistente UX**: Einheitliche Favoriten-Funktionalität für Betreuer und Dienstleister ✅
+
+#### Technische Verbesserungen (Vollständig implementiert)
+- **ownerCaretakerService**: Erweitert um kategorie_name und kategorie_icon für Dienstleister ✅
+- **DienstleisterCard**: Herz-Icon mit Favoriten-Toggle-Funktionalität hinzugefügt ✅
+- **CaretakerCard**: Herz-Icon mit Favoriten-Toggle-Funktionalität hinzugefügt ✅
+- **OwnerDashboardPage**: Dienstleistung-Badge und Anfahrkosten-Filter implementiert ✅
+- **DienstleisterProfilePage**: Herz-Icon im Header für Favoriten-Toggle hinzugefügt ✅
+
+**Implementierte Features**:
+- Vollständiges Favoriten-System für Dienstleister
+- Herz-Icons auf allen relevanten Karten und Profilseiten
+- Dienstleistung-Badge in Favoriten-Karten
+- Anfahrkosten werden aus Leistungen ausgeblendet
+- Konsistente UX zwischen Betreuer und Dienstleister
 
 ### ✅ Version 0.9.3 - Owner Dashboard Bug-Fix und Datenbank-Optimierung
 

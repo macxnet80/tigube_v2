@@ -121,13 +121,107 @@ export class DienstleisterService {
   /**
    * Dienstleister-Profil laden
    */
-  static async getDienstleisterProfil(id: string): Promise<DienstleisterProfil | null> {
+  static async getDienstleisterProfil(id: string, viewerId?: string): Promise<DienstleisterProfil | null> {
     try {
-      const { data, error } = await supabase
-        .from('dienstleister_search_view')
-        .select('*')
-        .eq('id', id)
-        .single();
+      // Prüfe ob der Viewer das eigene Profil ansehen möchte
+      const { data: { session } } = await supabase.auth.getSession();
+      const isOwnProfile = viewerId ? viewerId === id : (session?.user?.id === id);
+      
+      let data;
+      let error;
+      let loadedFromView = false;
+      
+      if (isOwnProfile) {
+        // Für eigenes Profil: Versuche zuerst die View (wenn freigegeben), sonst direkt aus caretaker_profiles
+        const { data: viewData, error: viewError } = await supabase
+          .from('dienstleister_search_view')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (!viewError && viewData) {
+          // Profil ist freigegeben und wurde über View geladen
+          data = viewData;
+          error = null;
+          loadedFromView = true;
+          console.log('✅ Own Dienstleister profile loaded from view (approved)');
+        } else {
+          // Profil ist nicht freigegeben oder View-Fehler - lade direkt aus caretaker_profiles
+          console.log('⚠️ Own Dienstleister profile not approved or view error, loading directly from caretaker_profiles');
+          const { data: profileData, error: profileError } = await supabase
+            .from('caretaker_profiles')
+            .select(`
+              *,
+              users!inner(
+                id,
+                first_name,
+                last_name,
+                city,
+                plz,
+                profile_photo_url,
+                user_type
+              ),
+              dienstleister_kategorien:kategorie_id(
+                id,
+                name,
+                icon
+              )
+            `)
+            .eq('id', id)
+            .single();
+          
+          if (profileError) {
+            console.error('Fehler beim Laden des Dienstleister-Profils:', profileError);
+            return null;
+          }
+          
+          // Transformiere zu DienstleisterProfil-Format
+          // Das View-Format wird hier simuliert
+          const userData = (profileData as any).users;
+          const kategorieData = (profileData as any).dienstleister_kategorien;
+          const kategorieId = (profileData as any).kategorie_id;
+          
+          data = {
+            ...profileData,
+            first_name: userData?.first_name || '',
+            last_name: userData?.last_name || '',
+            city: userData?.city || '',
+            plz: userData?.plz || '',
+            profile_photo_url: userData?.profile_photo_url || null,
+            user_type: userData?.user_type || 'dienstleister',
+            // Kategorie-Daten
+            kategorie_id: kategorieId || null,
+            kategorie_name: kategorieData?.name || '',
+            kategorie_icon: kategorieData?.icon || '',
+            dienstleister_typ: (profileData as any).dienstleister_typ || userData?.user_type || '',
+            search_type: (profileData as any).search_type || 'service_provider',
+            public_profile_visible: (profileData as any).public_profile_visible ?? true,
+            is_suspended: (profileData as any).is_suspended ?? false,
+            approval_status: (profileData as any).approval_status || 'not_requested',
+            // Erfahrung explizit übernehmen
+            experience_years: (profileData as any).experience_years || null,
+            experience_description: (profileData as any).experience_description || null,
+            // Weitere Felder sicherstellen
+            short_term_available: (profileData as any).short_term_available ?? false,
+            notfall_bereitschaft: (profileData as any).notfall_bereitschaft ?? false,
+            spezialisierungen: (profileData as any).spezialisierungen || [],
+            zertifikate: (profileData as any).zertifikate || [],
+            portfolio_urls: (profileData as any).portfolio_urls || [],
+            oeffnungszeiten: (profileData as any).oeffnungszeiten || null
+          } as DienstleisterProfil;
+        }
+      } else {
+        // Für fremde Profile: Nur freigegebene Profile (über View)
+        const { data: viewData, error: viewError } = await supabase
+          .from('dienstleister_search_view')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        data = viewData;
+        error = viewError;
+        loadedFromView = true;
+      }
 
       if (error) {
         console.error('Fehler beim Laden des Dienstleister-Profils:', error);

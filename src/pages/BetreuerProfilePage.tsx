@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Star, Clock, Shield, Calendar, MessageCircle, Heart, HeartOff, ArrowLeft, Verified, ChevronRight, CheckCircle, Edit3, Briefcase, Globe, Moon } from 'lucide-react';
+import { MapPin, Star, Clock, Shield, Calendar, MessageCircle, Heart, HeartOff, ArrowLeft, Verified, ChevronRight, CheckCircle, Edit3, Briefcase, Globe, Moon, User, Award, Image, GraduationCap, Info } from 'lucide-react';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { DE, GB, FR, ES, IT, PT, NL, RU, PL, TR, AE } from 'country-flag-icons/react/3x2';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AvailabilityDisplay from '../components/ui/AvailabilityDisplay';
 import { ReviewForm } from '../components/ui/ReviewForm';
-import { caretakerSearchService, ownerCaretakerService } from '../lib/supabase/db';
+import { caretakerSearchService, ownerCaretakerService, caretakerPartnerService } from '../lib/supabase/db';
 
 import { formatCurrency } from '../lib/utils';
 import { cn } from '../lib/utils';
@@ -16,6 +16,7 @@ import { useAuth } from '../lib/auth/AuthContext';
 import { getOrCreateConversation } from '../lib/supabase/chatService';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityContext';
+import { useSubscription } from '../lib/auth/useSubscription';
 import HomePhotosSection from '../components/ui/HomePhotosSection';
 import ResponseTimeDisplay from '../components/ui/ResponseTimeDisplay';
 import { getCaretakerResponseTime, calculateCaretakerResponseTime } from '../lib/supabase/responseTimeService';
@@ -68,9 +69,12 @@ function BetreuerProfilePage() {
   const navigate = useNavigate();
   const { isAuthenticated, user, userProfile } = useAuth();
   const { checkFeature, canSendContactRequest, trackUsage, subscription } = useFeatureAccess();
+  const { isPremiumUser, subscriptionLoading } = useSubscription();
   const { shortTermAvailable } = useShortTermAvailability();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+  const [isPartner, setIsPartner] = useState(false);
+  const [isPartnerLoading, setIsPartnerLoading] = useState(false);
   const [caretaker, setCaretaker] = useState<Caretaker | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,19 +95,31 @@ function BetreuerProfilePage() {
         return;
       }
 
+      // Premium-Check: Free-User können nur ihr eigenes Profil sehen
+      const isOwnProfile = user && id === user.id;
+      if (!isOwnProfile && !isPremiumUser && !subscriptionLoading) {
+        setError('Premium-Mitgliedschaft erforderlich');
+        setLoading(false);
+        navigate('/mitgliedschaften?feature=profile_view');
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
       try {
         // Use the getCaretakerById function from db.ts
-        const { data, error: fetchError } = await caretakerSearchService.getCaretakerById(id);
+        // Übergebe user.id als viewerId, damit das eigene Profil auch ohne Freigabe geladen wird
+        const { data, error: fetchError } = await caretakerSearchService.getCaretakerById(id, user?.id);
         
         console.log('🔍 Fetch result:', { data, error: fetchError });
         
         if (fetchError) {
           console.error('❌ Fetch error:', fetchError);
-          // Prüfe ob es ein Freigabe-Problem ist
-          if (fetchError.message?.includes('not found') || fetchError.message?.includes('No rows returned')) {
+          // Prüfe ob es das eigene Profil ist
+          if (user && id === user.id) {
+            setError('Dein Profil konnte nicht geladen werden. Bitte versuche es später erneut.');
+          } else if (fetchError.message?.includes('not found') || fetchError.message?.includes('No rows returned')) {
             setError('Dieses Betreuer-Profil ist nicht verfügbar oder noch nicht freigegeben');
           } else {
             setError('Fehler beim Laden des Betreuer-Profils');
@@ -111,7 +127,12 @@ function BetreuerProfilePage() {
           setCaretaker(null);
         } else if (!data) {
           console.error('❌ No data returned');
-          setError('Betreuer nicht gefunden oder noch nicht freigegeben');
+          // Prüfe ob es das eigene Profil ist
+          if (user && id === user.id) {
+            setError('Dein Profil konnte nicht geladen werden. Bitte versuche es später erneut.');
+          } else {
+            setError('Betreuer nicht gefunden oder noch nicht freigegeben');
+          }
           setCaretaker(null);
         } else {
           console.log('✅ Caretaker data loaded successfully:', data);
@@ -134,7 +155,7 @@ function BetreuerProfilePage() {
     };
 
     fetchCaretaker();
-  }, [id, user, shortTermAvailable]);
+  }, [id, user, shortTermAvailable, isPremiumUser, subscriptionLoading, navigate]);
 
   // Update caretaker's short_term_available when context changes
   useEffect(() => {
@@ -161,6 +182,28 @@ function BetreuerProfilePage() {
 
     fetchFavoriteStatus();
   }, [user, id]);
+
+  // Lade Partner-Status wenn User eingeloggt ist und ein Dienstleister/Betreuer ist
+  useEffect(() => {
+    const fetchPartnerStatus = async () => {
+      if (!user || !id || !userProfile) return;
+      
+      // Nur für Dienstleister/Betreuer anzeigen
+      const isCaretakerUser = userProfile.user_type === 'caretaker' || 
+        (userProfile.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type));
+      
+      if (!isCaretakerUser) return;
+      
+      try {
+        const { isPartner: partnerStatus } = await caretakerPartnerService.isPartner(user.id, id);
+        setIsPartner(partnerStatus);
+      } catch (error) {
+        console.error('Error fetching partner status:', error);
+      }
+    };
+
+    fetchPartnerStatus();
+  }, [user, id, userProfile]);
 
   // Bewertungen von echter DB laden
   useEffect(() => {
@@ -420,6 +463,36 @@ function BetreuerProfilePage() {
     }
   };
 
+  // Partner Toggle Handler (für Dienstleister/Betreuer)
+  const handlePartnerToggle = async () => {
+    if (!user) {
+      console.error('User nicht verfügbar');
+      return;
+    }
+
+    if (!caretaker?.id) {
+      console.error('Caretaker ID fehlt');
+      return;
+    }
+
+    setIsPartnerLoading(true);
+
+    try {
+      const { isPartner: newPartnerStatus, error } = await caretakerPartnerService.togglePartner(user.id, caretaker.id);
+      
+      if (error) {
+        console.error('Fehler beim Aktualisieren der Partner:', error);
+        return;
+      }
+
+      setIsPartner(newPartnerStatus);
+    } catch (error) {
+      console.error('Unerwarteter Fehler beim Partner-Toggle:', error);
+    } finally {
+      setIsPartnerLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -429,6 +502,7 @@ function BetreuerProfilePage() {
   }
 
   if (error || !caretaker) {
+    const isPremiumError = error === 'Premium-Mitgliedschaft erforderlich';
     return (
       <div className="container-custom py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">
@@ -437,9 +511,23 @@ function BetreuerProfilePage() {
         <p className="mb-8">
           {error || 'Der gesuchte Betreuer existiert nicht oder wurde entfernt.'}
         </p>
-        <Link to="/suche" className="btn btn-primary">
-          <Button variant="primary">Zurück zur Suche</Button>
-        </Link>
+        {isPremiumError ? (
+          <div className="flex flex-col gap-4 items-center">
+            <p className="text-gray-600">
+              Um andere Profile anzusehen, benötigst du eine Premium-Mitgliedschaft.
+            </p>
+            <Link to="/mitgliedschaften?feature=profile_view">
+              <Button variant="primary">Jetzt upgraden</Button>
+            </Link>
+            <Link to="/suche">
+              <Button variant="outline">Zurück zur Suche</Button>
+            </Link>
+          </div>
+        ) : (
+          <Link to="/suche">
+            <Button variant="primary">Zurück zur Suche</Button>
+          </Link>
+        )}
       </div>
     );
   }
@@ -522,22 +610,47 @@ function BetreuerProfilePage() {
                     )}
 
                     {/* Herz-Icon neben dem Namen, rechts */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleFavoriteToggle}
-                      className="p-1 focus:ring-0 focus:ring-offset-0"
-                      disabled={isFavoriteLoading}
-                      title={!user ? 'Anmelden um zu favorisieren' : (isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen')}
-                    >
-                      {isFavoriteLoading ? (
-                        <div className="w-5 h-5 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
-                      ) : isFavorite ? (
-                        <Heart className="h-5 w-5 text-primary-500 fill-primary-500" />
-                      ) : (
-                        <Heart className="h-5 w-5 text-primary-500 hover:text-primary-600" />
+                    <div className="flex items-center gap-2">
+                      {/* Favoriten-Herz (für Owner) */}
+                      {user && userProfile?.user_type === 'owner' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleFavoriteToggle}
+                          className="p-1 focus:ring-0 focus:ring-offset-0"
+                          disabled={isFavoriteLoading}
+                          title={!user ? 'Anmelden um zu favorisieren' : (isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen')}
+                        >
+                          {isFavoriteLoading ? (
+                            <div className="w-5 h-5 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
+                          ) : isFavorite ? (
+                            <Heart className="h-5 w-5 text-primary-500 fill-primary-500" />
+                          ) : (
+                            <Heart className="h-5 w-5 text-primary-500 hover:text-primary-600" />
+                          )}
+                        </Button>
                       )}
-                    </Button>
+                      {/* Partner-Herz (für Dienstleister/Betreuer) */}
+                      {user && userProfile && (userProfile.user_type === 'caretaker' || 
+                        (userProfile.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type))) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handlePartnerToggle}
+                          className="p-1 focus:ring-0 focus:ring-offset-0"
+                          disabled={isPartnerLoading}
+                          title={isPartner ? 'Partner entfernen' : 'Als Partner speichern'}
+                        >
+                          {isPartnerLoading ? (
+                            <div className="w-5 h-5 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
+                          ) : isPartner ? (
+                            <Heart className="h-5 w-5 text-primary-500 fill-primary-500" />
+                          ) : (
+                            <Heart className="h-5 w-5 text-primary-500 hover:text-primary-600" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center text-gray-600 mb-2">
                     <MapPin className="h-4 w-4 mr-1" />
@@ -679,7 +792,10 @@ function BetreuerProfilePage() {
           <div className="lg:col-span-2 space-y-8">
             {/* About Section */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h2 className="text-lg font-semibold mb-4">Über {displayName}</h2>
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <User className="h-5 w-5 text-primary-600" />
+                Über {displayName}
+              </h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
                 {caretaker.fullBio || caretaker.bio}
               </p>
@@ -688,7 +804,10 @@ function BetreuerProfilePage() {
             {/* Kurze Beschreibung */}
             {caretaker.short_about_me && (
               <div className="bg-white rounded-xl p-6 shadow-sm max-w-2xl mx-auto w-full lg:w-3/5">
-                <h2 className="text-lg font-semibold mb-4">Kurze Beschreibung</h2>
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Info className="h-5 w-5 text-primary-600" />
+                  Kurze Beschreibung
+                </h2>
                 <p className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
                   {caretaker.short_about_me}
                 </p>
@@ -698,7 +817,7 @@ function BetreuerProfilePage() {
             {/* Erfahrung */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Shield className="h-5 w-5 text-primary-600" />
+                <Award className="h-5 w-5 text-primary-600" />
                 Erfahrung
               </h2>
               {caretaker.experience_description ? (
@@ -719,7 +838,8 @@ function BetreuerProfilePage() {
 
             {/* Reviews */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h2 className="text-lg font-semibold mb-4">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Star className="h-5 w-5 text-primary-600" />
                 Bewertungen ({reviews.length})
               </h2>
 
@@ -793,7 +913,10 @@ function BetreuerProfilePage() {
           <div className="space-y-6">
             {/* Leistungen & Preise */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h2 className="text-lg font-semibold mb-6">Leistungen & Preise</h2>
+              <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-primary-600" />
+                Leistungen & Preise
+              </h2>
               <div className="space-y-6">
                 {caretaker.services
                   .filter(service => typeof service === 'string')
@@ -855,7 +978,10 @@ function BetreuerProfilePage() {
 
             {/* Fähigkeiten & Qualifikationen */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h2 className="text-lg font-semibold mb-6">Fähigkeiten & Qualifikationen</h2>
+              <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary-600" />
+                Fähigkeiten & Qualifikationen
+              </h2>
               <div className="space-y-3">
                 {caretaker.qualifications && caretaker.qualifications.length > 0 ? (
                   caretaker.qualifications.map((qualification, index) => (

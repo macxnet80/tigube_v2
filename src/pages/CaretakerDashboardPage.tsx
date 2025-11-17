@@ -8,8 +8,8 @@ import CommercialInfoInput from '../components/ui/CommercialInfoInput';
 import type { ClientData } from '../components/ui/ClientDetailsAccordion';
 import { useAuth } from '../lib/auth/AuthContext';
 import { useEffect, useState, useRef } from 'react';
-import { caretakerProfileService, ownerCaretakerService, userService } from '../lib/supabase/db';
-import { Calendar, Check, Edit, LogOut, MapPin, Phone, Shield, Upload, Camera, Star, Info, Lock, Briefcase, Verified, Eye, EyeOff, KeyRound, Trash2, AlertTriangle, Mail, X, Clock, Crown, Settings, PawPrint, Moon, CheckCircle, User, XCircle, ChevronRight } from 'lucide-react';
+import { caretakerProfileService, ownerCaretakerService, userService, caretakerPartnerService } from '../lib/supabase/db';
+import { Calendar, Check, Edit, LogOut, MapPin, Phone, Shield, Upload, Camera, Star, Info, Lock, Briefcase, Verified, Eye, EyeOff, KeyRound, Trash2, AlertTriangle, Mail, X, Clock, Crown, Settings, PawPrint, Moon, CheckCircle, User, XCircle, ChevronRight, Heart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase/client';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
@@ -27,6 +27,7 @@ import { useToast } from '../hooks/useToast';
 import ToastContainer from '../components/ui/ToastContainer';
 import { VerificationService, type VerificationDocument } from '../lib/services/verificationService';
 import CaretakerContactTab from '../components/ui/CaretakerContactTab';
+import { isCaretaker } from '../lib/utils';
 
 
 function CaretakerDashboardPage() {
@@ -97,6 +98,13 @@ function CaretakerDashboardPage() {
     }
   }, [userProfile]);
 
+  // Synchronisiere short_term_available mit Context wenn sich das Profil ändert
+  useEffect(() => {
+    if (profile?.short_term_available !== undefined && profile.short_term_available !== shortTermAvailable) {
+      setShortTermAvailable(profile.short_term_available);
+    }
+  }, [profile?.short_term_available, shortTermAvailable, setShortTermAvailable]);
+
   // Overnight availability state
   const [overnightAvailability, setOvernightAvailability] = useState<Record<string, boolean>>({
     Mo: false,
@@ -107,6 +115,11 @@ function CaretakerDashboardPage() {
     Sa: false,
     So: false,
   });
+
+  // Öffnungszeiten state für andere Dienstleister
+  // Opening hours state for other service providers
+  // Standardmäßig keine Öffnungszeiten gesetzt (null)
+  const [openingHours, setOpeningHours] = useState<Record<string, { open: string; close: string; closed: boolean }> | null>(null);
 
   // Onboarding State für Kategorie-Informationen
   const [onboardingCategoryName, setOnboardingCategoryName] = useState<string | undefined>();
@@ -861,6 +874,89 @@ function CaretakerDashboardPage() {
     }
   };
 
+  // Handler für Speichern der Öffnungszeiten (für andere Dienstleister)
+  const handleOpeningHoursChange = async (newOpeningHours: Record<string, { open: string; close: string; closed: boolean }> | null) => {
+    if (!user || !profile) return;
+    
+    // Wenn null oder leer, setze null in der Datenbank
+    if (!newOpeningHours || Object.keys(newOpeningHours).length === 0) {
+      try {
+        const { error } = await caretakerProfileService.saveProfile(user.id, {
+          oeffnungszeiten: null as any,
+        });
+        
+        if (error) {
+          console.error('❌ Fehler beim Löschen der Öffnungszeiten:', error);
+          showError('Fehler beim Löschen der Öffnungszeiten');
+          return;
+        }
+        
+        setOpeningHours(null);
+        setProfile((prev: any) => ({ ...prev, oeffnungszeiten: null }));
+        showSuccess('Öffnungszeiten wurden entfernt');
+        return;
+      } catch (err) {
+        console.error('Fehler beim Löschen der Öffnungszeiten:', err);
+        showError('Fehler beim Löschen der Öffnungszeiten');
+        return;
+      }
+    }
+    
+    // Konvertiere für Datenbank-Format
+    const dbOpeningHours: Record<string, any> = {};
+    Object.entries(newOpeningHours).forEach(([day, hours]) => {
+      if (hours.closed) {
+        dbOpeningHours[day] = null; // Geschlossen
+      } else {
+        dbOpeningHours[day] = {
+          open: hours.open,
+          close: hours.close
+        };
+      }
+    });
+    
+    // Sofort lokalen State aktualisieren
+    setOpeningHours(newOpeningHours);
+    setProfile((prev: any) => ({ ...prev, oeffnungszeiten: dbOpeningHours }));
+    
+    try {
+      const { data, error } = await caretakerProfileService.saveProfile(user.id, {
+        oeffnungszeiten: dbOpeningHours,
+      });
+      
+      if (error) {
+        console.error('❌ Fehler beim Speichern der Öffnungszeiten:', error);
+        // Wiederherstellen des vorherigen Zustands
+        const prevHours = (profile as any).oeffnungszeiten;
+        if (prevHours) {
+          // Konvertiere zurück für UI
+          const convertedHours: Record<string, { open: string; close: string; closed: boolean }> = {};
+          Object.entries(prevHours).forEach(([day, hours]: [string, any]) => {
+            if (hours && typeof hours === 'object' && hours.open && hours.close) {
+              convertedHours[day] = {
+                open: hours.open,
+                close: hours.close,
+                closed: false
+              };
+            }
+          });
+          setOpeningHours(Object.keys(convertedHours).length > 0 ? convertedHours : null);
+        } else {
+          setOpeningHours(null);
+        }
+        showError('Fehler beim Speichern der Öffnungszeiten');
+        return;
+      }
+      
+      showSuccess('Öffnungszeiten erfolgreich gespeichert');
+    } catch (error) {
+      console.error('❌ Exception beim Speichern der Öffnungszeiten:', error);
+      setOpeningHours(openingHours);
+      setProfile((prev: any) => ({ ...prev, oeffnungszeiten: (profile as any).oeffnungszeiten }));
+      showError('Fehler beim Speichern der Öffnungszeiten');
+    }
+  };
+
   // Handler für Übernachtungs-Verfügbarkeit
   const handleOvernightAvailabilityChange = async (newOvernightAvailability: Record<string, boolean>) => {
     if (!user || !profile) return;
@@ -1098,6 +1194,7 @@ function CaretakerDashboardPage() {
               services_with_categories: [],
               animal_types: [],
               service_radius: 0,
+              short_term_available: false,
               availability: dbDefaultAvailability,
               home_photos: [],
               qualifications: [],
@@ -1140,10 +1237,13 @@ function CaretakerDashboardPage() {
           });
         }
         
+        // Synchronisiere short_term_available mit Context wenn Profil geladen wird
+        const profileShortTermAvailable = (ensuredProfile as any)?.short_term_available || false;
+        if (profileShortTermAvailable !== shortTermAvailable) {
+          setShortTermAvailable(profileShortTermAvailable);
+        }
+        
         // Texte-States werden automatisch durch den useEffect oben aktualisiert
-          
-          // short_term_available wird jetzt über den Context verwaltet
-          // setShortTermAvailable wird automatisch durch den Context aktualisiert
           
           // Aktualisiere skillsDraft mit geladenen Daten (nur wenn keine sessionStorage-Daten vorhanden)
           if (!sessionStorage.getItem('servicesDraft')) {
@@ -1214,6 +1314,43 @@ function CaretakerDashboardPage() {
               Sa: false,
               So: false,
             });
+          }
+          
+          // Lade Öffnungszeiten für andere Dienstleister
+          // Nur laden wenn explizit gesetzt, sonst null (keine Standardwerte)
+          const dbOpeningHours = (ensuredProfile as any).oeffnungszeiten;
+          if (dbOpeningHours && typeof dbOpeningHours === 'object' && Object.keys(dbOpeningHours).length > 0) {
+            // Prüfe ob mindestens ein Tag gesetzt ist (nicht alle null)
+            const hasAnyHours = Object.values(dbOpeningHours).some(hours => hours !== null && hours !== undefined);
+            
+            if (hasAnyHours) {
+              // Konvertiere das Format falls nötig
+              const convertedHours: Record<string, { open: string; close: string; closed: boolean }> = {};
+              const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+              days.forEach(day => {
+                if (dbOpeningHours[day] && dbOpeningHours[day] !== null) {
+                  if (typeof dbOpeningHours[day] === 'object' && dbOpeningHours[day].open && dbOpeningHours[day].close) {
+                    convertedHours[day] = {
+                      open: dbOpeningHours[day].open,
+                      close: dbOpeningHours[day].close,
+                      closed: dbOpeningHours[day].closed || false
+                    };
+                  }
+                }
+                // Wenn kein Wert vorhanden ist, wird der Tag nicht hinzugefügt (nicht in convertedHours)
+              });
+              
+              // Nur setzen wenn mindestens ein Tag konvertiert wurde
+              if (Object.keys(convertedHours).length > 0) {
+                setOpeningHours(convertedHours);
+              } else {
+                setOpeningHours(null);
+              }
+            } else {
+              setOpeningHours(null);
+            }
+          } else {
+            setOpeningHours(null);
           }
           
           // Verfügbarkeit aus der Datenbank laden und validieren
@@ -1528,6 +1665,14 @@ function CaretakerDashboardPage() {
   const profileData = renderProfile || userProfile || fallbackProfile;
   const fullName = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim() || profileData.email;
   const initials = getInitials(profileData.first_name, profileData.last_name);
+  
+  // Prüfe ob es ein Betreuer ist
+  const isCaretakerUser = isCaretaker(
+    profileData?.user_type,
+    profile?.dienstleister_typ,
+    profile?.kategorie_id
+  );
+  
   // Sichere Avatar-URL mit Fallback für fehlerhafte URLs
   const getAvatarUrl = () => {
     const preferredUrl = optimisticAvatarUrl || profileData.profile_photo_url || profileData.avatar_url;
@@ -1543,7 +1688,8 @@ function CaretakerDashboardPage() {
   const avatarUrl = getAvatarUrl();
 
   // Tab-Navigation für Übersicht/Fotos
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'kontaktdaten' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften' | 'verfuegbarkeit'>('kunden');
+  // Standard-Tab: 'uebersicht' funktioniert für alle Dienstleister-Typen
+  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'kontaktdaten' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften' | 'verfuegbarkeit' | 'partner'>('uebersicht');
   
   // Scroll-Position-Persistierung entfernt - Browser sollte das automatisch handhaben
   // Das Problem liegt woanders - wahrscheinlich an anderen useEffect-Hooks die Re-Renders verursachen
@@ -1556,6 +1702,12 @@ function CaretakerDashboardPage() {
   const [clients, setClients] = useState<ClientData[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [clientsError, setClientsError] = useState<string | null>(null);
+
+  // Partner State
+  const [partners, setPartners] = useState<any[]>([]);
+  const [partnersLoading, setPartnersLoading] = useState(false);
+  const [partnersError, setPartnersError] = useState<string | null>(null);
+  const [removingPartnerId, setRemovingPartnerId] = useState<string | null>(null);
 
   // Bewertungen laden
   useEffect(() => {
@@ -1638,6 +1790,55 @@ function CaretakerDashboardPage() {
     }
     if (activeTab === 'verifizierung') fetchVerificationData();
   }, [activeTab, user]);
+
+  // Partner laden
+  useEffect(() => {
+    async function fetchPartners() {
+      if (!user) return;
+      setPartnersLoading(true);
+      setPartnersError(null);
+      try {
+        const { data, error } = await caretakerPartnerService.getPartners(user.id);
+        if (error) {
+          setPartnersError('Fehler beim Laden der Partner!');
+          setPartners([]);
+        } else {
+          setPartners(data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching partners:', error);
+        setPartnersError('Fehler beim Laden der Partner!');
+        setPartners([]);
+      } finally {
+        setPartnersLoading(false);
+      }
+    }
+    if (activeTab === 'partner') fetchPartners();
+  }, [activeTab, user]);
+
+  // Partner entfernen Handler
+  const handleRemovePartner = async (partner: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+    
+    setRemovingPartnerId(partner.id);
+    try {
+      const { error } = await caretakerPartnerService.togglePartner(user.id, partner.id);
+      if (error) {
+        console.error('Fehler beim Entfernen des Partners:', error);
+        showError('Fehler beim Entfernen des Partners. Bitte versuche es erneut.');
+      } else {
+        // Entferne den Partner aus der lokalen Liste
+        setPartners(prev => prev.filter(p => p.id !== partner.id));
+        showSuccess('Partner erfolgreich entfernt');
+      }
+    } catch (error) {
+      console.error('Unerwarteter Fehler beim Entfernen des Partners:', error);
+      showError('Fehler beim Entfernen des Partners. Bitte versuche es erneut.');
+    } finally {
+      setRemovingPartnerId(null);
+    }
+  };
 
   // Bewertung beantworten
   const handleRespondToReview = async (reviewId: string) => {
@@ -2136,7 +2337,11 @@ function CaretakerDashboardPage() {
                     {/* Auge-Icon neben dem Namen mit Hovereffekt */}
                     <div className="group relative">
                       <Link
-                        to={`/betreuer/${user?.id}`}
+                        to={
+                          userProfile?.user_type && ['dienstleister', 'tierarzt', 'hundetrainer', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type)
+                            ? `/dienstleister/${user?.id}`
+                            : `/betreuer/${user?.id}`
+                        }
                         className="inline-flex items-center justify-center w-6 h-6 text-primary-600 hover:text-primary-700 transition-colors"
                       >
                         <Eye className="h-4 w-4" />
@@ -2425,7 +2630,7 @@ function CaretakerDashboardPage() {
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  Verfügbarkeit
+                  {isCaretakerUser ? 'Verfügbarkeit' : 'Öffnungszeiten'}
                 </button>
               </li>
               <li>
@@ -2439,7 +2644,7 @@ function CaretakerDashboardPage() {
                       : 'text-gray-700 hover:bg-gray-50'
                   }`}
                 >
-                  Fotos
+                  {isCaretakerUser ? 'Fotos' : 'Portfolio'}
                 </button>
               </li>
               <li>
@@ -2496,6 +2701,20 @@ function CaretakerDashboardPage() {
                   }`}
                 >
                   Verifizierung
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('partner')}
+                  aria-current={activeTab === 'partner' ? 'page' : undefined}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    activeTab === 'partner'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Partner
                 </button>
               </li>
               <li>
@@ -2911,13 +3130,13 @@ function CaretakerDashboardPage() {
                     </div>
                   </div>
 
-                  {/* Beschreibung */}
+                  {/* Erfahrung */}
                   <div className="mb-4">
-                    <span className="font-semibold text-gray-900">Beschreibung:</span>
+                    <span className="font-semibold text-gray-900">Erfahrung:</span>
                     <div className="mt-2">
                       <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
                         <div className="text-gray-700 text-sm whitespace-pre-line">
-                          {profile.experience_description || <span className="text-gray-400">Keine Beschreibung angegeben</span>}
+                          {profile.experience_description || <span className="text-gray-400">Keine Erfahrung angegeben</span>}
                         </div>
                       </div>
                     </div>
@@ -3006,17 +3225,19 @@ function CaretakerDashboardPage() {
                       onTaxNumberChange={(value) => handleQualificationsChange('taxNumber', value)}
                       onVatIdChange={(value) => handleQualificationsChange('vatId', value)}
                       errors={{
-                        taxNumber: qualificationsDraft.isCommercial && !qualificationsDraft.taxNumber.trim() && !qualificationsDraft.vatId.trim() ? 'Steuernummer oder USt-IdNr. ist bei gewerblichen Betreuern erforderlich' : undefined
+                        taxNumber: qualificationsDraft.isCommercial && !qualificationsDraft.taxNumber.trim() && !qualificationsDraft.vatId.trim() ? `Steuernummer oder USt-IdNr. ist bei gewerblichen ${isCaretakerUser ? 'Betreuern' : 'Dienstleistern'} erforderlich` : undefined
                       }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Beschreibung</label>
+                    <label className="block text-sm font-medium mb-1">Erfahrung</label>
                     <textarea
                       className="input w-full min-h-[60px]"
                       value={qualificationsDraft.experience_description}
                       onChange={e => handleQualificationsChange('experience_description', e.target.value)}
-                      placeholder="Erzähle den Tierhaltern von deiner Erfahrung mit Tieren, inkl. beruflicher Erfahrung oder eigenen Tieren"
+                      placeholder={isCaretakerUser 
+                        ? "Erzähle den Tierhaltern von deiner Erfahrung mit Tieren, inkl. beruflicher Erfahrung oder eigenen Tieren"
+                        : "Erzähle den Tierhaltern von deiner Erfahrung, inkl. beruflicher Qualifikationen und Expertise"}
                     />
                   </div>
                   <div className="flex gap-2 pt-2">
@@ -3029,7 +3250,7 @@ function CaretakerDashboardPage() {
           </div>
         </div>
       )}
-      {activeTab === 'verfuegbarkeit' && (
+      {activeTab === 'verfuegbarkeit' && isCaretakerUser && (
         <div className="space-y-8 mb-8">
           <div>
             <h2 className="text-xl font-semibold mb-2 flex items-center gap-2 text-gray-900"><Calendar className="w-5 h-5" /> Verfügbarkeit</h2>
@@ -3051,12 +3272,122 @@ function CaretakerDashboardPage() {
           </div>
         </div>
       )}
+      {activeTab === 'verfuegbarkeit' && !isCaretakerUser && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900">
+            <Clock className="w-5 h-5" /> Öffnungszeiten
+          </h2>
+          <div className="bg-white rounded-xl shadow p-6">
+            {openingHours === null ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600 mb-4">Noch keine Öffnungszeiten hinterlegt.</p>
+                <Button
+                  onClick={() => {
+                    // Initialisiere mit Standardwerten für alle Tage
+                    const defaultHours: Record<string, { open: string; close: string; closed: boolean }> = {
+                      Mo: { open: '09:00', close: '18:00', closed: false },
+                      Di: { open: '09:00', close: '18:00', closed: false },
+                      Mi: { open: '09:00', close: '18:00', closed: false },
+                      Do: { open: '09:00', close: '18:00', closed: false },
+                      Fr: { open: '09:00', close: '18:00', closed: false },
+                      Sa: { open: '09:00', close: '13:00', closed: false },
+                      So: { open: '09:00', close: '13:00', closed: true },
+                    };
+                    setOpeningHours(defaultHours);
+                  }}
+                  variant="primary"
+                >
+                  Öffnungszeiten hinzufügen
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(openingHours).map(([day, hours]) => {
+                  const dayNames: Record<string, string> = {
+                    'Mo': 'Montag',
+                    'Di': 'Dienstag',
+                    'Mi': 'Mittwoch',
+                    'Do': 'Donnerstag',
+                    'Fr': 'Freitag',
+                    'Sa': 'Samstag',
+                    'So': 'Sonntag'
+                  };
+                  return (
+                    <div key={day} className="flex items-center gap-4 p-3 border rounded-lg">
+                      <div className="w-24 font-medium text-gray-700">{dayNames[day] || day}</div>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={!hours.closed}
+                          onChange={(e) => {
+                            const newHours = { ...openingHours };
+                            newHours[day] = { ...hours, closed: !e.target.checked };
+                            setOpeningHours(newHours);
+                          }}
+                          className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-gray-600">Geöffnet</span>
+                      </label>
+                      {!hours.closed && (
+                        <>
+                          <input
+                            type="time"
+                            value={hours.open}
+                            onChange={(e) => {
+                              const newHours = { ...openingHours };
+                              newHours[day] = { ...hours, open: e.target.value };
+                              setOpeningHours(newHours);
+                            }}
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                          <span className="text-gray-500">bis</span>
+                          <input
+                            type="time"
+                            value={hours.close}
+                            onChange={(e) => {
+                              const newHours = { ...openingHours };
+                              newHours[day] = { ...hours, close: e.target.value };
+                              setOpeningHours(newHours);
+                            }}
+                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </>
+                      )}
+                      {hours.closed && (
+                        <span className="text-sm text-gray-400">Geschlossen</span>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between pt-4 border-t">
+                  <Button
+                    onClick={() => {
+                      if (confirm('Möchten Sie die Öffnungszeiten wirklich entfernen?')) {
+                        handleOpeningHoursChange(null);
+                      }
+                    }}
+                    variant="outline"
+                  >
+                    Öffnungszeiten entfernen
+                  </Button>
+                  <Button
+                    onClick={() => handleOpeningHoursChange(openingHours)}
+                    variant="primary"
+                  >
+                    Öffnungszeiten speichern
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {activeTab === 'fotos' && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900">
               <Upload className="w-5 h-5" /> 
-              Umgebungsbilder
+              {isCaretakerUser ? 'Umgebungsbilder' : 'Portfolio'}
             </h2>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">
@@ -3075,8 +3406,9 @@ function CaretakerDashboardPage() {
                     Professional-Mitgliedschaft erforderlich
                   </h3>
                   <p className="text-yellow-700 text-sm mb-3">
-                    Umgebungsbilder sind nur für Professional-Mitglieder verfügbar. 
-                    Zeige deine Betreuungsumgebung und gewinne das Vertrauen von Tierhaltern.
+                    {isCaretakerUser 
+                      ? 'Umgebungsbilder sind nur für Professional-Mitglieder verfügbar. Zeige deine Betreuungsumgebung und gewinne das Vertrauen von Tierhaltern.'
+                      : 'Portfolio-Bilder sind nur für Professional-Mitglieder verfügbar. Zeige deine Arbeit und gewinne das Vertrauen von Tierhaltern.'}
                   </p>
                   <button
                     onClick={() => setActiveTab('mitgliedschaften')}
@@ -3140,7 +3472,7 @@ function CaretakerDashboardPage() {
                 {maxEnvironmentImages() === 0 || photos.length >= maxEnvironmentImages() ? (
                   <span className="text-xs text-gray-400">
                     {maxEnvironmentImages() === 0 
-                      ? 'Upgrade auf Professional für Umgebungsbilder'
+                      ? `Upgrade auf Professional für ${isCaretakerUser ? 'Umgebungsbilder' : 'Portfolio-Bilder'}`
                       : 'Professional-Mitglieder können bis zu 6 Bilder hochladen'
                     }
                   </span>
@@ -3156,7 +3488,7 @@ function CaretakerDashboardPage() {
                 const url = typeof fileOrUrl === 'string' ? fileOrUrl : URL.createObjectURL(fileOrUrl);
                 return (
                   <div key={idx} className="relative group">
-                    <img src={url} alt="Wohnungsfoto" className="h-24 w-24 object-cover rounded border" />
+                    <img src={url} alt={isCaretakerUser ? "Wohnungsfoto" : "Portfolio-Bild"} className="h-24 w-24 object-cover rounded border" />
                     <button
                       type="button"
                       className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow text-gray-400 hover:text-red-500"
@@ -3175,8 +3507,8 @@ function CaretakerDashboardPage() {
       )}
       {activeTab === 'texte' && (
         <div className="mb-8">
-          {/* Kurze Beschreibung */}
-          <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Info className="w-5 h-5" /> Kurze Beschreibung</h2>
+          {/* Kurze Erfahrung */}
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900 mb-2"><Info className="w-5 h-5" /> Kurze Erfahrung</h2>
           <div className="bg-white rounded-xl shadow p-6 mb-8 relative">
             {!editShortDesc && (
               <button className="absolute top-4 right-4 p-2 text-gray-400 hover:text-primary-600" onClick={() => { setEditShortDesc(true); setShortDescDraft(shortDescription); }} title="Bearbeiten">
@@ -3188,7 +3520,7 @@ function CaretakerDashboardPage() {
                 {shortDescription ? (
                   <span>{shortDescription}</span>
                 ) : (
-                  <span className="text-gray-400">Noch keine Beschreibung hinterlegt.</span>
+                  <span className="text-gray-400">Noch keine Erfahrung hinterlegt.</span>
                 )}
               </div>
             ) : (
@@ -3240,7 +3572,9 @@ function CaretakerDashboardPage() {
                   value={aboutMeDraft}
                   onChange={e => setAboutMeDraft(e.target.value)}
                   minLength={minAboutMe}
-                  placeholder="Erzähle mehr über dich, deine Motivation, Erfahrung und was dich als Betreuer:in auszeichnet. Mindestens 540 Zeichen."
+                  placeholder={isCaretakerUser 
+                    ? "Erzähle mehr über dich, deine Motivation, Erfahrung und was dich als Betreuer:in auszeichnet. Mindestens 540 Zeichen."
+                    : "Erzähle mehr über dich, deine Motivation, Erfahrung und was dich als Dienstleister:in auszeichnet. Mindestens 540 Zeichen."}
                   autoFocus
                 />
                 <div className="flex items-center justify-between mt-2">
@@ -3281,7 +3615,7 @@ function CaretakerDashboardPage() {
               <div className="text-gray-500">
                 <h3 className="font-medium text-lg mb-2">Noch keine Kunden vorhanden</h3>
                 <p className="text-sm">
-                  Kunden erscheinen hier automatisch, wenn sie dich als Betreuer speichern.<br />
+                  Kunden erscheinen hier automatisch, wenn sie dich {isCaretakerUser ? 'als Betreuer' : 'als Dienstleister'} speichern.<br />
                   Teile dein Profil mit Tierhaltern oder werde über die Suche gefunden!
                 </p>
               </div>
@@ -3289,7 +3623,7 @@ function CaretakerDashboardPage() {
           ) : (
             <div>
               <p className="text-gray-600 mb-4 text-sm">
-                Hier siehst du alle Tierhalter, die dich als Betreuer gespeichert haben. 
+                Hier siehst du alle Tierhalter, die dich {isCaretakerUser ? 'als Betreuer' : 'als Dienstleister'} gespeichert haben. 
                 Klicke auf einen Namen, um die freigegebenen Informationen zu sehen.
               </p>
               <ClientDetailsAccordion clients={clients} onDeleteClient={handleDeleteClient} />
@@ -3803,6 +4137,95 @@ function CaretakerDashboardPage() {
       )}
       {activeTab === 'kontaktdaten' && (
         <CaretakerContactTab />
+      )}
+
+      {/* Partner Tab */}
+      {activeTab === 'partner' && (
+        <div className="space-y-8">
+          <div>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-gray-900">
+              <Heart className="w-5 h-5" />
+              Partner
+            </h2>
+            
+            {partnersLoading ? (
+              <div className="text-gray-500">Partner werden geladen ...</div>
+            ) : partnersError ? (
+              <div className="text-red-500">{partnersError}</div>
+            ) : partners.length === 0 ? (
+              <div className="text-gray-500">
+                Noch keine Partner gespeichert.
+                <br />
+                <span className="text-sm">Verwende das Herz-Symbol auf Dienstleister- oder Betreuer-Profilen, um Partner zu speichern.</span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {partners.map((partner: any) => (
+                  <div key={`partner-${partner.id}`} className="bg-white rounded-xl shadow-sm p-4 flex gap-4 items-center relative min-h-[110px] border border-primary-100">
+                    {/* Action Icons oben rechts */}
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      {/* Partner-Herz (klickbar zum Entfernen) */}
+                      <button
+                        type="button"
+                        className="text-primary-500 hover:text-red-500 transition-colors disabled:opacity-50"
+                        title="Partner entfernen"
+                        onClick={(e) => handleRemovePartner(partner, e)}
+                        disabled={removingPartnerId === partner.id}
+                      >
+                        {removingPartnerId === partner.id ? (
+                          <div className="w-3.5 h-3.5 border border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <Heart className="h-3.5 w-3.5 fill-current" />
+                        )}
+                      </button>
+                      {/* Profil ansehen */}
+                      <Link
+                        to={partner.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(partner.user_type) 
+                          ? `/dienstleister/${partner.id}` 
+                          : `/betreuer/${partner.id}`}
+                        className="text-gray-400 hover:text-primary-600 transition-colors"
+                        title="Profil ansehen"
+                      >
+                        <User className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+
+                    {/* Avatar */}
+                    <div className="flex-shrink-0">
+                      <img
+                        src={partner.avatar}
+                        alt={partner.name}
+                        className="w-16 h-16 rounded-full object-cover border-2 border-primary-200"
+                      />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{partner.name}</h3>
+                      <p className="text-sm text-gray-600 truncate">{partner.location}</p>
+                      {partner.rating > 0 && (
+                        <div className="flex items-center gap-1 mt-1">
+                          <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+                          <span className="text-sm font-medium text-gray-700">{partner.rating.toFixed(1)}</span>
+                          {partner.reviewCount > 0 && (
+                            <span className="text-xs text-gray-500">
+                              ({partner.reviewCount} {partner.reviewCount === 1 ? 'Bewertung' : 'Bewertungen'})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {partner.hourlyRate > 0 && (
+                        <p className="text-sm text-primary-600 font-medium mt-1">
+                          ab €{partner.hourlyRate}/Std.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Verifizierung Tab */}

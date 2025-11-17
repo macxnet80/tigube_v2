@@ -2654,8 +2654,184 @@ const useToast = () => {
 - Automatische Cleanup bei Komponenten-Unmount
 - Effiziente Toast-Verwaltung
 
+## Favoriten-System-Patterns
+
+### Dienstleister-Favoriten-Integration
+
+#### ownerCaretakerService-Erweiterung
+```typescript
+// Erweiterte getFavoriteCaretakers Funktion für Dienstleister-Kategorien
+async getFavoriteCaretakers(ownerId: string) {
+  // ... (existing code to fetch connections, caretakerProfiles, userData)
+
+  // Lade Kategorie-Informationen für Dienstleister
+  const kategorieIds = [...new Set(caretakerProfiles.map(p => p.kategorie_id).filter(Boolean))];
+  let kategorienData: any[] = [];
+  if (kategorieIds.length > 0) {
+    const { data: kategorien, error: kategorienError } = await supabase
+      .from('dienstleister_kategorien')
+      .select('id, name, icon')
+      .in('id', kategorieIds);
+    
+    if (!kategorienError && kategorien) {
+      kategorienData = kategorien;
+    }
+  }
+  
+  // Kombiniere die Daten mit Kategorie-Informationen
+  const caretakers = caretakerProfiles.map(profile => {
+    const user = userData?.find(u => u.id === profile.id);
+    const kategorie = kategorienData.find(k => k.id === profile.kategorie_id);
+    return {
+      ...profile,
+      users: user,
+      kategorie: kategorie || null
+    };
+  });
+  
+  // Transform data to include kategorie_name and kategorie_icon
+  return {
+    kategorie_name: caretaker.kategorie?.name || null,
+    kategorie_icon: caretaker.kategorie?.icon || null,
+    // ... other fields
+  };
+}
+```
+
+**Zweck**: Kategorie-Informationen für Dienstleister in Favoriten-Karten bereitstellen
+**Vorteile**: 
+- Vollständige Dienstleister-Informationen in Favoriten
+- Konsistente Datenstruktur für Betreuer und Dienstleister
+- Einfache Anzeige von Dienstleistung-Badges
+
+#### Herz-Icon-Integration-Pattern
+```typescript
+// Herz-Icon für Favoriten in Karten-Komponenten
+function DienstleisterCard({ dienstleister }: DienstleisterCardProps) {
+  const { user } = useAuth();
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchFavoriteStatus = async () => {
+      if (!user || !dienstleister.id) return;
+      try {
+        const { isFavorite: favoriteStatus } = await ownerCaretakerService.isFavorite(user.id, dienstleister.id);
+        setIsFavorite(favoriteStatus);
+      } catch (error) {
+        console.error('Error fetching favorite status:', error);
+      }
+    };
+    fetchFavoriteStatus();
+  }, [user, dienstleister.id]);
+
+  const handleFavoriteToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) {
+      navigate('/anmelden?redirect=' + encodeURIComponent(`/dienstleister/${dienstleister.id}`));
+      return;
+    }
+    setIsFavoriteLoading(true);
+    try {
+      const { success } = await ownerCaretakerService.toggleFavorite(user.id, dienstleister.id);
+      if (success) {
+        setIsFavorite(prev => !prev);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite status:', error);
+    } finally {
+      setIsFavoriteLoading(false);
+    }
+  };
+
+  return (
+    <div className="card">
+      <div className="absolute top-2 right-2">
+        <button
+          type="button"
+          onClick={handleFavoriteToggle}
+          className="bg-white rounded-full p-1 shadow-md"
+          disabled={isFavoriteLoading}
+        >
+          {isFavorite ? (
+            <Heart className="h-4 w-4 text-primary-500 fill-primary-500" />
+          ) : (
+            <Heart className="h-4 w-4 text-gray-400" />
+          )}
+        </button>
+      </div>
+      {/* ... rest of card ... */}
+    </div>
+  );
+}
+```
+
+**Zweck**: Konsistente Favoriten-Funktionalität für alle Karten-Komponenten
+**Vorteile**: 
+- Einheitliche UX für Betreuer und Dienstleister
+- Event-Propagation-Stopp für korrekte Navigation
+- Loading-States für bessere UX
+
+#### Dienstleistung-Badge-Pattern
+```typescript
+// Dienstleistung-Badge in Owner Dashboard Favoriten-Karten
+{favoriteCaretakers.map((caregiver: any) => (
+  <div key={`fav-${caregiver.id}`}>
+    {/* ... other content ... */}
+    
+    {/* Dienstleistung Badge */}
+    {caregiver.kategorie_name && (
+      <div className="flex items-center gap-1 mb-2">
+        {caregiver.kategorie_icon && (
+          <DienstleisterCategoryIcon 
+            iconName={caregiver.kategorie_icon} 
+            size="sm" 
+            className={getCategoryColor(caregiver.kategorie_name)}
+          />
+        )}
+        <span className={cn(
+          "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
+          getCategoryBgColor(caregiver.kategorie_name),
+          getCategoryColor(caregiver.kategorie_name)
+        )}>
+          {caregiver.kategorie_name}
+        </span>
+      </div>
+    )}
+    
+    {/* ... rest of card ... */}
+  </div>
+))}
+```
+
+**Zweck**: Dienstleistung-Kategorie als Badge in Favoriten-Karten anzeigen
+**Vorteile**: 
+- Klare Identifikation von Dienstleistern
+- Konsistente Badge-Darstellung mit Icons
+- Bessere visuelle Hierarchie
+
+#### Anfahrkosten-Filter-Pattern
+```typescript
+// Anfahrkosten aus Leistungen in Favoriten-Karten filtern
+<div className="flex flex-wrap gap-2 mt-1">
+  {caregiver.services
+    .filter((service: string) => !service.toLowerCase().includes('anfahr'))
+    .map((service: string) => (
+      <span key={service} className="inline-block bg-primary-50 text-primary-700 text-xs px-2 py-0.5 rounded-full">
+        {service}
+      </span>
+    ))}
+</div>
+```
+
+**Zweck**: "Anfahrkosten" aus Leistungen in Favoriten-Karten ausblenden
+**Vorteile**: 
+- Saubere Leistungsanzeige ohne Anfahrkosten
+- Bessere UX durch relevante Informationen
+- Konsistente Darstellung
+
 ---
 
 **Letzte Aktualisierung**: 08.02.2025  
-**Status**: UI-Modal-System-Patterns und Toast-Notification-Patterns dokumentiert  
+**Status**: Favoriten-System-Patterns dokumentiert, einschließlich Dienstleister-Integration und UI-Verbesserungen  
 **Nächste Überprüfung**: Nach Implementierung des Buchungssystems

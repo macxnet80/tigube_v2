@@ -123,7 +123,7 @@ export default function DienstleisterCrossSearchCard({ dienstleister }: Dienstle
               Premium
             </span>
           )}
-          {dienstleister.notfall_verfuegbar && (
+          {dienstleister.notfall_bereitschaft && (
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
               <Clock className="w-3 h-3 mr-1" />
               Notfall

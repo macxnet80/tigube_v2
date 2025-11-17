@@ -57,3 +57,27 @@ export function generateAvatarUrl(name: string): string {
 export function getRandomId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
+
+/**
+ * Prüft, ob ein Dienstleister ein Betreuer ist
+ * @param userType - Der user_type aus der users-Tabelle ('caretaker' | 'dienstleister' | 'owner')
+ * @param dienstleisterTyp - Der dienstleister_typ aus dem Profil
+ * @param kategorieId - Die kategorie_id (1 = Betreuer)
+ * @returns true wenn es sich um einen Betreuer handelt
+ */
+export function isCaretaker(
+  userType?: string | null,
+  dienstleisterTyp?: string | null,
+  kategorieId?: number | null
+): boolean {
+  // Prüfe user_type
+  if (userType === 'caretaker') return true;
+  
+  // Prüfe kategorie_id (1 = Betreuer)
+  if (kategorieId === 1) return true;
+  
+  // Prüfe dienstleister_typ als Fallback
+  if (dienstleisterTyp === 'caretaker' || dienstleisterTyp === 'betreuer') return true;
+  
+  return false;
+}

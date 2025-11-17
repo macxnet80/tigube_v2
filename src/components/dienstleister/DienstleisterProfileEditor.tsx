@@ -20,7 +20,7 @@ interface DienstleisterProfileEditorProps {
     fachgebiete?: string[];
     beratungsarten?: string[];
     freie_dienstleistung?: string;
-    notfall_verfuegbar?: boolean;
+    notfall_bereitschaft?: boolean;
     portfolio_urls?: string[];
     stil_beschreibung?: string;
   };
@@ -45,7 +45,7 @@ export default function DienstleisterProfileEditor({
   const [fachgebiete, setFachgebiete] = useState<string[]>(initialData.fachgebiete || []);
   const [beratungsarten, setBeratungsarten] = useState<string[]>(initialData.beratungsarten || []);
   const [freieDialenstleistung, setFreieDialenstleistung] = useState<string>(initialData.freie_dienstleistung || '');
-  const [notfallVerfuegbar, setNotfallVerfuegbar] = useState<boolean>(initialData.notfall_verfuegbar || false);
+  const [notfallBereitschaft, setNotfallBereitschaft] = useState<boolean>(initialData.notfall_bereitschaft || false);
   const [portfolioUrls, setPortfolioUrls] = useState<string[]>(initialData.portfolio_urls || []);
   const [stilBeschreibung, setStilBeschreibung] = useState<string>(initialData.stil_beschreibung || '');
 
@@ -108,7 +108,7 @@ export default function DienstleisterProfileEditor({
         fachgebiete,
         beratungsarten,
         freie_dienstleistung: freieDialenstleistung || null,
-        notfall_verfuegbar: notfallVerfuegbar,
+        notfall_bereitschaft: notfallBereitschaft,
         portfolio_urls: portfolioUrls.filter(url => url.trim()),
         stil_beschreibung: stilBeschreibung || null,
       };
@@ -315,8 +315,8 @@ export default function DienstleisterProfileEditor({
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                checked={notfallVerfuegbar}
-                onChange={(e) => setNotfallVerfuegbar(e.target.checked)}
+                checked={notfallBereitschaft}
+                onChange={(e) => setNotfallBereitschaft(e.target.checked)}
                 className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
               <span className="text-sm font-medium text-gray-700">

@@ -24,7 +24,7 @@ const HelpPage = lazy(() => import('./pages/HelpPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const OwnerDashboardPage = lazy(() => import('./pages/OwnerDashboardPage'));
 const CaretakerDashboardPage = lazy(() => import('./pages/CaretakerDashboardPage'));
-const DienstleisterProfilePage = lazy(() => import('./pages/DienstleisterProfilePage'));
+const DienstleisterProfilePage = lazy(() => import('./pages/DienstleisterProfilePage').then(module => ({ default: module.default || module.DienstleisterProfilePage })));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const OwnerPublicProfilePage = lazy(() => import('./pages/OwnerPublicProfilePage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));

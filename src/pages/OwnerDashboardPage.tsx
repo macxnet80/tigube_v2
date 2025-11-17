@@ -1,6 +1,8 @@
  
 import Button from '../components/ui/Button';
 import { MapPin, Phone, PawPrint, Edit, Shield, Heart, Trash, Check, X, Plus, Upload, Settings, AlertTriangle, Trash2, Briefcase, User, MessageCircle, KeyRound, Eye, EyeOff, Mail, Star, Crown } from 'lucide-react';
+import DienstleisterCategoryIcon, { getCategoryColor, getCategoryBgColor } from '../components/ui/DienstleisterCategoryIcon';
+import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { ownerPreferencesService, petService, userService, ownerCaretakerService } from '../lib/supabase/db';
@@ -1620,7 +1622,9 @@ function OwnerDashboardPage() {
                           )}
                           {/* Profil ansehen */}
                           <Link
-                            to={`/betreuer/${caregiver.id}`}
+                            to={caregiver.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(caregiver.user_type) 
+                              ? `/dienstleister/${caregiver.id}` 
+                              : `/betreuer/${caregiver.id}`}
                             className="text-gray-400 hover:text-primary-600 transition-colors"
                             title="Profil ansehen"
                           >
@@ -1713,7 +1717,9 @@ function OwnerDashboardPage() {
                           </button>
                           {/* Profil ansehen */}
                           <Link
-                            to={`/betreuer/${caregiver.id}`}
+                            to={caregiver.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(caregiver.user_type) 
+                              ? `/dienstleister/${caregiver.id}` 
+                              : `/betreuer/${caregiver.id}`}
                             className="text-gray-400 hover:text-primary-600 transition-colors"
                             title="Profil ansehen"
                           >
@@ -1739,16 +1745,33 @@ function OwnerDashboardPage() {
                               </span>
                             )}
                           </div>
+                          {/* Dienstleistung Badge */}
+                          {caregiver.kategorie_name && (
+                            <div className="flex items-center gap-1 mb-2">
+                              {caregiver.kategorie_icon && (
+                                <DienstleisterCategoryIcon 
+                                  iconName={caregiver.kategorie_icon} 
+                                  size="sm" 
+                                  className={getCategoryColor(caregiver.kategorie_name)}
+                                />
+                              )}
+                              <span className={cn("inline-flex items-center px-2 py-1 rounded-full text-xs font-medium", getCategoryBgColor(caregiver.kategorie_name), getCategoryColor(caregiver.kategorie_name))}>
+                                {caregiver.kategorie_name}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex items-center text-gray-600 text-sm mt-1 mb-2 gap-1">
                             <MapPin className="h-4 w-4 mr-1" />
                             <span className="truncate">{caregiver.location}</span>
                           </div>
                           <div className="flex flex-wrap gap-2 mt-1">
-                            {caregiver.services.map((service: string) => (
-                              <span key={service} className="inline-block bg-primary-50 text-primary-700 text-xs px-2 py-0.5 rounded-full">
-                                {service}
-                              </span>
-                            ))}
+                            {caregiver.services
+                              .filter((service: string) => !service.toLowerCase().includes('anfahr'))
+                              .map((service: string) => (
+                                <span key={service} className="inline-block bg-primary-50 text-primary-700 text-xs px-2 py-0.5 rounded-full">
+                                  {service}
+                                </span>
+                              ))}
                           </div>
                         </div>
                       </div>

@@ -27,18 +27,48 @@ function LoginPage() {
 
   // Handle redirect after successful authentication and profile loading
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      // Only redirect if we don't have specific redirect URLs
-      if (!redirectUrl || redirectUrl === '/') {
-        if (!from || from === '/') {
-          // Redirect to appropriate dashboard based on user type
-          // If userProfile is not loaded yet or user_type is missing, default to owner dashboard
-          const dashboardPath = userProfile?.user_type === 'caretaker' 
-            ? '/dashboard-caretaker' 
-            : '/dashboard-owner';
-          navigate(dashboardPath, { replace: true });
-        }
+    console.log('🔍 Login redirect effect - isAuthenticated:', isAuthenticated, 'authLoading:', authLoading, 'userProfile:', userProfile, 'redirectUrl:', redirectUrl, 'from:', from);
+    
+    if (isAuthenticated && !authLoading && userProfile) {
+      // Prüfe ob es eine spezifische redirectUrl gibt, die NICHT die Startseite oder Login-Seite ist
+      const hasSpecificRedirect = redirectUrl && 
+                                  redirectUrl !== '/' && 
+                                  redirectUrl !== '/anmelden' && 
+                                  redirectUrl !== '/login' &&
+                                  !redirectUrl.startsWith('/anmelden?') &&
+                                  !redirectUrl.startsWith('/login?');
+      
+      // Prüfe ob from eine spezifische Seite ist (nicht Startseite oder Login)
+      const hasSpecificFrom = from && 
+                              from !== '/' && 
+                              from !== '/anmelden' && 
+                              from !== '/login' &&
+                              !from.startsWith('/anmelden?') &&
+                              !from.startsWith('/login?');
+      
+      console.log('🔍 hasSpecificRedirect:', hasSpecificRedirect, 'hasSpecificFrom:', hasSpecificFrom);
+      
+      // Wenn keine spezifische Weiterleitung vorhanden ist, leite zum Dashboard weiter
+      if (!hasSpecificRedirect && !hasSpecificFrom) {
+        // Redirect to appropriate dashboard based on user type
+        const userType = userProfile?.user_type;
+        console.log('🔍 Login redirect - userType:', userType, 'userProfile:', userProfile);
+        
+        const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' || 
+                               userType === 'tierarzt' || userType === 'hundetrainer' || 
+                               userType === 'tierfriseur' || userType === 'physiotherapeut' || 
+                               userType === 'ernaehrungsberater' || userType === 'tierfotograf' || 
+                               userType === 'sonstige')
+          ? '/dashboard-caretaker' 
+          : '/dashboard-owner';
+        
+        console.log('🧭 Navigating to dashboard:', dashboardPath);
+        navigate(dashboardPath, { replace: true });
+      } else {
+        console.log('⏭️ Skipping dashboard redirect - has specific redirect/from');
       }
+    } else {
+      console.log('⏳ Waiting for auth/profile - isAuthenticated:', isAuthenticated, 'authLoading:', authLoading, 'hasUserProfile:', !!userProfile);
     }
   }, [isAuthenticated, authLoading, userProfile, navigate, redirectUrl, from]);
 
@@ -55,18 +85,62 @@ function LoginPage() {
       setLoading(true);
       await signIn(email, password);
       
+      // Warte kurz, damit userProfile geladen werden kann
+      // Dann leite direkt zum Dashboard weiter
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       // Handle different redirect scenarios
-      if (redirectUrl && redirectUrl !== '/') {
-        // Redirect to the originally requested page
+      const hasSpecificRedirect = redirectUrl && 
+                                  redirectUrl !== '/' && 
+                                  redirectUrl !== '/anmelden' && 
+                                  redirectUrl !== '/login' &&
+                                  !redirectUrl.startsWith('/anmelden?') &&
+                                  !redirectUrl.startsWith('/login?');
+      
+      const hasSpecificFrom = from && 
+                              from !== '/' && 
+                              from !== '/anmelden' && 
+                              from !== '/login' &&
+                              !from.startsWith('/anmelden?') &&
+                              !from.startsWith('/login?');
+      
+      console.log('🔍 Post-login redirect check - redirectUrl:', redirectUrl, 'from:', from, 'hasSpecificRedirect:', hasSpecificRedirect, 'hasSpecificFrom:', hasSpecificFrom);
+      
+      if (hasSpecificRedirect) {
+        // Redirect to the originally requested page (aber nicht zu Login-Seiten)
+        console.log('🧭 Redirecting to specific URL:', redirectUrl);
         navigate(redirectUrl, { replace: true });
-      } else if (from && from !== '/') {
-        // Redirect to the page user was trying to access
+      } else if (hasSpecificFrom) {
+        // Redirect to the page user was trying to access (aber nicht zu Login-Seiten)
+        console.log('🧭 Redirecting to from:', from);
         navigate(from, { replace: true });
       } else {
-        // Note: The actual redirect to the appropriate dashboard will be handled
-        // by a useEffect that watches for authentication state changes
-        // This ensures the userProfile is loaded before determining the redirect
-        return;
+        // Leite zum Dashboard weiter basierend auf user_type
+        // Es gibt nur drei User-Typen: owner, caretaker, dienstleister
+        // userProfile sollte jetzt geladen sein (wird vom signIn geladen)
+        console.log('🔍 Post-login redirect - userProfile:', userProfile);
+        
+        // Warte nochmal kurz und prüfe userProfile erneut
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Prüfe userProfile aus dem Hook (wird automatisch aktualisiert)
+        if (userProfile) {
+          const userType = userProfile.user_type;
+          const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' || 
+                                 userType === 'tierarzt' || userType === 'hundetrainer' || 
+                                 userType === 'tierfriseur' || userType === 'physiotherapeut' || 
+                                 userType === 'ernaehrungsberater' || userType === 'tierfotograf' || 
+                                 userType === 'sonstige')
+            ? '/dashboard-caretaker' 
+            : '/dashboard-owner';
+          
+          console.log('🧭 Navigating to dashboard:', dashboardPath, 'userType:', userType);
+          navigate(dashboardPath, { replace: true });
+        } else {
+          // Fallback: Leite zum Caretaker-Dashboard weiter (wird dann korrigiert wenn userProfile geladen ist)
+          console.log('⏳ Profile not loaded yet, redirecting to caretaker dashboard as fallback...');
+          navigate('/dashboard-caretaker', { replace: true });
+        }
       }
     } catch (err: any) {
       console.error('Fehler bei der Anmeldung:', err);

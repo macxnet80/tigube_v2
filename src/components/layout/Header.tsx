@@ -42,6 +42,7 @@ function Header() {
   // Bessere Owner-Prüfung mit Fallback
   const isOwner = userProfile?.user_type === 'owner' || (!userProfile && isAuthenticated);
   const isCaretaker = userProfile?.user_type === 'caretaker' || 
+                      userProfile?.user_type === 'dienstleister' ||
                       userProfile?.user_type === 'tierarzt' || 
                       userProfile?.user_type === 'hundetrainer' || 
                       userProfile?.user_type === 'tierfriseur' || 

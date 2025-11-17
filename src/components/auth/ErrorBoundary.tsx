@@ -21,10 +21,14 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error?.message || 'Unknown error', {
-      componentStack: errorInfo?.componentStack || 'N/A',
-      errorBoundary: errorInfo?.errorBoundary || 'N/A'
-    });
+    try {
+      const errorMessage = error?.message || (error ? String(error) : 'Unknown error');
+      console.error('ErrorBoundary caught an error:', errorMessage, {
+        componentStack: errorInfo?.componentStack || 'N/A'
+      });
+    } catch (logError) {
+      console.error('ErrorBoundary: Failed to log error:', logError);
+    }
   }
 
   render() {

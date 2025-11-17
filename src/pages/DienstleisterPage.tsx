@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapPin, Star, X, ChevronDown, Briefcase, Search } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
@@ -91,16 +91,13 @@ export default function DienstleisterPage() {
       }
       
       // Suche ausführen
+      // Die dienstleister_search_view filtert bereits nach:
+      // - approval_status = 'approved'
+      // - kategorie_id != 1 (Betreuer ausgeschlossen)
+      // - user_type != 'caretaker' (oder kategorie_id != 1)
       const searchResult = await DienstleisterService.searchDienstleister(filters, 50, 0);
       
-      // Nur Dienstleister anzeigen, keine Betreuer (user_type sollte 'dienstleister' sein)
-      // Die dienstleister_search_view sollte bereits nur Dienstleister enthalten,
-      // aber zur Sicherheit filtern wir nochmal nach user_type !== 'caretaker'
-      const filteredResults = (searchResult.dienstleister || []).filter(
-        (d: any) => d.user_type !== 'caretaker' && d.kategorie_id !== 1
-      );
-      
-      setResults(filteredResults);
+      setResults(searchResult.dienstleister || []);
       setTotalCount(searchResult.total_count);
     } catch (err) {
       console.error('Fehler bei der Dienstleister-Suche:', err);

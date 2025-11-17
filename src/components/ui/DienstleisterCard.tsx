@@ -1,8 +1,11 @@
-import { Star, MapPin, Briefcase, Clock, Verified } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star, MapPin, Briefcase, Clock, Verified, Heart } from 'lucide-react';
 import DienstleisterCategoryIcon, { getCategoryColor } from './DienstleisterCategoryIcon';
 import Button from './Button';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
+import { useAuth } from '../../lib/auth/AuthContext';
+import { ownerCaretakerService } from '../../lib/supabase/db';
 import type { DienstleisterProfil } from '../../lib/types/dienstleister';
 
 interface DienstleisterCardProps {
@@ -11,9 +14,57 @@ interface DienstleisterCardProps {
 
 export default function DienstleisterCard({ dienstleister }: DienstleisterCardProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   
-  const handleViewProfile = () => {
+  const handleViewProfile = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     navigate(`/dienstleister/${dienstleister.id}`);
+  };
+
+  // Lade Favoriten-Status wenn User eingeloggt ist
+  useEffect(() => {
+    const fetchFavoriteStatus = async () => {
+      if (!user || !dienstleister.id) return;
+      
+      try {
+        const { isFavorite: favoriteStatus } = await ownerCaretakerService.isFavorite(user.id, dienstleister.id);
+        setIsFavorite(favoriteStatus);
+      } catch (error) {
+        console.error('Error fetching favorite status:', error);
+      }
+    };
+
+    fetchFavoriteStatus();
+  }, [user, dienstleister.id]);
+
+  const handleFavoriteToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!user) {
+      navigate('/anmelden?redirect=' + encodeURIComponent(`/dienstleister/${dienstleister.id}`));
+      return;
+    }
+
+    setIsFavoriteLoading(true);
+
+    try {
+      const { isFavorite: newFavoriteStatus, error } = await ownerCaretakerService.toggleFavorite(user.id, dienstleister.id);
+      
+      if (error) {
+        console.error('Fehler beim Aktualisieren der Favoriten:', error);
+        return;
+      }
+
+      setIsFavorite(newFavoriteStatus);
+    } catch (error) {
+      console.error('Unerwarteter Fehler beim Favorisieren:', error);
+    } finally {
+      setIsFavoriteLoading(false);
+    }
   };
 
   const getDisplayPrice = () => {
@@ -29,7 +80,10 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
   const bio = dienstleister.bio || dienstleister.short_about_me || '';
 
   return (
-    <div className="card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm h-full flex flex-col">
+    <div 
+      className="card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm h-full flex flex-col cursor-pointer"
+      onClick={handleViewProfile}
+    >
       <div className="relative flex flex-col h-full">
         {/* Quadratisches Bild */}
         <div className="relative w-full aspect-square">
@@ -53,6 +107,23 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
           
           {/* Badges overlay */}
           <div className="absolute top-2 right-2 flex flex-col gap-1 items-center">
+            {/* Herz-Icon für Favoriten */}
+            {user && (
+              <button
+                onClick={handleFavoriteToggle}
+                disabled={isFavoriteLoading}
+                className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md hover:bg-white transition-colors disabled:opacity-50 z-10"
+                title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
+              >
+                {isFavoriteLoading ? (
+                  <div className="w-4 h-4 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
+                ) : isFavorite ? (
+                  <Heart className="h-4 w-4 text-primary-500 fill-primary-500" />
+                ) : (
+                  <Heart className="h-4 w-4 text-gray-600 hover:text-primary-500" />
+                )}
+              </button>
+            )}
             {/* is_verified könnte je nach Datenstruktur variieren - optional anzeigen wenn vorhanden */}
             {(dienstleister as any).is_verified && (
               <div className="bg-primary-500 text-white text-xs font-medium px-2 py-1 rounded-full text-center">
