@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import SafeProtectedRoute from './components/auth/SafeProtectedRoute';
@@ -75,6 +75,7 @@ function App() {
           <Route path="/hilfe" element={<HelpPage />} />
           <Route path="/preise" element={<PricingPage />} />
           <Route path="/mitgliedschaften" element={<PricingPage />} />
+          <Route path="/pricing" element={<Navigate to="/mitgliedschaften" replace />} />
           <Route path="/payment/success" element={<PaymentSuccessPage />} />
           <Route path="/blog" element={<BlogListPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />

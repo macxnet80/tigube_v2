@@ -81,17 +81,30 @@ export const formatPrice = (cents: number): string => {
   }).format(cents / 100);
 };
 
+// Alle Dienstleister-Typen (synchron mit stripeService.ts)
+const DIENSTLEISTER_TYPES = [
+  'caretaker', 'tierarzt', 'hundetrainer', 'tierfriseur', 
+  'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'
+] as const;
+
+// Helper: Prüft ob userType ein Dienstleister ist
+const isDienstleister = (userType: string): boolean => {
+  return DIENSTLEISTER_TYPES.includes(userType as any);
+};
+
 // Get plan display name
-export const getPlanDisplayName = (userType: 'owner' | 'caretaker', plan: 'basic' | 'premium'): string => {
+export const getPlanDisplayName = (userType: string, plan: 'basic' | 'premium'): string => {
   if (plan === 'basic') return 'Starter';
   
+  // Owner bekommt "Premium", alle Dienstleister bekommen "Professional"
   return userType === 'owner' ? 'Premium' : 'Professional';
 };
 
 // Get plan price for display - VERBESSERT
-export const getPlanPrice = (userType: 'owner' | 'caretaker', plan: 'basic' | 'premium'): string => {
+export const getPlanPrice = (userType: string, plan: 'basic' | 'premium'): string => {
   if (plan === 'basic') return 'Kostenlos';
   
+  // Owner bekommt den Premium-Preis, alle Dienstleister den Professional-Preis
   const cents = userType === 'owner' ? config.pricing.ownerPremium : config.pricing.caretakerProfessional;
   const formattedPrice = formatPrice(cents);
   

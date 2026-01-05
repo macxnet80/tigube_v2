@@ -7,7 +7,7 @@ import LanguageSelector from '../components/ui/LanguageSelector';
 import CommercialInfoInput from '../components/ui/CommercialInfoInput';
 import type { ClientData } from '../components/ui/ClientDetailsAccordion';
 import { useAuth } from '../lib/auth/AuthContext';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { caretakerProfileService, ownerCaretakerService, userService, caretakerPartnerService } from '../lib/supabase/db';
 import { Calendar, Check, Edit, LogOut, MapPin, Phone, Shield, Upload, Camera, Star, Info, Lock, Briefcase, Verified, Eye, EyeOff, KeyRound, Trash2, AlertTriangle, Mail, X, Clock, Crown, Settings, PawPrint, Moon, CheckCircle, User, XCircle, ChevronRight, Heart } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -379,23 +379,121 @@ function CaretakerDashboardPage() {
     'Tierheim-Erfahrung',
   ];
 
-  // Standard-Leistungen mit Preisfeldern
-  const defaultServices = [
-    'Gassi-Service',
-    'Haustierbetreuung',
-    'Übernachtung',
-    'Kurzbesuche',
-    'Haussitting',
-    'Hundetagesbetreuung',
-  ];
+  // Vordefinierte Dienstleistungen nach Dienstleister-Kategorie (kategorie_id)
+  const predefinedServicesByCategory: Record<number, string[]> = {
+    1: [ // Betreuer
+      'Gassi-Service',
+      'Haustierbetreuung zu Hause',
+      'Hundetagesbetreuung',
+      'Übernachtungsbetreuung',
+      'Urlaubsbetreuung',
+    ],
+    2: [ // Tierarzt
+      'Allgemeine Untersuchung',
+      'Impfung',
+      'Kastration / Sterilisation',
+      'Notfallbehandlung',
+      'Hausbesuch',
+    ],
+    3: [ // Hundetrainer
+      'Einzeltraining',
+      'Gruppentraining',
+      'Welpenkurs',
+      'Verhaltensberatung',
+      'Clickertraining',
+    ],
+    4: [ // Tierfriseur
+      'Komplett-Schnitt',
+      'Fellpflege / Grooming',
+      'Baden & Waschen',
+      'Krallenpflege',
+      'Zahnpflege',
+    ],
+    5: [ // Physiotherapeut
+      'Physiotherapie-Sitzung',
+      'Massage',
+      'Bewegungstherapie',
+      'Rehabilitation',
+      'Hausbesuch',
+    ],
+    6: [ // Ernährungsberater
+      'Ernährungsberatung',
+      'Diätplan-Erstellung',
+      'Futteranalyse',
+      'Gewichtsmanagement',
+      'Allergieberatung',
+    ],
+    7: [ // Tierfotograf
+      'Fotoshooting',
+      'Outdoor-Fotografie',
+      'Studio-Fotografie',
+      'Event-Fotografie',
+      'Bildbearbeitung',
+    ],
+    8: [ // Sonstige
+      'Individuelle Beratung',
+      'Hausbesuch',
+      'Notfall-Service',
+      'Langzeitbetreuung',
+    ],
+  };
+
+  // Hole kategorie_id aus dem Profil (Standard: 1 für Betreuer)
+  const currentCategoryId = profile?.kategorie_id || 1;
+  
+  // Dynamische Liste der Standard-Leistungen basierend auf kategorie_id
+  const defaultServices = useMemo(() => {
+    return predefinedServicesByCategory[currentCategoryId] || predefinedServicesByCategory[1];
+  }, [currentCategoryId]);
 
   const servicePriceLabels: Record<string, string> = {
+    // Betreuer (kategorie_id: 1)
     'Gassi-Service': '€/30 Min',
-    'Haustierbetreuung': '€/Besuch',
-    'Übernachtung': '€/Nacht',
-    'Kurzbesuche': '€/Besuch',
-    'Haussitting': '€/Tag',
+    'Haustierbetreuung zu Hause': '€/Besuch',
     'Hundetagesbetreuung': '€/Tag',
+    'Übernachtungsbetreuung': '€/Nacht',
+    'Urlaubsbetreuung': '€/Tag',
+    // Tierarzt (kategorie_id: 2)
+    'Allgemeine Untersuchung': '€/Termin',
+    'Impfung': '€/Termin',
+    'Kastration / Sterilisation': '€/Termin',
+    'Notfallbehandlung': '€/Termin',
+    'Hausbesuch': '€/Besuch',
+    // Hundetrainer (kategorie_id: 3)
+    'Einzeltraining': '€/Stunde',
+    'Gruppentraining': '€/Stunde',
+    'Welpenkurs': '€/Kurs',
+    'Verhaltensberatung': '€/Stunde',
+    'Clickertraining': '€/Stunde',
+    // Tierfriseur (kategorie_id: 4)
+    'Komplett-Schnitt': '€/Termin',
+    'Fellpflege / Grooming': '€/Termin',
+    'Baden & Waschen': '€/Termin',
+    'Krallenpflege': '€/Termin',
+    'Zahnpflege': '€/Termin',
+    // Physiotherapeut (kategorie_id: 5)
+    'Physiotherapie-Sitzung': '€/Stunde',
+    'Massage': '€/Stunde',
+    'Bewegungstherapie': '€/Stunde',
+    'Rehabilitation': '€/Stunde',
+    'Hausbesuch': '€/Besuch',
+    // Ernährungsberater (kategorie_id: 6)
+    'Ernährungsberatung': '€/Stunde',
+    'Diätplan-Erstellung': '€/Plan',
+    'Futteranalyse': '€/Analyse',
+    'Gewichtsmanagement': '€/Stunde',
+    'Allergieberatung': '€/Stunde',
+    // Tierfotograf (kategorie_id: 7)
+    'Fotoshooting': '€/Shooting',
+    'Outdoor-Fotografie': '€/Shooting',
+    'Studio-Fotografie': '€/Shooting',
+    'Event-Fotografie': '€/Event',
+    'Bildbearbeitung': '€/Bild',
+    // Sonstige (kategorie_id: 8)
+    'Individuelle Beratung': '€/Stunde',
+    'Hausbesuch': '€/Besuch',
+    'Notfall-Service': '€/Einsatz',
+    'Langzeitbetreuung': '€/Tag',
   };
 
   // Anfahrkosten separat
@@ -2811,12 +2909,12 @@ function CaretakerDashboardPage() {
               ) : (
                 // Edit-Modus-Leistungen
                 <form onSubmit={e => { e.preventDefault(); handleSaveServices(); }} className="space-y-6">
-                  {/* Standard-Leistungen mit Checkboxen und Preisfeldern */}
+                  {/* Vordefinierte Dienstleistungen für die eigene Kategorie */}
                   <div>
-                    <label className="block text-sm font-medium mb-3">Standard-Leistungen</label>
+                    <label className="block text-sm font-medium mb-4">Dienstleistungen</label>
                     <div className="space-y-3">
                       {defaultServices.map((service) => (
-                        <div key={service} className="flex items-center gap-4 p-3 border rounded-lg">
+                        <div key={service} className="flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
                           <div className="flex items-center gap-3 flex-1">
                             <input 
                               type="checkbox" 
@@ -2835,7 +2933,7 @@ function CaretakerDashboardPage() {
                               }}
                             />
                             <span className="font-medium text-gray-700">{service}</span>
-                            <span className="text-sm text-gray-500">({servicePriceLabels[service]})</span>
+                            <span className="text-sm text-gray-500">({servicePriceLabels[service] || '€'})</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <input 
@@ -4558,7 +4656,7 @@ function CaretakerDashboardPage() {
                   <button
                     onClick={() => {
                       
-                      window.location.href = '/pricing';
+                      window.location.href = '/mitgliedschaften';
                     }}
                     className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                   >
@@ -4569,7 +4667,7 @@ function CaretakerDashboardPage() {
                     variant="outline"
                     onClick={() => {
                       
-                      window.location.href = '/pricing';
+                      window.location.href = '/mitgliedschaften';
                     }}
                     className="flex items-center gap-2"
                   >

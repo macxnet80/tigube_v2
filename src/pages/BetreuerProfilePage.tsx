@@ -886,7 +886,7 @@ function BetreuerProfilePage() {
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <p className="text-amber-800 text-sm">
                     <strong>Bewertung schreiben:</strong> Du benötigst ein Premium-Abo, um Bewertungen zu schreiben. 
-                    <Link to="/pricing" className="text-amber-900 underline ml-1">
+                    <Link to="/mitgliedschaften" className="text-amber-900 underline ml-1">
                       Jetzt upgraden →
                     </Link>
                   </p>

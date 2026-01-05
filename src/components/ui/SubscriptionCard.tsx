@@ -268,7 +268,7 @@ function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker
       basic: {
         name: 'Starter',
         price: planPrice,
-        description: 'Grundausstattung für Betreuer',
+        description: 'Grundausstattung für Dienstleister',
         icon: <Users className="w-8 h-8 text-gray-600" />,
         features: [
           { name: 'Kontaktanfragen', available: true, limit: '3 pro Monat' },
@@ -277,19 +277,17 @@ function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker
           { name: 'Verfügbarkeitskalender', available: true },
           { name: 'Premium Badge', available: false },
           { name: 'Priorität in Suche', available: false },
-          { name: 'Bis zu 6 Umgebungsbilder', available: false },
           { name: 'Premium Support', available: false }
         ]
       },
       premium: {
         name: 'Professional',
         price: planPrice,
-        description: 'Für professionelle Betreuer',
+        description: 'Für professionelle Dienstleister',
         icon: <Crown className="w-8 h-8 text-purple-600" />,
         features: [
           { name: 'Kontaktanfragen', available: true, highlight: 'Unlimited' },
           { name: 'Basis-Profil', available: true },
-          { name: 'Bis zu 3 Umgebungsbilder', available: true },
           { name: 'Verfügbarkeitskalender', available: true },
           { name: 'Premium Badge', available: true },
           { name: 'Priorität in Suche', available: true },
@@ -321,7 +319,7 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
         <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
           {userType === 'owner' 
             ? 'Finde die perfekte Betreuung für dein Haustier mit den Funktionen, die du brauchst.'
-            : 'Erweitere dein Betreuungsgeschäft mit professionellen Tools und Features.'
+            : 'Erweitere dein Geschäft mit professionellen Tools und Features.'
           }
         </p>
 

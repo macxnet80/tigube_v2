@@ -1,8 +1,19 @@
 import { stripePromise, config, getPriceInCents, getPlanDisplayName } from './stripeConfig';
 import { supabase } from '../supabase/client';
 
+// Alle Dienstleister-Typen, die den Professional Plan nutzen können
+export type DienstleisterType = 
+  | 'caretaker' 
+  | 'tierarzt' 
+  | 'hundetrainer' 
+  | 'tierfriseur' 
+  | 'physiotherapeut' 
+  | 'ernaehrungsberater' 
+  | 'tierfotograf' 
+  | 'sonstige';
+
 export interface CheckoutSessionData {
-  userType: 'owner' | 'caretaker';
+  userType: 'owner' | DienstleisterType;
   plan: 'premium' | 'professional';
   userId: string;
   userEmail: string;
@@ -44,14 +55,21 @@ export class StripeService {
       environment: config.app.environment
     });
 
+    // Liste aller Dienstleister-Typen, die den Professional Plan nutzen können
+    const dienstleisterTypes: DienstleisterType[] = [
+      'caretaker', 'tierarzt', 'hundetrainer', 'tierfriseur', 
+      'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'
+    ];
+    
     // Bestimme den richtigen Payment Link
     let baseUrl = '';
     if (data.userType === 'owner' && data.plan === 'premium') {
       baseUrl = PAYMENT_LINKS.owner_premium;
-    } else if (data.userType === 'caretaker' && data.plan === 'professional') {
+    } else if (dienstleisterTypes.includes(data.userType as DienstleisterType) && data.plan === 'professional') {
+      // Alle Dienstleister-Typen nutzen den gleichen Professional Payment Link
       baseUrl = PAYMENT_LINKS.caretaker_professional;
       if (!baseUrl) {
-        throw new Error('Payment Link für Caretaker Professional noch nicht konfiguriert. Bitte VITE_STRIPE_PAYMENT_LINK_CARETAKER_PROFESSIONAL setzen.');
+        throw new Error('Payment Link für Professional noch nicht konfiguriert. Bitte VITE_STRIPE_PAYMENT_LINK_CARETAKER_PROFESSIONAL setzen.');
       }
     } else {
       throw new Error(`Ungültige Kombination: userType=${data.userType}, plan=${data.plan}`);
@@ -61,7 +79,7 @@ export class StripeService {
     if (!baseUrl || baseUrl === 'undefined') {
       const missingEnvVar = data.userType === 'owner' 
         ? 'VITE_STRIPE_PAYMENT_LINK_OWNER_PREMIUM'
-        : 'VITE_STRIPE_PAYMENT_LINK_CARETAKER_PROFESSIONAL';
+        : 'VITE_STRIPE_PAYMENT_LINK_CARETAKER_PROFESSIONAL'; // Alle Dienstleister nutzen denselben Link
       throw new Error(`Payment Link nicht konfiguriert. Bitte Environment Variable ${missingEnvVar} setzen.`);
     }
 
