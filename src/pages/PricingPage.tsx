@@ -209,7 +209,7 @@ export default function PricingPage() {
                   Was passiert, wenn die Beta-Phase endet?
                 </h3>
                 <p className="text-gray-600">
-                  Am 31. Oktober 2025 wechseln wir vom Beta-Modus zu unserem regulären Freemium-Modell. 
+                  Ende Mai 2026 wechseln wir vom Beta-Modus zu unserem regulären Freemium-Modell. 
                   Du behältst alle deine Daten und kannst weiterhin den kostenlosen Basic-Plan nutzen oder 
                   zu Premium/Professional upgraden für erweiterte Features.
                 </p>
