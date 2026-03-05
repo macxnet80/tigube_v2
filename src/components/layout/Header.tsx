@@ -18,9 +18,9 @@ function Header() {
   const { unreadCount } = useNotifications();
   const { isPremiumUser } = useSubscription();
 
-  
+
   const isActive = (path: string) => location.pathname === path;
-  
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -41,22 +41,22 @@ function Header() {
 
   // Bessere Owner-Prüfung mit Fallback
   const isOwner = userProfile?.user_type === 'owner' || (!userProfile && isAuthenticated);
-  const isCaretaker = userProfile?.user_type === 'caretaker' || 
-                      userProfile?.user_type === 'dienstleister' ||
-                      userProfile?.user_type === 'tierarzt' || 
-                      userProfile?.user_type === 'hundetrainer' || 
-                      userProfile?.user_type === 'tierfriseur' || 
-                      userProfile?.user_type === 'physiotherapeut' || 
-                      userProfile?.user_type === 'ernaehrungsberater' || 
-                      userProfile?.user_type === 'tierfotograf' || 
-                      userProfile?.user_type === 'sonstige';
-  
+  const isCaretaker = userProfile?.user_type === 'caretaker' ||
+    userProfile?.user_type === 'dienstleister' ||
+    userProfile?.user_type === 'tierarzt' ||
+    userProfile?.user_type === 'hundetrainer' ||
+    userProfile?.user_type === 'tierfriseur' ||
+    userProfile?.user_type === 'physiotherapeut' ||
+    userProfile?.user_type === 'ernaehrungsberater' ||
+    userProfile?.user_type === 'tierfotograf' ||
+    userProfile?.user_type === 'sonstige';
+
   // Debug: Log current state
   if (import.meta.env.DEV) {
-    console.log('Header State:', { 
-      loading, 
-      isAuthenticated, 
-      hasUserProfile: !!userProfile, 
+    console.log('Header State:', {
+      loading,
+      isAuthenticated,
+      hasUserProfile: !!userProfile,
       userType: userProfile?.user_type,
       calculatedIsOwner: isOwner,
       calculatedIsCaretaker: isCaretaker
@@ -71,7 +71,7 @@ function Header() {
           <Link to="/" className="flex items-center space-x-2">
             <img src="/Image/Logos/tigube_logo.svg" alt="tigube Logo" className="h-10 w-auto" />
           </Link>
-          
+
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             {isAuthenticated ? (
@@ -89,13 +89,14 @@ function Header() {
                 <NavLink to="/suche" isActive={isActive('/suche')}>
                   Betreuer finden
                 </NavLink>
-                <div className="relative inline-block">
+                <div className="relative inline-block group">
                   <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
                     Wo finde ich...?
                   </NavLink>
                   {!isPremiumUser && (
-                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
-                      <PremiumBadge size="sm" />
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1 bg-amber-500 text-white text-xs font-semibold rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 shadow-md z-50">
+                      🔒 Premium
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-amber-500" />
                     </div>
                   )}
                 </div>
@@ -109,7 +110,7 @@ function Header() {
                   </NavLink>
                 )}
                 <Link to="/nachrichten" className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-primary-700 transition-colors relative">
-                  <MessageCircle className="h-5 w-5" /> 
+                  <MessageCircle className="h-5 w-5" />
                   Nachrichten
                   <NotificationBadge count={unreadCount} className="ml-1" />
                 </Link>
@@ -126,42 +127,43 @@ function Header() {
               </>
             ) : (
               <>
-            <NavLink to="/" isActive={isActive('/')}>
-              Startseite
-            </NavLink>
-            <NavLink to="/suche" isActive={isActive('/suche')}>
-            Betreuer finden
-            </NavLink>
-            <div className="relative inline-block">
-              <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
-                Wo finde ich...?
-              </NavLink>
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
-                <PremiumBadge size="sm" />
-              </div>
-            </div>
-            <NavLink to="/mitgliedschaften" isActive={isActive('/mitgliedschaften') || isActive('/preise')}>
-            Preise
-            </NavLink>
-            <NavLink to="/blog" isActive={isActive('/blog')}>
-            tigube-Welt
-            </NavLink>
-            <Link
-              to="/anmelden"
-              className="btn btn-outline"
-            >
-              Login
-            </Link>
-            <Link
-              to="/registrieren"
-              className="btn btn-primary"
-            >
-              Registrieren
-            </Link>
+                <NavLink to="/" isActive={isActive('/')}>
+                  Startseite
+                </NavLink>
+                <NavLink to="/suche" isActive={isActive('/suche')}>
+                  Betreuer finden
+                </NavLink>
+                <div className="relative inline-block group">
+                  <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
+                    Wo finde ich...?
+                  </NavLink>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1 bg-amber-500 text-white text-xs font-semibold rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 shadow-md z-50">
+                    🔒 Premium
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-amber-500" />
+                  </div>
+                </div>
+                <NavLink to="/mitgliedschaften" isActive={isActive('/mitgliedschaften') || isActive('/preise')}>
+                  Preise
+                </NavLink>
+                <NavLink to="/blog" isActive={isActive('/blog')}>
+                  tigube-Welt
+                </NavLink>
+                <Link
+                  to="/anmelden"
+                  className="btn btn-outline"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/registrieren"
+                  className="btn btn-primary"
+                >
+                  Registrieren
+                </Link>
               </>
             )}
           </nav>
-          
+
           {/* Mobile menu button */}
           <button
             type="button"
@@ -176,7 +178,7 @@ function Header() {
             )}
           </button>
         </div>
-        
+
         {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="md:hidden">
@@ -196,14 +198,14 @@ function Header() {
                   <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
                     Betreuer finden
                   </MobileNavLink>
-                  <div className="relative px-3 py-2">
+                  <div className="relative group">
                     <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
                       Wo finde ich...?
                     </MobileNavLink>
                     {!isPremiumUser && (
-                      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
-                        <PremiumBadge size="sm" />
-                      </div>
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 bg-amber-500 text-white text-xs font-semibold rounded-full">
+                        🔒 Premium
+                      </span>
                     )}
                   </div>
                   <MobileNavLink to="/blog" isActive={isActive('/blog')} onClick={() => setIsMenuOpen(false)}>
@@ -211,16 +213,16 @@ function Header() {
                   </MobileNavLink>
                   {/* Test-Dashboard-Link entfernt (mobil) */}
                   {!isPremiumUser && (
-                    <MobileNavLink 
-                      to="/mitgliedschaften" 
-                      isActive={isActive('/mitgliedschaften') || isActive('/preise')} 
+                    <MobileNavLink
+                      to="/mitgliedschaften"
+                      isActive={isActive('/mitgliedschaften') || isActive('/preise')}
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Mitgliedschaften
                     </MobileNavLink>
                   )}
                   <Link to="/nachrichten" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-primary-700 relative" onClick={() => setIsMenuOpen(false)}>
-                    <MessageCircle className="h-5 w-5" /> 
+                    <MessageCircle className="h-5 w-5" />
                     Nachrichten
                     <NotificationBadge count={unreadCount} className="ml-1" />
                   </Link>
@@ -240,49 +242,49 @@ function Header() {
                 </>
               ) : (
                 <>
-              <MobileNavLink to="/" isActive={isActive('/')} onClick={() => setIsMenuOpen(false)}>
+                  <MobileNavLink to="/" isActive={isActive('/')} onClick={() => setIsMenuOpen(false)}>
                     Startseite
-              </MobileNavLink>
-              <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
+                  </MobileNavLink>
+                  <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
                     Betreuer finden
-              </MobileNavLink>
-              <div className="relative px-3 py-2">
-                <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
-                  Wo finde ich...?
-                </MobileNavLink>
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 z-10">
-                  <PremiumBadge size="sm" />
-                </div>
-              </div>
-              <MobileNavLink 
-                to="/mitgliedschaften" 
-                isActive={isActive('/mitgliedschaften') || isActive('/preise')} 
-                onClick={() => setIsMenuOpen(false)}
-              >
+                  </MobileNavLink>
+                  <div className="relative group">
+                    <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
+                      Wo finde ich...?
+                    </MobileNavLink>
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 bg-amber-500 text-white text-xs font-semibold rounded-full">
+                      🔒 Premium
+                    </span>
+                  </div>
+                  <MobileNavLink
+                    to="/mitgliedschaften"
+                    isActive={isActive('/mitgliedschaften') || isActive('/preise')}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     Preise
-              </MobileNavLink>
-              <MobileNavLink 
-                to="/blog" 
-                isActive={isActive('/blog')} 
-                onClick={() => setIsMenuOpen(false)}
-              >
+                  </MobileNavLink>
+                  <MobileNavLink
+                    to="/blog"
+                    isActive={isActive('/blog')}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     tigube-Welt
-              </MobileNavLink>
-              <div className="pt-2 flex flex-col space-y-2">
-                <Link
-                  to="/anmelden"
-                  className="btn btn-outline w-full justify-center"
-                  onClick={() => setIsMenuOpen(false)}
-                >
+                  </MobileNavLink>
+                  <div className="pt-2 flex flex-col space-y-2">
+                    <Link
+                      to="/anmelden"
+                      className="btn btn-outline w-full justify-center"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
                       Login
-                </Link>
-                <Link
-                  to="/registrieren"
-                  className="btn btn-primary w-full justify-center"
-                >
+                    </Link>
+                    <Link
+                      to="/registrieren"
+                      className="btn btn-primary w-full justify-center"
+                    >
                       Registrieren
-                </Link>
-              </div>
+                    </Link>
+                  </div>
                 </>
               )}
             </div>
