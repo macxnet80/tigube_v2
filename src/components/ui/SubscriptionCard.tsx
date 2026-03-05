@@ -12,20 +12,20 @@ interface SubscriptionCardProps {
   highlighted?: boolean;
 }
 
-export function SubscriptionCard({ 
-  plan, 
-  userType, 
-  onSelectPlan, 
+export function SubscriptionCard({
+  plan,
+  userType,
+  onSelectPlan,
   className = '',
-  highlighted = false 
+  highlighted = false
 }: SubscriptionCardProps) {
   const { subscription, features } = useSubscription();
   const planConfig = getPlanConfig(plan, userType);
-  
+
   // Check if this is the user's current plan
   const currentPlan = subscription?.plan_type || 'basic';
   const isCurrentPlan = currentPlan === plan;
-  
+
   // Check if user is in beta
   const isBetaUser = subscription?.status === 'trial';
 
@@ -34,10 +34,10 @@ export function SubscriptionCard({
     // Stripe Customer Portal URL für Owner
     if (userType === 'owner') {
       // Stripe Customer Portal URLs - konfiguriert im Stripe Dashboard
-      const customerPortalUrl = isStripeTestMode() 
+      const customerPortalUrl = isStripeTestMode()
         ? 'https://billing.stripe.com/p/login/test_00w9AU8GVfV897Q8gJ2oE00'  // Test Mode Login
         : 'https://billing.stripe.com/p/login/live_00000000000000000000000000'; // Live Mode Login (TODO: Mit echter URL ersetzen)
-      
+
       console.log('🔗 Opening Stripe Customer Portal:', customerPortalUrl);
       window.open(customerPortalUrl, '_blank');
     } else {
@@ -45,7 +45,7 @@ export function SubscriptionCard({
       const caretakerPortalUrl = isStripeTestMode()
         ? 'https://billing.stripe.com/p/login/test_CARETAKER_URL'  // TODO: Caretaker Test URL
         : 'https://billing.stripe.com/p/login/live_CARETAKER_URL'; // TODO: Caretaker Live URL
-      
+
       console.log('🔗 Opening Caretaker Customer Portal:', caretakerPortalUrl);
       alert('Mitgliedschaftsverwaltung für Betreuer wird in Kürze verfügbar sein.\n\nURL: ' + caretakerPortalUrl);
     }
@@ -75,18 +75,18 @@ export function SubscriptionCard({
           <div className="flex items-center justify-center mb-3">
             {planConfig.icon}
           </div>
-          
+
           <h3 className="text-xl font-bold text-gray-900 mb-2">
             {planConfig.name}
           </h3>
-          
+
           <div className="mb-2">
             <span className="text-4xl font-bold text-gray-900">{planConfig.price}</span>
             {planConfig.price !== 'Kostenlos' && (
               <span className="text-gray-500 ml-1">/Monat</span>
             )}
           </div>
-          
+
           <p className="text-gray-600 text-sm">{planConfig.description}</p>
         </div>
 
@@ -124,12 +124,12 @@ export function SubscriptionCard({
         {isBetaUser && plan === 'premium' && (
           <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
             <p className="text-xs text-blue-800 text-center">
-              <strong>Beta-Test:</strong> Alle Features bereits kostenlos verfügbar.<br/>
+              <strong>Beta-Test:</strong> Alle Features bereits kostenlos verfügbar.<br />
               Upgrade nur zum Testen der Zahlungsabwicklung.
             </p>
           </div>
         )}
-        
+
         {isBetaUser && plan === 'basic' && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-xs text-blue-800 text-center">
@@ -151,7 +151,7 @@ export function SubscriptionCard({
         {plan === 'premium' && isStripeTestMode && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="text-xs text-blue-800 text-center">
-              <strong>🔒 Stripe Test-Modus aktiv</strong><br/>
+              <strong>🔒 Stripe Test-Modus aktiv</strong><br />
               Sichere Test-Umgebung - keine echten Zahlungen
             </div>
           </div>
@@ -212,7 +212,7 @@ interface FeatureItem {
 
 function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker') {
   const planPrice = getPlanPrice(userType, plan);
-  
+
   if (userType === 'owner') {
     // Owner-spezifische Pläne
     const ownerFeatures: Record<string, {
@@ -231,8 +231,8 @@ function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker
           { name: 'Kontaktanfragen', available: true, limit: '3 pro Monat' },
           { name: 'Basis-Suchfilter', available: true },
           { name: 'Profil erstellen', available: true },
-          { name: 'Bewertungen lesen', available: true },
-          { name: 'Bewertungen schreiben', available: false },
+          { name: 'Bewertungen schreiben', available: true },
+          { name: 'Bewertungen lesen', available: false },
           { name: 'Werbefrei', available: false },
           { name: 'Erweiterte Filter', available: false },
           { name: 'Premium Support', available: false }
@@ -247,8 +247,8 @@ function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker
           { name: 'Kontaktanfragen', available: true, highlight: 'Unlimited' },
           { name: 'Basis-Suchfilter', available: true },
           { name: 'Profil erstellen', available: true },
-          { name: 'Bewertungen lesen', available: true },
           { name: 'Bewertungen schreiben', available: true },
+          { name: 'Bewertungen lesen', available: true },
           { name: 'Werbefrei', available: true },
           { name: 'Erweiterte Filter', available: true },
           { name: 'Premium Support', available: true }
@@ -317,7 +317,7 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
       {/* Header */}
       <div className="text-center mb-12">
         <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-          {userType === 'owner' 
+          {userType === 'owner'
             ? 'Finde die perfekte Betreuung für dein Haustier mit den Funktionen, die du brauchst.'
             : 'Erweitere dein Geschäft mit professionellen Tools und Features.'
           }
@@ -329,11 +329,10 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl w-full">
               <button
                 onClick={() => onUserTypeChange('owner')}
-                className={`relative bg-white rounded-xl border transition-all duration-300 hover:shadow-lg p-6 text-left ${
-                  userType === 'owner'
+                className={`relative bg-white rounded-xl border transition-all duration-300 hover:shadow-lg p-6 text-left ${userType === 'owner'
                     ? 'border-2 border-blue-500 shadow-lg transform scale-105 ring-2 ring-blue-500/20'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 {userType === 'owner' && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -353,11 +352,10 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
 
               <button
                 onClick={() => onUserTypeChange('caretaker')}
-                className={`relative bg-white rounded-xl border transition-all duration-300 hover:shadow-lg p-6 text-left ${
-                  userType === 'caretaker'
+                className={`relative bg-white rounded-xl border transition-all duration-300 hover:shadow-lg p-6 text-left ${userType === 'caretaker'
                     ? 'border-2 border-blue-500 shadow-lg transform scale-105 ring-2 ring-blue-500/20'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 {userType === 'caretaker' && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -377,7 +375,7 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
             </div>
           </div>
         )}
-        
+
         {isBetaUser && (
           <div className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-full">
             <Zap className="w-4 h-4" />
@@ -390,14 +388,14 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        <SubscriptionCard 
-          plan="basic" 
-          userType={userType} 
+        <SubscriptionCard
+          plan="basic"
+          userType={userType}
           onSelectPlan={onSelectPlan}
         />
-        <SubscriptionCard 
-          plan="premium" 
-          userType={userType} 
+        <SubscriptionCard
+          plan="premium"
+          userType={userType}
           onSelectPlan={onSelectPlan}
           highlighted={!isBetaUser} // Highlight Premium wenn nicht Beta
         />
@@ -421,7 +419,7 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
 function FeatureComparisonTable({ userType }: { userType: 'owner' | 'caretaker' }) {
   const planName = userType === 'owner' ? 'Premium' : 'Professional';
   const planPrice = userType === 'owner' ? '€4,90/Monat' : '€12,90/Monat';
-  
+
   const features = [
     { name: 'Kontaktanfragen', basic: '3/Monat', premium: 'Unlimited' },
     { name: 'Suchfilter', basic: 'Basis', premium: 'Erweitert' },
@@ -433,6 +431,8 @@ function FeatureComparisonTable({ userType }: { userType: 'owner' | 'caretaker' 
       { name: 'Priorität in Suche', basic: 'Normal', premium: 'Höchste' },
       { name: 'Umgebungsbilder', basic: '❌', premium: '✅ (6 max)' }
     ] : [
+      { name: 'Bewertungen schreiben', basic: '✅', premium: '✅' },
+      { name: 'Bewertungen lesen', basic: '❌', premium: '✅' },
       { name: 'Favoriten-Listen', basic: '❌', premium: '✅' },
       { name: 'Erweiterte Filter', basic: '❌', premium: '✅' }
     ])

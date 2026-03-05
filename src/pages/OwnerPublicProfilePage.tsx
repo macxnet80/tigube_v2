@@ -1,41 +1,60 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAuth } from '../lib/auth/AuthContext';
 import { getOrCreateConversation } from '../lib/supabase/chatService';
 import { ownerPublicService } from '../lib/supabase/ownerPublicService';
+import { supabase } from '../lib/supabase/client';
+import { useFeatureAccess } from '../hooks/useFeatureAccess';
+import { OwnerReviewForm } from '../components/ui/OwnerReviewForm';
 import type { PublicOwnerProfile } from '../lib/supabase/types';
-import { 
-  PawPrint, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Shield, 
+import {
+  PawPrint,
+  MapPin,
+  Phone,
+  Mail,
+  Shield,
   Heart,
   Calendar,
   ArrowLeft,
   Lock,
   AlertTriangle,
-  Camera
+  Camera,
+  Star
 } from 'lucide-react';
 import Button from '../components/ui/Button';
 
 function OwnerPublicProfilePage() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  
+  const { user, userProfile } = useAuth();
+  const { subscription } = useFeatureAccess();
+
   const [profile, setProfile] = useState<PublicOwnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
+
+  // Owner-Review State
+  interface OwnerReview {
+    id: string;
+    rating: number;
+    comment: string | null;
+    created_at: string | null;
+    reviewer_id: string | null;
+    users?: { first_name: string | null; last_name: string | null } | null;
+  }
+  const [ownerReviews, setOwnerReviews] = useState<OwnerReview[]>([]);
+  const [ownerReviewsLoading, setOwnerReviewsLoading] = useState(false);
+  const [showOwnerReviewForm, setShowOwnerReviewForm] = useState(false);
+  const [isSubmittingOwnerReview, setIsSubmittingOwnerReview] = useState(false);
 
   // Rate Limiting: Verhindert zu häufige Profile-Zugriffe
   const checkRateLimit = (): boolean => {
     const key = `profile_access_${userId}`;
     const now = Date.now();
     const lastAccess = localStorage.getItem(key);
-    
+
     if (lastAccess) {
       const timeDiff = now - parseInt(lastAccess);
       // Erlaubt maximal einen Zugriff alle 30 Sekunden pro Profil
@@ -43,7 +62,7 @@ function OwnerPublicProfilePage() {
         return false; // Rate limit exceeded
       }
     }
-    
+
     localStorage.setItem(key, now.toString());
     return true; // Access allowed
   };
@@ -69,7 +88,7 @@ function OwnerPublicProfilePage() {
 
       try {
         const { data, error: profileError } = await ownerPublicService.getPublicOwnerProfile(userId, user.id);
-        
+
         if (profileError) {
           if (profileError === 'UNAUTHORIZED') {
             setUnauthorized(true);
@@ -93,16 +112,92 @@ function OwnerPublicProfilePage() {
     loadProfile();
   }, [userId, user]);
 
+  // Owner-Reviews laden
+  useEffect(() => {
+    const fetchOwnerReviews = async () => {
+      if (!userId) return;
+      setOwnerReviewsLoading(true);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('owner_reviews')
+          .select(`
+            id,
+            rating,
+            comment,
+            created_at,
+            reviewer_id,
+            reviewer:users!owner_reviews_reviewer_id_fkey(first_name, last_name)
+          `)
+          .eq('owner_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (!fetchError && data) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setOwnerReviews(data as any);
+        }
+      } catch (err) {
+        console.error('Error fetching owner reviews:', err);
+      } finally {
+        setOwnerReviewsLoading(false);
+      }
+    };
+    fetchOwnerReviews();
+  }, [userId]);
+
+  // Owner-Review einreichen
+  const handleOwnerReviewSubmit = async (rating: number, comment: string) => {
+    if (!user || !userId) return;
+
+    setIsSubmittingOwnerReview(true);
+    try {
+      const { error: insertError } = await supabase
+        .from('owner_reviews')
+        .insert({
+          owner_id: userId,
+          reviewer_id: user.id,
+          rating,
+          comment: comment || null
+        });
+
+      if (insertError) {
+        console.error('Error submitting owner review:', insertError);
+        return;
+      }
+
+      // Reviews neu laden
+      const { data: newReviews } = await supabase
+        .from('owner_reviews')
+        .select(`
+          id,
+          rating,
+          comment,
+          created_at,
+          reviewer_id,
+          reviewer:users!owner_reviews_reviewer_id_fkey(first_name, last_name)
+        `)
+        .eq('owner_id', userId)
+        .order('created_at', { ascending: false });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (newReviews) setOwnerReviews(newReviews as any);
+      setShowOwnerReviewForm(false);
+    } catch (err) {
+      console.error('Unexpected error submitting owner review:', err);
+    } finally {
+      setIsSubmittingOwnerReview(false);
+    }
+  };
+
   // SEO-Optimierung: Meta-Tags dynamisch setzen
   useEffect(() => {
     if (profile) {
       const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Tierhalter';
       const petNames = profile.pets?.map(pet => pet.name).join(', ') || '';
       const description = `Tierhalter-Profil von ${fullName}${petNames ? ` mit ${petNames}` : ''} auf tigube - Professionelle Tierbetreuung finden`;
-      
+
       // Dynamische Meta-Tags setzen
       document.title = `${fullName} - Tierhalter-Profil | tigube`;
-      
+
       // Meta Description
       let metaDescription = document.querySelector('meta[name="description"]');
       if (!metaDescription) {
@@ -153,7 +248,7 @@ function OwnerPublicProfilePage() {
     // Cleanup: Standard-Meta-Tags bei Component Unmount
     return () => {
       document.title = 'tigube - Professionelle Tierbetreuung finden';
-      
+
       const metaDescription = document.querySelector('meta[name="description"]');
       if (metaDescription) {
         metaDescription.setAttribute('content', 'tigube - Die Plattform für professionelle Tierbetreuung. Finden Sie vertrauensvolle Betreuer für Ihre Haustiere.');
@@ -182,16 +277,16 @@ function OwnerPublicProfilePage() {
             <PawPrint className="mx-auto h-24 w-24 text-gray-300" />
             <Lock className="absolute -top-2 -right-2 h-12 w-12 text-primary-500 bg-white rounded-full p-2 shadow-lg" />
           </div>
-          
+
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             🔒 Pssst... das ist privat!
           </h1>
-          
+
           <p className="text-lg text-gray-600 mb-6 leading-relaxed">
-            Du bist nicht berechtigt, dieses Profil zu sehen. 
+            Du bist nicht berechtigt, dieses Profil zu sehen.
             Nur Betreuer, die bereits von diesem Tierhalter kontaktiert wurden, haben Zugriff! 🐕
           </p>
-          
+
           <div className="bg-primary-50 rounded-lg p-6 mb-8 text-left">
             <div className="flex items-start">
               <Heart className="h-6 w-6 text-primary-600 mt-1 mr-3 flex-shrink-0" />
@@ -207,20 +302,20 @@ function OwnerPublicProfilePage() {
               </div>
             </div>
           </div>
-          
-                      <div className="text-center">
-              <p className="text-sm text-gray-500 mb-3">
-                Noch kein Betreuer? Werde Teil unserer Community!
-              </p>
-              <Button
-                onClick={() => navigate('/registrieren?type=caretaker')}
-                variant="outline"
-                className="flex items-center justify-center gap-2 mx-auto"
-              >
-                <Heart className="h-4 w-4" />
-                Betreuer werden
-              </Button>
-            </div>
+
+          <div className="text-center">
+            <p className="text-sm text-gray-500 mb-3">
+              Noch kein Betreuer? Werde Teil unserer Community!
+            </p>
+            <Button
+              onClick={() => navigate('/registrieren?type=caretaker')}
+              variant="outline"
+              className="flex items-center justify-center gap-2 mx-auto"
+            >
+              <Heart className="h-4 w-4" />
+              Betreuer werden
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -334,16 +429,16 @@ function OwnerPublicProfilePage() {
                 <Camera className="h-4 w-4 text-white" />
               </div>
             </div>
-            
+
             <div className="flex-1 w-full text-center lg:text-left">
               <h1 className="text-3xl font-bold text-gray-900 mb-4">{fullName}</h1>
-              
+
               {/* Haustier-Badges */}
               {profile.pets && profile.pets.length > 0 && (
                 <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-6">
                   {profile.pets.map((pet) => (
-                    <span 
-                      key={pet.id} 
+                    <span
+                      key={pet.id}
                       className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary-50 text-primary-700"
                     >
                       <PawPrint className="h-4 w-4 mr-1" />
@@ -360,7 +455,7 @@ function OwnerPublicProfilePage() {
                   <div className="text-sm">
                     <p className="font-medium text-blue-800">Geteilte Informationen</p>
                     <p className="text-blue-700 mt-1">
-                      Nur freigegebene Daten werden angezeigt. Der Tierhalter kann jederzeit 
+                      Nur freigegebene Daten werden angezeigt. Der Tierhalter kann jederzeit
                       kontrollieren, welche Informationen sichtbar sind.
                     </p>
                   </div>
@@ -415,10 +510,10 @@ function OwnerPublicProfilePage() {
               {profile.pets.map((pet) => (
                 <div key={pet.id} className="flex gap-4 items-center">
                   {pet.photo_url ? (
-                    <img 
-                      src={pet.photo_url} 
-                      alt={pet.name} 
-                      className="w-20 h-20 rounded-xl object-cover border-2 border-primary-100" 
+                    <img
+                      src={pet.photo_url}
+                      alt={pet.name}
+                      className="w-20 h-20 rounded-xl object-cover border-2 border-primary-100"
                       loading="lazy"
                       onError={(e) => {
                         // Fallback wenn Bild nicht laden kann
@@ -432,7 +527,7 @@ function OwnerPublicProfilePage() {
                     />
                   ) : null}
                   {/* Fallback Avatar - wird angezeigt wenn kein Bild oder Fehler beim Laden */}
-                  <div 
+                  <div
                     className="w-20 h-20 rounded-xl bg-gray-100 border-2 border-primary-100 flex items-center justify-center text-gray-400 text-2xl font-bold"
                     style={{ display: pet.photo_url ? 'none' : 'flex' }}
                   >
@@ -536,11 +631,106 @@ function OwnerPublicProfilePage() {
           </div>
         )}
 
+        {/* Bewertungen von Dienstleistern */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Star className="h-5 w-5 text-primary-600" />
+            Bewertungen ({ownerReviews.length})
+          </h2>
+
+          {/* Bewertungsformular schreiben – für eingeloggte Caretaker/Dienstleister (Free + Premium) */}
+          {user && userProfile && userId !== user.id &&
+            (userProfile.user_type === 'caretaker' ||
+              ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type || '')) && (
+              <>
+                {showOwnerReviewForm ? (
+                  <div className="mb-6">
+                    <OwnerReviewForm
+                      ownerName={profile?.first_name || 'Tierhalter'}
+                      onSubmit={handleOwnerReviewSubmit}
+                      onCancel={() => setShowOwnerReviewForm(false)}
+                      isLoading={isSubmittingOwnerReview}
+                      reviewerName={userProfile ? `${userProfile.first_name} ${userProfile.last_name?.charAt(0) || ''}.` : undefined}
+                    />
+                  </div>
+                ) : (
+                  <div className="mb-6">
+                    <Button
+                      variant="primary"
+                      onClick={() => setShowOwnerReviewForm(true)}
+                      className="w-full sm:w-auto"
+                    >
+                      ⭐ Bewertung schreiben
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+
+          {/* Bewertungen lesen – Premium Gate */}
+          {ownerReviewsLoading ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner />
+            </div>
+          ) : subscription?.plan_type === 'premium' ? (
+            ownerReviews.length > 0 ? (
+              <div className="space-y-4">
+                {ownerReviews.map((review) => {
+                  const firstName = review.users?.first_name || null;
+                  const lastName = review.users?.last_name || null;
+                  const reviewerName = firstName
+                    ? `${firstName}${lastName ? ` ${lastName.charAt(0)}.` : ''}`
+                    : 'Dienstleister';
+                  return (
+                    <div key={review.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center">
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${i < review.rating
+                                  ? 'text-yellow-500 fill-yellow-500'
+                                  : 'text-gray-300'
+                                  }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="ml-2 text-sm font-medium text-gray-900">
+                            {reviewerName}
+                          </span>
+                        </div>
+                        <span className="text-sm text-gray-600">
+                          {new Date(review.created_at || '').toLocaleDateString('de-DE')}
+                        </span>
+                      </div>
+                      {review.comment && (
+                        <p className="text-gray-700">{review.comment}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-gray-600">Noch keine Bewertungen vorhanden.</p>
+            )
+          ) : (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-amber-800 text-sm">
+                <strong>Bewertungen lesen:</strong> Du benötigst ein Premium-Abo, um Bewertungen zu lesen.
+                <Link to="/mitgliedschaften" className="text-amber-900 underline ml-1">
+                  Jetzt upgraden →
+                </Link>
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Kontakt-Aufruf */}
         <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl p-6 text-center">
           <h2 className="text-xl font-semibold mb-2">Interesse an einer Zusammenarbeit?</h2>
           <p className="text-gray-600 mb-4">
-            Kontaktiere {profile.first_name || 'den Tierhalter'} über die Nachrichtenfunktion!
+            Kontaktiere {profile?.first_name || 'den Tierhalter'} über die Nachrichtenfunktion!
           </p>
           <Button
             onClick={handleSendMessage}

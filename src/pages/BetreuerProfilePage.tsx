@@ -16,7 +16,7 @@ import { useAuth } from '../lib/auth/AuthContext';
 import { getOrCreateConversation } from '../lib/supabase/chatService';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityContext';
-import { useSubscription } from '../lib/auth/useSubscription';
+
 import HomePhotosSection from '../components/ui/HomePhotosSection';
 import ResponseTimeDisplay from '../components/ui/ResponseTimeDisplay';
 import { getCaretakerResponseTime, calculateCaretakerResponseTime } from '../lib/supabase/responseTimeService';
@@ -69,7 +69,7 @@ function BetreuerProfilePage() {
   const navigate = useNavigate();
   const { isAuthenticated, user, userProfile } = useAuth();
   const { checkFeature, canSendContactRequest, trackUsage, subscription } = useFeatureAccess();
-  const { isPremiumUser, subscriptionLoading } = useSubscription();
+
   const { shortTermAvailable } = useShortTermAvailability();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
@@ -86,7 +86,7 @@ function BetreuerProfilePage() {
   const [responseTime, setResponseTime] = useState<string | null>(null);
   const [responseTimeLoading, setResponseTimeLoading] = useState(false);
   const [responseTimeData, setResponseTimeData] = useState<{ text: string; messageCount: number } | null>(null);
-  
+
   useEffect(() => {
     const fetchCaretaker = async () => {
       if (!id) {
@@ -95,14 +95,6 @@ function BetreuerProfilePage() {
         return;
       }
 
-      // Premium-Check: Free-User können nur ihr eigenes Profil sehen
-      const isOwnProfile = user && id === user.id;
-      if (!isOwnProfile && !isPremiumUser && !subscriptionLoading) {
-        setError('Premium-Mitgliedschaft erforderlich');
-        setLoading(false);
-        navigate('/mitgliedschaften?feature=profile_view');
-        return;
-      }
 
       setLoading(true);
       setError(null);
@@ -111,9 +103,9 @@ function BetreuerProfilePage() {
         // Use the getCaretakerById function from db.ts
         // Übergebe user.id als viewerId, damit das eigene Profil auch ohne Freigabe geladen wird
         const { data, error: fetchError } = await caretakerSearchService.getCaretakerById(id, user?.id);
-        
+
         console.log('🔍 Fetch result:', { data, error: fetchError });
-        
+
         if (fetchError) {
           console.error('❌ Fetch error:', fetchError);
           // Prüfe ob es das eigene Profil ist
@@ -142,7 +134,7 @@ function BetreuerProfilePage() {
             short_term_available: user && data.userId === user.id ? shortTermAvailable : data.short_term_available
           };
           setCaretaker(updatedData);
-          
+
           // Profile loaded
         }
       } catch (err) {
@@ -155,7 +147,7 @@ function BetreuerProfilePage() {
     };
 
     fetchCaretaker();
-  }, [id, user, shortTermAvailable, isPremiumUser, subscriptionLoading, navigate]);
+  }, [id, user, shortTermAvailable]);
 
   // Update caretaker's short_term_available when context changes
   useEffect(() => {
@@ -171,7 +163,7 @@ function BetreuerProfilePage() {
   useEffect(() => {
     const fetchFavoriteStatus = async () => {
       if (!user || !id) return;
-      
+
       try {
         const { isFavorite: favoriteStatus } = await ownerCaretakerService.isFavorite(user.id, id);
         setIsFavorite(favoriteStatus);
@@ -187,13 +179,13 @@ function BetreuerProfilePage() {
   useEffect(() => {
     const fetchPartnerStatus = async () => {
       if (!user || !id || !userProfile) return;
-      
+
       // Nur für Dienstleister/Betreuer anzeigen
-      const isCaretakerUser = userProfile.user_type === 'caretaker' || 
+      const isCaretakerUser = userProfile.user_type === 'caretaker' ||
         (userProfile.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type));
-      
+
       if (!isCaretakerUser) return;
-      
+
       try {
         const { isPartner: partnerStatus } = await caretakerPartnerService.isPartner(user.id, id);
         setIsPartner(partnerStatus);
@@ -209,7 +201,7 @@ function BetreuerProfilePage() {
   useEffect(() => {
     const fetchReviews = async () => {
       if (!id) return;
-      
+
       setReviewsLoading(true);
       try {
         const { data, error } = await supabase
@@ -229,13 +221,13 @@ function BetreuerProfilePage() {
 
         if (!error && data) {
           setReviews(data);
-          
+
           // Aktualisiere auch die Bewertungsdaten im Caretaker-Objekt
           if (caretaker) {
-            const averageRating = data.length > 0 
-              ? data.reduce((sum, review) => sum + review.rating, 0) / data.length 
+            const averageRating = data.length > 0
+              ? data.reduce((sum, review) => sum + review.rating, 0) / data.length
               : 0;
-            
+
             setCaretaker(prev => prev ? {
               ...prev,
               rating: averageRating,
@@ -257,7 +249,7 @@ function BetreuerProfilePage() {
   useEffect(() => {
     const fetchResponseTime = async () => {
       if (!id) return;
-      
+
       setResponseTimeLoading(true);
       try {
         const responseTimeData = await calculateCaretakerResponseTime(id);
@@ -287,14 +279,14 @@ function BetreuerProfilePage() {
   const formatCaretakerName = (name: string) => {
     const parts = name.trim().split(' ');
     if (parts.length <= 1) return name;
-    
+
     const firstName = parts[0];
     const lastName = parts[parts.length - 1];
-    
+
     if (lastName && lastName.length > 0) {
       return `${firstName} ${lastName.charAt(0)}.`;
     }
-    
+
     return name;
   };
 
@@ -334,7 +326,7 @@ function BetreuerProfilePage() {
 
       if (conversation && !error) {
         // Contact initiated
-        
+
         // Navigiere direkt in die Konversation
         navigate(`/nachrichten/${conversation.id}`);
       } else {
@@ -364,11 +356,10 @@ function BetreuerProfilePage() {
       return;
     }
 
-    // Premium-Prüfung: Nur Premium-Owner können bewerten
-    if (subscription?.plan_type !== 'premium') {
-      console.error('Only premium owners can submit reviews');
-      // Optional: Redirect to pricing page
-      navigate('/mitgliedschaften?feature=review');
+    // Prüfung: Nur Owners können bewerten (kein Plan-Check mehr)
+    // Free-Owner können schreiben, Premium-Owner können lesen UND schreiben
+    if (subscription?.plan_type !== 'basic' && subscription?.plan_type !== 'premium' && subscription?.plan_type !== undefined) {
+      console.error('Invalid plan type');
       return;
     }
 
@@ -390,9 +381,9 @@ function BetreuerProfilePage() {
       }
 
       // Refresh reviews list
-              const { data: newReviews, error: fetchError } = await supabase
-          .from('reviews')
-          .select(`
+      const { data: newReviews, error: fetchError } = await supabase
+        .from('reviews')
+        .select(`
             id,
             rating,
             comment,
@@ -402,17 +393,17 @@ function BetreuerProfilePage() {
             caretaker_response_created_at,
             users(first_name, last_name)
           `)
-          .eq('caretaker_id', caretaker.id)
-          .order('created_at', { ascending: false });
+        .eq('caretaker_id', caretaker.id)
+        .order('created_at', { ascending: false });
 
       if (!fetchError && newReviews) {
         setReviews(newReviews);
-        
+
         // Aktualisiere auch die Bewertungsdaten im Caretaker-Objekt
-        const averageRating = newReviews.length > 0 
-          ? newReviews.reduce((sum, review) => sum + review.rating, 0) / newReviews.length 
+        const averageRating = newReviews.length > 0
+          ? newReviews.reduce((sum, review) => sum + review.rating, 0) / newReviews.length
           : 0;
-        
+
         setCaretaker(prev => prev ? {
           ...prev,
           rating: averageRating,
@@ -446,7 +437,7 @@ function BetreuerProfilePage() {
 
     try {
       const { isFavorite: newFavoriteStatus, error } = await ownerCaretakerService.toggleFavorite(user.id, caretaker.id);
-      
+
       if (error) {
         console.error('Fehler beim Aktualisieren der Favoriten:', error);
         // TODO: Toast-Benachrichtigung anzeigen
@@ -479,7 +470,7 @@ function BetreuerProfilePage() {
 
     try {
       const { isPartner: newPartnerStatus, error } = await caretakerPartnerService.togglePartner(user.id, caretaker.id);
-      
+
       if (error) {
         console.error('Fehler beim Aktualisieren der Partner:', error);
         return;
@@ -502,7 +493,6 @@ function BetreuerProfilePage() {
   }
 
   if (error || !caretaker) {
-    const isPremiumError = error === 'Premium-Mitgliedschaft erforderlich';
     return (
       <div className="container-custom py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">
@@ -511,23 +501,9 @@ function BetreuerProfilePage() {
         <p className="mb-8">
           {error || 'Der gesuchte Betreuer existiert nicht oder wurde entfernt.'}
         </p>
-        {isPremiumError ? (
-          <div className="flex flex-col gap-4 items-center">
-            <p className="text-gray-600">
-              Um andere Profile anzusehen, benötigst du eine Premium-Mitgliedschaft.
-            </p>
-            <Link to="/mitgliedschaften?feature=profile_view">
-              <Button variant="primary">Jetzt upgraden</Button>
-            </Link>
-            <Link to="/suche">
-              <Button variant="outline">Zurück zur Suche</Button>
-            </Link>
-          </div>
-        ) : (
-          <Link to="/suche">
-            <Button variant="primary">Zurück zur Suche</Button>
-          </Link>
-        )}
+        <Link to="/suche">
+          <Button variant="primary">Zurück zur Suche</Button>
+        </Link>
       </div>
     );
   }
@@ -559,7 +535,7 @@ function BetreuerProfilePage() {
       'Arabisch': AE,
       'العربية': AE
     };
-    
+
     return languageMap[language] || null; // Fallback für unbekannte Sprachen
   };
 
@@ -574,8 +550,8 @@ function BetreuerProfilePage() {
             {/* Profile Image */}
             <div className="md:w-1/4 lg:w-1/5">
               <div className="relative rounded-xl overflow-hidden shadow-md">
-                <img 
-                  src={caretaker.avatar} 
+                <img
+                  src={caretaker.avatar}
                   alt={displayName}
                   className="w-full aspect-square object-cover"
                   onError={(e) => {
@@ -586,7 +562,7 @@ function BetreuerProfilePage() {
 
               </div>
             </div>
-            
+
             {/* Profile Info */}
             <div className="flex-1">
               <div className="flex items-start justify-between mb-4">
@@ -631,25 +607,25 @@ function BetreuerProfilePage() {
                         </Button>
                       )}
                       {/* Partner-Herz (für Dienstleister/Betreuer) */}
-                      {user && userProfile && (userProfile.user_type === 'caretaker' || 
+                      {user && userProfile && (userProfile.user_type === 'caretaker' ||
                         (userProfile.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type))) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handlePartnerToggle}
-                          className="p-1 focus:ring-0 focus:ring-offset-0"
-                          disabled={isPartnerLoading}
-                          title={isPartner ? 'Partner entfernen' : 'Als Partner speichern'}
-                        >
-                          {isPartnerLoading ? (
-                            <div className="w-5 h-5 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
-                          ) : isPartner ? (
-                            <Heart className="h-5 w-5 text-primary-500 fill-primary-500" />
-                          ) : (
-                            <Heart className="h-5 w-5 text-primary-500 hover:text-primary-600" />
-                          )}
-                        </Button>
-                      )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handlePartnerToggle}
+                            className="p-1 focus:ring-0 focus:ring-offset-0"
+                            disabled={isPartnerLoading}
+                            title={isPartner ? 'Partner entfernen' : 'Als Partner speichern'}
+                          >
+                            {isPartnerLoading ? (
+                              <div className="w-5 h-5 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
+                            ) : isPartner ? (
+                              <Heart className="h-5 w-5 text-primary-500 fill-primary-500" />
+                            ) : (
+                              <Heart className="h-5 w-5 text-primary-500 hover:text-primary-600" />
+                            )}
+                          </Button>
+                        )}
                     </div>
                   </div>
                   <div className="flex items-center text-gray-600 mb-2">
@@ -668,7 +644,7 @@ function BetreuerProfilePage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3">
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary-600">
@@ -677,7 +653,7 @@ function BetreuerProfilePage() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Services */}
               <div className="flex flex-wrap gap-2 mb-6">
                 {caretaker.services
@@ -691,20 +667,20 @@ function BetreuerProfilePage() {
                     </span>
                   ))}
               </div>
-              
+
               <p className="text-gray-700 mb-6 whitespace-pre-wrap break-words w-full lg:w-3/5">
                 {caretaker.bio}
               </p>
-              
+
               {/* Antwortzeit-Anzeige */}
               <div className="mb-4">
-                <ResponseTimeDisplay 
-                  responseTime={responseTime || caretaker.responseTime} 
+                <ResponseTimeDisplay
+                  responseTime={responseTime || caretaker.responseTime}
                   messageCount={responseTimeData?.messageCount}
                   isLoading={responseTimeLoading}
                 />
               </div>
-              
+
               {/* Anmeldung-Aufforderung für nicht eingeloggte Benutzer */}
               {!user && (
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -739,10 +715,10 @@ function BetreuerProfilePage() {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="lg"
                   leftIcon={<MessageCircle className="h-4 w-4" />}
                   onClick={handleContactClick}
@@ -751,11 +727,11 @@ function BetreuerProfilePage() {
                 >
                   Nachricht senden
                 </Button>
-                
+
                 {/* Zurück zum Dashboard Button - nur für Betreuer auf eigenem Profil */}
                 {user && caretaker.userId === user.id && userProfile?.user_type === 'caretaker' && (
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     leftIcon={<ArrowLeft className="h-3 w-3" />}
                     onClick={() => navigate('/dashboard-caretaker')}
@@ -764,7 +740,7 @@ function BetreuerProfilePage() {
                     Dashboard
                   </Button>
                 )}
-                
+
                 {/* Review Button - only for authenticated owners */}
                 {/* Review Button wurde in die Bewertungs-Sektion verschoben */}
               </div>
@@ -773,17 +749,17 @@ function BetreuerProfilePage() {
         </div>
       </div>
 
-              {/* Profile Banner Top */}
-        <div className="container-custom py-4">
-          <AdvertisementBanner 
-            placement="profile_top"
-            targetingOptions={{
-              petTypes: userProfile?.pet_types || [],
-              location: userProfile?.location || '',
-              subscriptionType: subscription?.plan_type || 'free'
-            }}
-          />
-        </div>
+      {/* Profile Banner Top */}
+      <div className="container-custom py-4">
+        <AdvertisementBanner
+          placement="profile_top"
+          targetingOptions={{
+            petTypes: userProfile?.pet_types || [],
+            location: userProfile?.location || '',
+            subscriptionType: subscription?.plan_type || 'free'
+          }}
+        />
+      </div>
 
       {/* Details Tabs */}
       <div className="container-custom py-12">
@@ -828,8 +804,8 @@ function BetreuerProfilePage() {
             </div>
 
             {/* Verfügbarkeit */}
-            <AvailabilityDisplay 
-              availability={caretaker.availability} 
+            <AvailabilityDisplay
+              availability={caretaker.availability}
               overnightAvailability={caretaker.overnight_availability}
             />
 
@@ -843,8 +819,8 @@ function BetreuerProfilePage() {
                 Bewertungen ({reviews.length})
               </h2>
 
-              {/* Review Form - Nur für Premium Owners */}
-              {showReviewForm && caretaker && userProfile?.user_type === 'owner' && subscription?.plan_type === 'premium' && (
+              {/* Review Form - Für alle Owner (Free & Premium) */}
+              {showReviewForm && caretaker && userProfile?.user_type === 'owner' && (
                 <div className="mb-6">
                   <ReviewForm
                     caretakerId={caretaker.id || ''}
@@ -857,8 +833,8 @@ function BetreuerProfilePage() {
                 </div>
               )}
 
-              {/* Review Button - Nur für Premium Owners anzeigen */}
-              {!showReviewForm && userProfile?.user_type === 'owner' && subscription?.plan_type === 'premium' && (
+              {/* Review Button - Für alle Owner anzeigen */}
+              {!showReviewForm && userProfile?.user_type === 'owner' && (
                 <div className="mb-6">
                   <Button
                     variant="primary"
@@ -870,22 +846,20 @@ function BetreuerProfilePage() {
                 </div>
               )}
 
-
-
               {/* Info für Caretaker */}
               {userProfile?.user_type === 'caretaker' && (
                 <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <p className="text-gray-700 text-sm">
-                    <strong>Bewertung schreiben:</strong> Nur Premium-Tierhalter können Bewertungen für Betreuer schreiben.
+                    <strong>Bewertungen lesen:</strong> Nur Premium-Tierhalter können Bewertungen anderer Tierhalter sehen.
                   </p>
                 </div>
               )}
 
-              {/* Info für Free Owners */}
+              {/* Reviews-Anzeige: Nur für Premium-Owner sichtbar */}
               {userProfile?.user_type === 'owner' && subscription?.plan_type !== 'premium' && (
                 <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <p className="text-amber-800 text-sm">
-                    <strong>Bewertung schreiben:</strong> Du benötigst ein Premium-Abo, um Bewertungen zu schreiben. 
+                    <strong>Bewertungen lesen:</strong> Du benötigst ein Premium-Abo, um Bewertungen zu lesen.
                     <Link to="/mitgliedschaften" className="text-amber-900 underline ml-1">
                       Jetzt upgraden →
                     </Link>
@@ -897,15 +871,17 @@ function BetreuerProfilePage() {
                 <div className="flex justify-center py-8">
                   <LoadingSpinner />
                 </div>
-              ) : reviews.length > 0 ? (
-                <div className="space-y-6">
-                                  {reviews.map(review => (
-                  <ReviewCard key={review.id} review={review} caretakerName={displayName} />
-                ))}
-                </div>
-              ) : (
-                <p className="text-gray-600">Noch keine Bewertungen vorhanden.</p>
-              )}
+              ) : subscription?.plan_type === 'premium' || userProfile?.user_type !== 'owner' ? (
+                reviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {reviews.map(review => (
+                      <ReviewCard key={review.id} review={review} caretakerName={displayName} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">Noch keine Bewertungen vorhanden.</p>
+                )
+              ) : null}
             </div>
           </div>
 
@@ -923,18 +899,18 @@ function BetreuerProfilePage() {
                   .map(service => {
                     // Suche Service-spezifischen Preis
                     const servicePrice = caretaker.prices && caretaker.prices[service];
-                    
+
                     // Prüfe ob ein gültiger Preis vorhanden ist (nicht leer, nicht null, nicht undefined)
-                    const hasValidPrice = servicePrice && 
-                      servicePrice !== '' && 
-                      servicePrice !== null && 
+                    const hasValidPrice = servicePrice &&
+                      servicePrice !== '' &&
+                      servicePrice !== null &&
                       servicePrice !== undefined &&
                       (typeof servicePrice === 'number' ? servicePrice > 0 : parseFloat(servicePrice) > 0);
-                    
+
                     const displayPrice = hasValidPrice
                       ? (typeof servicePrice === 'string' ? `${servicePrice}€` : `${servicePrice}€`)
                       : 'Preis auf Anfrage';
-                    
+
                     return (
                       <div key={service} className="flex justify-between items-center">
                         <span className="text-gray-800 font-medium">{service}</span>
@@ -958,13 +934,13 @@ function BetreuerProfilePage() {
                   {caretaker.languages.map((language, index) => {
                     const FlagComponent = getLanguageFlag(language);
                     return (
-                      <div 
-                        key={index} 
+                      <div
+                        key={index}
                         className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200"
                       >
                         {FlagComponent && (
-                          <FlagComponent 
-                            className="w-5 h-4 rounded-sm border border-gray-300 shadow-sm" 
+                          <FlagComponent
+                            className="w-5 h-4 rounded-sm border border-gray-300 shadow-sm"
                             title={language}
                           />
                         )}
@@ -996,15 +972,15 @@ function BetreuerProfilePage() {
               </div>
             </div>
 
-                          {/* Advertisement Banner */}
-              <AdvertisementBanner 
-                placement="profile_sidebar"
-                targetingOptions={{
-                  petTypes: userProfile?.pet_types || [],
-                  location: userProfile?.location || '',
-                  subscriptionType: subscription?.plan_type || 'free'
-                }}
-              />
+            {/* Advertisement Banner */}
+            <AdvertisementBanner
+              placement="profile_sidebar"
+              targetingOptions={{
+                petTypes: userProfile?.pet_types || [],
+                location: userProfile?.location || '',
+                subscriptionType: subscription?.plan_type || 'free'
+              }}
+            />
           </div>
         </div>
       </div>
@@ -1024,17 +1000,17 @@ function ReviewCard({ review, caretakerName }: ReviewCardProps) {
       // Fallback für Reviews ohne Benutzer-Daten
       return 'Tierhalter';
     }
-    
+
     if (!firstName) {
       // Nur Nachname vorhanden
       return lastName || 'Tierhalter';
     }
-    
+
     if (!lastName) {
       // Nur Vorname vorhanden
       return firstName;
     }
-    
+
     // Vollständiger Name: Vorname + erster Buchstabe des Nachnamens
     return `${firstName} ${lastName.charAt(0)}.`;
   };
@@ -1070,7 +1046,7 @@ function ReviewCard({ review, caretakerName }: ReviewCardProps) {
         </span>
       </div>
       <p className="text-gray-700">{review.comment || ''}</p>
-      
+
       {/* Caretaker Antwort */}
       {review.caretaker_response && (
         <div className="mt-3 ml-4 pl-4 border-l-2 border-primary-200 bg-primary-50 rounded-r-lg p-3">

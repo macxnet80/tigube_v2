@@ -47,3 +47,45 @@ export interface UnreadCount {
   conversation_id: string
   count: number
 }
+
+// Owner caretaker connection types
+export type OwnerCaretakerConnection = Database['public']['Tables']['owner_caretaker_connections']['Row']
+export type OwnerCaretakerConnectionInsert = Database['public']['Tables']['owner_caretaker_connections']['Insert']
+export type OwnerCaretakerConnectionUpdate = Database['public']['Tables']['owner_caretaker_connections']['Update']
+
+// Public owner profile (shown to caretakers with access)
+export interface PublicOwnerProfile {
+  id: string
+  first_name: string
+  last_name: string
+  profile_photo_url?: string | null
+  phone_number?: string | null
+  email?: string | null
+  plz?: string | null
+  city?: string | null
+  services?: string[] | null
+  other_services?: string | null
+  vet_info?: { name: string; address: string; phone: string } | string | null
+  emergency_contact_name?: string | null
+  emergency_contact_phone?: string | null
+  care_instructions?: string | null
+  pets?: Array<{
+    id: string
+    name: string
+    type: string
+    breed?: string | null
+    age?: number | null
+    photo_url?: string | null
+    gender?: string | null
+    neutered?: boolean | null
+  }>
+  share_settings?: {
+    phoneNumber: boolean
+    email: boolean
+    address: boolean
+    vetInfo: boolean
+    emergencyContact: boolean
+    petDetails: boolean
+    carePreferences: boolean
+  }
+}

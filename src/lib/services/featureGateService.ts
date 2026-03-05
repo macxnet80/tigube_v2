@@ -7,6 +7,7 @@ export interface FeatureLimits {
   booking_requests_per_month: number;
   profile_views_per_month: number;
   can_write_reviews: boolean;
+  can_read_reviews: boolean; // Premium: Reviews anderer sehen
   can_reply_to_reviews: boolean;
   max_environment_images: number;
   has_premium_badge: boolean;
@@ -32,7 +33,8 @@ export class FeatureGateService {
             contact_requests_per_month: 3,
             booking_requests_per_month: 0, // Owner erstellen keine Bookings
             profile_views_per_month: 50,
-            can_write_reviews: false,
+            can_write_reviews: true, // Free: Schreiben erlaubt
+            can_read_reviews: false,  // Free: Lesen NICHT erlaubt
             can_reply_to_reviews: false,
             max_environment_images: 0,
             has_premium_badge: false,
@@ -46,7 +48,8 @@ export class FeatureGateService {
             contact_requests_per_month: -1, // Unlimited
             booking_requests_per_month: 0,
             profile_views_per_month: -1,
-            can_write_reviews: true,
+            can_write_reviews: true,  // Premium: Schreiben auch erlaubt
+            can_read_reviews: true,   // Premium: Lesen erlaubt
             can_reply_to_reviews: false,
             max_environment_images: 0,
             has_premium_badge: true,
@@ -65,7 +68,8 @@ export class FeatureGateService {
             contact_requests_per_month: 0, // Caretaker senden keine Contact Requests
             booking_requests_per_month: 3, // Können 3 Bookings pro Monat empfangen
             profile_views_per_month: 30,
-            can_write_reviews: false,
+            can_write_reviews: true,  // Free: Bewertungen schreiben erlaubt
+            can_read_reviews: false,  // Free: Lesen NICHT erlaubt
             can_reply_to_reviews: false,
             max_environment_images: 0,
             has_premium_badge: false,
@@ -79,7 +83,8 @@ export class FeatureGateService {
             contact_requests_per_month: 0,
             booking_requests_per_month: -1, // Unlimited
             profile_views_per_month: -1,
-            can_write_reviews: false,
+            can_write_reviews: true,  // Premium: Bewertungen schreiben erlaubt
+            can_read_reviews: true,   // Premium: Bewertungen lesen erlaubt
             can_reply_to_reviews: true,
             max_environment_images: 6,
             has_premium_badge: true,
@@ -117,7 +122,7 @@ export class FeatureGateService {
           if (subscription.user_type !== 'owner') {
             return { allowed: false, reason: 'Only owners can send contact requests' };
           }
-          
+
           if (limits.contact_requests_per_month === -1) {
             return { allowed: true, reason: 'Unlimited access' };
           }
@@ -231,14 +236,14 @@ export class FeatureGateService {
 
   // Track Feature Usage
   static async trackFeatureUsage(
-    userId: string, 
-    featureType: FeatureType, 
+    userId: string,
+    featureType: FeatureType,
     targetUserId?: string
   ): Promise<void> {
     // Map FeatureType zu UsageTrackingService ActionType
     const actionTypeMap: Record<string, string> = {
       'contact_request': 'contact_request',
-      'booking_request': 'booking_request', 
+      'booking_request': 'booking_request',
       'profile_view': 'profile_view'
     };
 

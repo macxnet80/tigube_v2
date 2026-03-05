@@ -150,13 +150,13 @@ export const userService = {
     try {
       // Aktuelles Session-Token abrufen
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session?.access_token) {
         return { error: new Error('No valid session found') };
       }
 
       console.log('Versuche Edge Function aufzurufen...');
-      
+
       try {
         // Versuche Edge Function für komplette Löschung (DB + Auth)
         const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
@@ -175,7 +175,7 @@ export const userService = {
           await supabase.auth.signOut();
           return { error: null };
         }
-        
+
         console.warn('Edge Function nicht verfügbar oder fehlgeschlagen, verwende Fallback...');
       } catch (edgeFunctionError) {
         console.warn('Edge Function Fehler, verwende Fallback:', edgeFunctionError);
@@ -312,12 +312,12 @@ export const ownerPreferencesService = {
       vet_info: preferences.vetInfo
         ? preferences.vetInfo
         : (preferences.vetName || preferences.vetAddress || preferences.vetPhone
-            ? JSON.stringify({
-                name: preferences.vetName || '',
-                address: preferences.vetAddress || '',
-                phone: preferences.vetPhone || ''
-              })
-            : null),
+          ? JSON.stringify({
+            name: preferences.vetName || '',
+            address: preferences.vetAddress || '',
+            phone: preferences.vetPhone || ''
+          })
+          : null),
       emergency_contact_name: preferences.emergencyContactName || null,
       emergency_contact_phone: preferences.emergencyContactPhone || null,
       care_instructions: preferences.careInstructions || null,
@@ -410,7 +410,7 @@ export const ownerPreferencesService = {
         // Nur emergency_contact Felder aktualisieren
         const result = await supabase
           .from('owner_preferences')
-          .update({ 
+          .update({
             emergency_contact_name: emergencyName || null,
             emergency_contact_phone: emergencyPhone || null
           })
@@ -495,7 +495,7 @@ export const ownerPreferencesService = {
 
     // Sicherstellen, dass die Werte Boolean sind (falls sie als Strings kommen)
     const rawSettings = data.share_settings as any;
-    
+
     // Sehr robuste Boolean-Konvertierung
     const toBool = (value: any): boolean => {
       if (typeof value === 'boolean') return value;
@@ -505,7 +505,7 @@ export const ownerPreferencesService = {
       if (typeof value === 'number') return value === 1;
       return Boolean(value);
     };
-    
+
     const normalizedSettings: ShareSettings = {
       phoneNumber: toBool(rawSettings.phoneNumber),
       email: toBool(rawSettings.email),
@@ -516,9 +516,9 @@ export const ownerPreferencesService = {
       carePreferences: toBool(rawSettings.carePreferences)
     };
 
-    return { 
-      data: normalizedSettings, 
-      error: null 
+    return {
+      data: normalizedSettings,
+      error: null
     };
   },
 };
@@ -616,7 +616,7 @@ export const caretakerProfileService = {
   }) => {
     // Nur die übergebenen Felder aktualisieren
     const updateData: any = { id: userId };
-    
+
     if (profile.animalTypes !== undefined) updateData.animal_types = profile.animalTypes;
     if (profile.serviceRadius !== undefined) updateData.service_radius = profile.serviceRadius;
     if (profile.availability !== undefined) updateData.availability = profile.availability;
@@ -636,7 +636,7 @@ export const caretakerProfileService = {
     if (profile.oeffnungszeiten !== undefined) {
       updateData.oeffnungszeiten = profile.oeffnungszeiten === null ? null : profile.oeffnungszeiten;
     }
-    
+
     const { data, error } = await supabase
       .from('caretaker_profiles')
       .upsert(updateData, { onConflict: 'id' })
@@ -743,14 +743,14 @@ export const caretakerSearchService = {
       }
 
       const { data: caretakers, error } = await query;
-      
+
       if (error) {
         console.error('❌ Query error:', error);
         return { data: [], error };
       }
-      
+
       console.log('📊 Caretakers found:', caretakers?.length);
-      
+
       if (!caretakers || caretakers.length === 0) {
         console.log('⚠️ No caretakers found');
         return { data: [], error: null };
@@ -768,7 +768,7 @@ export const caretakerSearchService = {
         // Services und Preise aus der neuen services_with_categories Struktur extrahieren
         let services: string[] = [];
         let prices: Record<string, number> = {};
-        
+
         if (row.services_with_categories && Array.isArray(row.services_with_categories)) {
           services = row.services_with_categories.map((service: any) => service.name).filter(Boolean);
           // Extrahiere Preise aus services_with_categories
@@ -807,9 +807,9 @@ export const caretakerSearchService = {
 
       // Wende Filter an
       let filteredResults = transformedResults;
-      
+
       if (filters.services && filters.services.length > 0) {
-        filteredResults = filteredResults.filter((caretaker: any) => 
+        filteredResults = filteredResults.filter((caretaker: any) =>
           filters.services!.some(service => caretaker.services.includes(service))
         );
         console.log('🏷️ After service filter:', filteredResults);
@@ -818,7 +818,7 @@ export const caretakerSearchService = {
       if (filters.minPrice !== undefined) {
         filteredResults = filteredResults.filter((caretaker: any) => caretaker.hourlyRate >= filters.minPrice!);
       }
-      
+
       if (filters.maxPrice !== undefined) {
         filteredResults = filteredResults.filter((caretaker: any) => caretaker.hourlyRate <= filters.maxPrice!);
       }
@@ -837,19 +837,19 @@ export const caretakerSearchService = {
 
   getCaretakerById: async (id: string, viewerId?: string) => {
     console.log('🔍 Getting caretaker by ID:', id);
-    
+
     try {
       // Prüfe ob der Viewer das eigene Profil ansehen möchte
       const { data: { session } } = await supabase.auth.getSession();
       const isOwnProfile = viewerId ? viewerId === id : (session?.user?.id === id);
-      
+
       // Hole die Daten direkt aus caretaker_profiles + Join users und zusätzlich availability/home_photos
       console.log('🔍 Executing database query...');
-      
+
       let profileRow;
       let profileJoinError;
       let loadedFromView = false;
-      
+
       if (isOwnProfile) {
         // Für eigenes Profil: Versuche zuerst die View (wenn freigegeben), sonst direkt aus caretaker_profiles
         const { data: viewData, error: viewError } = await supabase
@@ -857,7 +857,7 @@ export const caretakerSearchService = {
           .select('*')
           .eq('id', id)
           .single();
-        
+
         if (!viewError && viewData) {
           // Profil ist freigegeben und wurde über View geladen
           profileRow = viewData;
@@ -883,10 +883,10 @@ export const caretakerSearchService = {
             `)
             .eq('id', id)
             .single();
-          
+
           profileRow = profileData;
           profileJoinError = profileError;
-          
+
           // Wenn kein Fehler, transformiere die Daten ähnlich wie das View
           if (!profileError && profileRow) {
             // Transformiere zu View-Format
@@ -903,7 +903,7 @@ export const caretakerSearchService = {
           .select('*')
           .eq('id', id)
           .single();
-        
+
         profileRow = viewData;
         profileJoinError = viewError;
         loadedFromView = true;
@@ -922,7 +922,7 @@ export const caretakerSearchService = {
       console.log('✅ Database query successful, data:', profileRow);
 
       let result = profileRow as any;
-      
+
       // Wenn eigenes Profil direkt aus caretaker_profiles geladen wurde (nicht über View), transformiere es
       if (isOwnProfile && !loadedFromView && result.users) {
         const userData = result.users;
@@ -940,7 +940,7 @@ export const caretakerSearchService = {
       // Services und Preise aus services_with_categories extrahieren
       let services: string[] = [];
       let prices: Record<string, number | string> = {};
-      
+
       if (result.services_with_categories && Array.isArray(result.services_with_categories)) {
         services = result.services_with_categories.map((service: any) => service.name).filter(Boolean);
         // Extrahiere Preise aus services_with_categories
@@ -955,7 +955,7 @@ export const caretakerSearchService = {
       // Anfahrkosten werden ausgeschlossen, da sie zusätzliche Kosten sind
       const getBestPrice = (prices: Record<string, number | string>): number => {
         if (!prices || Object.keys(prices).length === 0) return 0;
-        
+
         // Filtere Anfahrkosten aus der Preisberechnung aus
         const pricesWithoutTravelCosts = Object.entries(prices)
           .filter(([key, price]) => {
@@ -971,10 +971,10 @@ export const caretakerSearchService = {
             return isNaN(num) ? 0 : num;
           })
           .filter(price => price > 0);
-        
+
         return pricesWithoutTravelCosts.length > 0 ? Math.min(...pricesWithoutTravelCosts) : 0;
       };
-      
+
       const bestPrice = getBestPrice(prices) || Number(result.hourly_rate) || 0;
 
       // Use the data from the view directly
@@ -1055,20 +1055,20 @@ export const ownerCaretakerService = {
         .eq('owner_id', ownerId)
         .eq('caretaker_id', caretakerId)
         .maybeSingle()
-      
+
       if (existingError) throw existingError
-      
+
       if (existing) {
         // Verbindung existiert - wandle zu Betreuer um (egal ob vorher Favorit)
         const { data, error } = await supabase
           .from('owner_caretaker_connections')
-          .update({ 
+          .update({
             connection_type: 'caretaker'
           })
           .eq('id', existing.id)
           .select()
           .single()
-        
+
         if (error) throw error
         return { data, error: null }
       } else {
@@ -1082,7 +1082,7 @@ export const ownerCaretakerService = {
           })
           .select()
           .single()
-        
+
         if (error) throw error
         return { data, error: null }
       }
@@ -1100,7 +1100,7 @@ export const ownerCaretakerService = {
         .delete()
         .eq('owner_id', ownerId)
         .eq('caretaker_id', caretakerId)
-      
+
       if (error) throw error
       return { error: null }
     } catch (error) {
@@ -1119,7 +1119,7 @@ export const ownerCaretakerService = {
         .eq('caretaker_id', caretakerId)
         .eq('connection_type', 'caretaker')  // Nur echte Betreuer zählen
         .maybeSingle()
-      
+
       if (error) throw error
       return { isSaved: !!data, error: null }
     } catch (error) {
@@ -1138,23 +1138,23 @@ export const ownerCaretakerService = {
         .eq('owner_id', ownerId)
         .eq('caretaker_id', caretakerId)
         .maybeSingle()
-      
+
       if (existingError) throw existingError
-      
+
       if (existing) {
         // Verbindung existiert
         if (existing.connection_type === 'caretaker') {
           // Bereits ein Betreuer - kann nicht als Favorit markiert werden
           return { isFavorite: false, error: 'Dieser Betreuer ist bereits in Ihren gespeicherten Betreuern' }
         }
-        
+
         if (existing.connection_type === 'favorite') {
           // Favorit entfernen = Verbindung komplett löschen
           const { error } = await supabase
             .from('owner_caretaker_connections')
             .delete()
             .eq('id', existing.id)
-          
+
           if (error) throw error
           return { isFavorite: false, error: null }
         }
@@ -1169,11 +1169,11 @@ export const ownerCaretakerService = {
           })
           .select('connection_type')
           .single()
-        
+
         if (error) throw error
         return { isFavorite: data.connection_type === 'favorite', error: null }
       }
-      
+
       return { isFavorite: false, error: null }
     } catch (error) {
       console.error('Error toggling favorite:', error)
@@ -1190,7 +1190,7 @@ export const ownerCaretakerService = {
         .eq('owner_id', ownerId)
         .eq('caretaker_id', caretakerId)
         .maybeSingle()
-      
+
       if (error) throw error
       return { isFavorite: data?.connection_type === 'favorite', error: null }
     } catch (error) {
@@ -1204,14 +1204,14 @@ export const ownerCaretakerService = {
     try {
       // Prüfe aktuelle Session
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session?.user?.id) {
         return { data: [], error: 'Not authenticated' };
       }
-      
+
       // Verwende die Session-User-ID statt der übergebenen ownerId für RLS
       const authenticatedUserId = session.user.id;
-      
+
       // Erst die Favoriten-Verbindungen laden (nur Favoriten, keine Betreuer)
       const { data: connections, error: connectionsError } = await supabase
         .from('owner_caretaker_connections')
@@ -1219,15 +1219,15 @@ export const ownerCaretakerService = {
         .eq('owner_id', authenticatedUserId)  // Verwende auth user ID
         .eq('connection_type', 'favorite')  // Nur reine Favoriten
         .order('created_at', { ascending: false })
-      
+
       if (connectionsError) {
         throw connectionsError;
       }
-      
+
       if (!connections || connections.length === 0) {
         return { data: [], error: null }
       }
-      
+
       // Dann die Caretaker-Daten aus caretaker_profiles + users laden
       const caretakerIds = connections.map(c => c.caretaker_id)
       // Erst Caretaker-Profile laden
@@ -1236,25 +1236,25 @@ export const ownerCaretakerService = {
         .select('*')
         .in('id', caretakerIds)
         .eq('approval_status', 'approved');
-      
+
       if (profilesError) {
         throw profilesError;
       }
-      
+
       if (!caretakerProfiles || caretakerProfiles.length === 0) {
         return { data: [], error: null };
       }
-      
+
       // Dann User-Daten laden
       const { data: userData, error: usersError } = await supabase
         .from('users')
         .select('id, first_name, last_name, city, plz, profile_photo_url, user_type')
         .in('id', caretakerIds);
-      
+
       if (usersError) {
         throw usersError;
       }
-      
+
       // Lade Kategorie-Informationen für Dienstleister
       const kategorieIds = [...new Set(caretakerProfiles.map(p => p.kategorie_id).filter(Boolean))];
       let kategorienData: any[] = [];
@@ -1263,12 +1263,12 @@ export const ownerCaretakerService = {
           .from('dienstleister_kategorien')
           .select('id, name, icon')
           .in('id', kategorieIds);
-        
+
         if (!kategorienError && kategorien) {
           kategorienData = kategorien;
         }
       }
-      
+
       // Kombiniere die Daten
       const caretakers = caretakerProfiles.map(profile => {
         const user = userData?.find(u => u.id === profile.id);
@@ -1279,20 +1279,20 @@ export const ownerCaretakerService = {
           kategorie: kategorie || null
         };
       });
-      
+
       const careteakersError = null; // Kein Fehler, da wir separate Queries verwenden
-      
+
       if (careteakersError) {
         throw careteakersError;
       }
-      
+
       // Transform data to match the expected format
       const transformedData = connections.map(connection => {
         const caretaker: any = caretakers?.find((c: any) => c.id === connection.caretaker_id)
         if (!caretaker) {
           return null;
         }
-        
+
         return {
           id: caretaker.id,
           name: (caretaker.users?.first_name && caretaker.users?.last_name)
@@ -1300,7 +1300,7 @@ export const ownerCaretakerService = {
             : (caretaker.users?.first_name || 'Unbekannt'),
           avatar: caretaker.users?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(caretaker.users?.first_name || 'U')}&background=f3f4f6&color=374151`,
           location: caretaker.users?.city && caretaker.users?.plz ? `${caretaker.users.city} ${caretaker.users.plz}` : (caretaker.users?.city || 'Ort nicht angegeben'),
-          services: Array.isArray(caretaker.services_with_categories) 
+          services: Array.isArray(caretaker.services_with_categories)
             ? caretaker.services_with_categories.map((service: any) => service.name || service)
             : [],
           rating: Number(caretaker.rating) || 0,
@@ -1318,26 +1318,26 @@ export const ownerCaretakerService = {
           isFavorite: true
         }
       }).filter(Boolean)
-      
+
       return { data: transformedData || [], error: null }
     } catch (error) {
       return { data: [], error: (error as Error).message }
     }
   },
 
-        // Lade nur die echten Betreuer für einen Owner (die aus Chat gespeichert wurden)
+  // Lade nur die echten Betreuer für einen Owner (die aus Chat gespeichert wurden)
   async getSavedCaretakers(ownerId: string) {
     try {
       // Prüfe aktuelle Session
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session?.user?.id) {
         return { data: [], error: 'Not authenticated' };
       }
-      
+
       // Verwende die Session-User-ID statt der übergebenen ownerId für RLS
       const authenticatedUserId = session.user.id;
-      
+
       // Erst die Betreuer-Verbindungen laden (nur echte Betreuer, keine Favoriten)
       const { data: connections, error: connectionsError } = await supabase
         .from('owner_caretaker_connections')
@@ -1345,15 +1345,15 @@ export const ownerCaretakerService = {
         .eq('owner_id', authenticatedUserId)  // Verwende auth user ID
         .eq('connection_type', 'caretaker')  // Nur echte Betreuer, keine reinen Favoriten
         .order('created_at', { ascending: false })
-      
+
       if (connectionsError) {
         throw connectionsError;
       }
-      
+
       if (!connections || connections.length === 0) {
         return { data: [], error: null }
       }
-      
+
       // Dann die Caretaker-Daten aus caretaker_profiles + users laden
       const caretakerIds = connections.map(c => c.caretaker_id)
       // Erst Caretaker-Profile laden
@@ -1362,25 +1362,25 @@ export const ownerCaretakerService = {
         .select('*')
         .in('id', caretakerIds)
         .eq('approval_status', 'approved');
-      
+
       if (profilesError) {
         throw profilesError;
       }
-      
+
       if (!caretakerProfiles || caretakerProfiles.length === 0) {
         return { data: [], error: null };
       }
-      
+
       // Dann User-Daten laden
       const { data: userData, error: usersError } = await supabase
         .from('users')
         .select('id, first_name, last_name, city, plz, profile_photo_url, user_type')
         .in('id', caretakerIds);
-      
+
       if (usersError) {
         throw usersError;
       }
-      
+
       // Kombiniere die Daten
       const caretakers = caretakerProfiles.map(profile => {
         const user = userData?.find(u => u.id === profile.id);
@@ -1389,20 +1389,20 @@ export const ownerCaretakerService = {
           users: user
         };
       });
-      
+
       const careteakersError = null; // Kein Fehler, da wir separate Queries verwenden
-      
+
       if (careteakersError) {
         throw careteakersError;
       }
-      
+
       // Transform data to match the expected format
       const transformedData = connections.map(connection => {
         const caretaker: any = caretakers?.find((c: any) => c.id === connection.caretaker_id)
         if (!caretaker) {
           return null;
         }
-        
+
         return {
           id: caretaker.id,
           name: (caretaker.users?.first_name && caretaker.users?.last_name)
@@ -1410,7 +1410,7 @@ export const ownerCaretakerService = {
             : (caretaker.users?.first_name || 'Unbekannt'),
           avatar: caretaker.users?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(caretaker.users?.first_name || 'U')}&background=f3f4f6&color=374151`,
           location: caretaker.users?.city && caretaker.users?.plz ? `${caretaker.users.city} ${caretaker.users.plz}` : (caretaker.users?.city || 'Ort nicht angegeben'),
-          services: Array.isArray(caretaker.services_with_categories) 
+          services: Array.isArray(caretaker.services_with_categories)
             ? caretaker.services_with_categories.map((service: any) => service.name || service)
             : [],
           rating: Number(caretaker.rating) || 0,
@@ -1425,7 +1425,7 @@ export const ownerCaretakerService = {
           isFavorite: false  // Betreuer sind nie Favoriten (mutual exclusivity)
         }
       }).filter(Boolean)
-      
+
       return { data: transformedData || [], error: null }
     } catch (error) {
       return { data: [], error: (error as Error).message }
@@ -1441,44 +1441,44 @@ export const ownerCaretakerService = {
         .select('owner_id, created_at')
         .eq('caretaker_id', caretakerId)
         .order('created_at', { ascending: false })
-      
+
       if (connectionsError) throw connectionsError
-      
+
       if (!connections || connections.length === 0) {
         return { data: [], error: null }
       }
-      
+
       // Dann die Owner-Daten laden
       const ownerIds = connections.map(c => c.owner_id)
-      
+
       const { data: owners, error: ownersError } = await supabase
         .from('users')
         .select('id, first_name, last_name, email, phone_number, profile_photo_url, city, plz')
         .in('id', ownerIds)
-      
+
       if (ownersError) throw ownersError
-      
+
       // Transform data to match the ClientData format mit allen benötigten Daten
       const transformedData = await Promise.all(connections.map(async connection => {
         const owner = owners?.find(o => o.id === connection.owner_id)
         if (!owner) return null
-        
+
         // Lade Share-Settings, Owner-Preferences und Pets aus der Datenbank
         const [shareSettingsResult, preferencesResult, petsResult] = await Promise.all([
           ownerPreferencesService.getShareSettings(owner.id),
           ownerPreferencesService.getPreferences(owner.id),
           petService.getOwnerPets(owner.id)
         ]);
-        
+
         console.log(`=== Debug for ${owner.first_name} ${owner.last_name} (ID: ${owner.id}) ===`);
         console.log('ShareSettings result:', shareSettingsResult);
         console.log('Preferences result:', preferencesResult);
         console.log('Pets result:', petsResult);
-        
+
         // Parse Tierarzt-Daten (jetzt da RLS funktioniert)
         let vetInfo = null;
         const prefsData = preferencesResult.data;
-        
+
         if (prefsData?.vet_info) {
           try {
             vetInfo = JSON.parse(prefsData.vet_info);
@@ -1489,7 +1489,7 @@ export const ownerCaretakerService = {
         } else {
           console.log(`No vet_info found for ${owner.first_name} ${owner.last_name}. Preferences:`, prefsData);
         }
-        
+
         // Transform Pets für ClientData Format
         const pets = (petsResult.data || []).map((pet: any) => ({
           id: pet.id,
@@ -1502,7 +1502,7 @@ export const ownerCaretakerService = {
           description: pet.description,
           photoUrl: pet.photo_url
         }));
-        
+
         const finalData = {
           id: owner.id,
           name: `${owner.first_name || ''} ${owner.last_name || ''}`.trim() || 'Unbekannt',
@@ -1530,22 +1530,22 @@ export const ownerCaretakerService = {
           },
           // Legacy fields für bestehende UI
           avatar: owner.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(owner.first_name || 'U')}&background=f3f4f6&color=374151`,
-          location: shareSettingsResult.data?.address 
+          location: shareSettingsResult.data?.address
             ? (owner.city && owner.plz ? `${owner.plz} ${owner.city}` : (owner.plz || owner.city || 'Ort nicht angegeben'))
             : 'Adresse nicht freigegeben',
           saved_at: connection.created_at
         };
-        
+
         console.log(`Final data for ${finalData.name}:`, {
           vetName: finalData.vetName,
-          vetAddress: finalData.vetAddress, 
+          vetAddress: finalData.vetAddress,
           vetPhone: finalData.vetPhone,
           shareSettings: finalData.shareSettings
         });
-        
+
         return finalData;
       }))
-      
+
       return { data: transformedData.filter(Boolean) || [], error: null }
     } catch (error) {
       console.error('Error getting caretaker clients:', error)
@@ -1566,16 +1566,16 @@ export const caretakerPartnerService = {
         .eq('caretaker_id', caretakerId)
         .eq('partner_id', partnerId)
         .maybeSingle()
-      
+
       if (existingError) throw existingError
-      
+
       if (existing) {
         // Partner entfernen = Verbindung löschen
         const { error } = await supabase
           .from('caretaker_partner_connections')
           .delete()
           .eq('id', existing.id)
-        
+
         if (error) throw error
         return { isPartner: false, error: null }
       } else {
@@ -1588,7 +1588,7 @@ export const caretakerPartnerService = {
           })
           .select('id')
           .single()
-        
+
         if (error) throw error
         return { isPartner: true, error: null }
       }
@@ -1607,7 +1607,7 @@ export const caretakerPartnerService = {
         .eq('caretaker_id', caretakerId)
         .eq('partner_id', partnerId)
         .maybeSingle()
-      
+
       if (error) throw error
       return { isPartner: !!data, error: null }
     } catch (error) {
@@ -1621,95 +1621,71 @@ export const caretakerPartnerService = {
     try {
       // Prüfe aktuelle Session
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session?.user?.id) {
         return { data: [], error: 'Not authenticated' };
       }
-      
+
       // Verwende die Session-User-ID statt der übergebenen caretakerId für RLS
       const authenticatedUserId = session.user.id;
-      
+
       // Partner-Verbindungen laden
       const { data: connections, error: connectionsError } = await supabase
         .from('caretaker_partner_connections')
         .select('partner_id, created_at')
         .eq('caretaker_id', authenticatedUserId)
         .order('created_at', { ascending: false })
-      
+
       if (connectionsError) {
         throw connectionsError;
       }
-      
+
       if (!connections || connections.length === 0) {
         return { data: [], error: null }
       }
-      
+
       // Partner-IDs extrahieren
       const partnerIds = connections.map(c => c.partner_id)
-      
+
       // User-Daten für Partner laden (sowohl Betreuer als auch Dienstleister)
       const { data: userData, error: usersError } = await supabase
         .from('users')
         .select('id, first_name, last_name, city, plz, profile_photo_url, user_type')
         .in('id', partnerIds)
-      
+
       if (usersError) {
         throw usersError;
       }
-      
+
       if (!userData || userData.length === 0) {
         return { data: [], error: null };
       }
-      
-      // Für Betreuer: Caretaker-Profile-Daten laden
-      const caretakerIds = userData
-        .filter(u => u.user_type === 'caretaker')
-        .map(u => u.id);
-      
-      let caretakerProfiles: any[] = [];
-      if (caretakerIds.length > 0) {
+
+      // Alle Partner (Betreuer + alle Dienstleister-Typen) nutzen caretaker_profiles
+      // Die separate dienstleister_profiles Tabelle existiert nicht
+      const allPartnerIds = userData.map(u => u.id);
+
+      let allProfiles: any[] = [];
+      if (allPartnerIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from('caretaker_profiles')
           .select('id, hourly_rate, rating, review_count')
-          .in('id', caretakerIds)
-          .eq('approval_status', 'approved');
-        
+          .in('id', allPartnerIds);
+
         if (profilesError) {
           throw profilesError;
         }
-        caretakerProfiles = profiles || [];
+        allProfiles = profiles || [];
       }
-      
-      // Für Dienstleister: Dienstleister-Profile-Daten laden
-      const dienstleisterIds = userData
-        .filter(u => u.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(u.user_type))
-        .map(u => u.id);
-      
-      let dienstleisterProfiles: any[] = [];
-      if (dienstleisterIds.length > 0) {
-        const { data: profiles, error: profilesError } = await supabase
-          .from('dienstleister_profiles')
-          .select('id, hourly_rate, rating, review_count')
-          .in('id', dienstleisterIds)
-          .eq('approval_status', 'approved');
-        
-        if (profilesError) {
-          throw profilesError;
-        }
-        dienstleisterProfiles = profiles || [];
-      }
-      
+
       // Daten zusammenführen
       const partners = connections.map(connection => {
         const user = userData.find(u => u.id === connection.partner_id);
         if (!user) return null;
-        
-        // Prüfe ob Betreuer oder Dienstleister
-        const isCaretaker = user.user_type === 'caretaker';
-        const profile = isCaretaker 
-          ? caretakerProfiles.find(p => p.id === user.id)
-          : dienstleisterProfiles.find(p => p.id === user.id);
-        
+
+        // Profil aus caretaker_profiles (gilt für alle User-Typen)
+        const profile = allProfiles.find(p => p.id === user.id);
+
         return {
           id: user.id,
           name: (user.first_name && user.last_name)
@@ -1724,7 +1700,7 @@ export const caretakerPartnerService = {
           created_at: connection.created_at
         };
       }).filter(Boolean);
-      
+
       return { data: partners, error: null }
     } catch (error) {
       console.error('Error getting partners:', error)

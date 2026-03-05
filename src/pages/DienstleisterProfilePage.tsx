@@ -10,7 +10,7 @@ import HomePhotosSection from '../components/ui/HomePhotosSection';
 import { DienstleisterService } from '../lib/services/dienstleisterService';
 import { useAuth } from '../lib/auth/AuthContext';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
-import { useSubscription } from '../lib/auth/useSubscription';
+
 import { getOrCreateConversation } from '../lib/supabase/chatService';
 import { ownerCaretakerService, caretakerPartnerService } from '../lib/supabase/db';
 import { formatCurrency, isCaretaker } from '../lib/utils';
@@ -37,8 +37,8 @@ function DienstleisterProfilePage() {
   const navigate = useNavigate();
   const { isAuthenticated, user, userProfile } = useAuth();
   const { checkFeature, canSendContactRequest, trackUsage, subscription } = useFeatureAccess();
-  const { isPremiumUser, subscriptionLoading } = useSubscription();
-  
+
+
   const [dienstleister, setDienstleister] = useState<DienstleisterProfil | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,14 +58,6 @@ function DienstleisterProfilePage() {
         return;
       }
 
-      // Premium-Check: Free-User können nur ihr eigenes Profil sehen
-      const isOwnProfile = user && id === user.id;
-      if (!isOwnProfile && !isPremiumUser && !subscriptionLoading) {
-        setError('Premium-Mitgliedschaft erforderlich');
-        setLoading(false);
-        navigate('/mitgliedschaften?feature=profile_view');
-        return;
-      }
 
       setLoading(true);
       setError(null);
@@ -73,9 +65,9 @@ function DienstleisterProfilePage() {
       try {
         // Übergebe user.id als viewerId, damit das eigene Profil auch ohne Freigabe geladen wird
         const profil = await DienstleisterService.getDienstleisterProfil(id, user?.id);
-        
+
         console.log('🔍 Fetch result:', { profil });
-        
+
         if (!profil) {
           console.error('❌ No data returned');
           // Prüfe ob es das eigene Profil ist
@@ -105,13 +97,13 @@ function DienstleisterProfilePage() {
     };
 
     fetchDienstleister();
-  }, [id, user, isPremiumUser, subscriptionLoading, navigate]);
+  }, [id, user]);
 
   // Lade Bewertungen
   useEffect(() => {
     const fetchReviews = async () => {
       if (!id) return;
-      
+
       setReviewsLoading(true);
       try {
         const { data, error } = await supabase
@@ -198,7 +190,7 @@ function DienstleisterProfilePage() {
   useEffect(() => {
     const fetchFavoriteStatus = async () => {
       if (!user || !id) return;
-      
+
       try {
         const { isFavorite: favoriteStatus } = await ownerCaretakerService.isFavorite(user.id, id);
         setIsFavorite(favoriteStatus);
@@ -214,13 +206,13 @@ function DienstleisterProfilePage() {
   useEffect(() => {
     const fetchPartnerStatus = async () => {
       if (!user || !id || !userProfile) return;
-      
+
       // Nur für Dienstleister/Betreuer anzeigen
-      const isCaretakerUser = userProfile.user_type === 'caretaker' || 
+      const isCaretakerUser = userProfile.user_type === 'caretaker' ||
         (userProfile.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type));
-      
+
       if (!isCaretakerUser) return;
-      
+
       try {
         const { isPartner: partnerStatus } = await caretakerPartnerService.isPartner(user.id, id);
         setIsPartner(partnerStatus);
@@ -252,7 +244,7 @@ function DienstleisterProfilePage() {
 
     try {
       const { isFavorite: newFavoriteStatus, error } = await ownerCaretakerService.toggleFavorite(user.id, dienstleister.id);
-      
+
       if (error) {
         console.error('Fehler beim Aktualisieren der Favoriten:', error);
         // TODO: Toast-Benachrichtigung anzeigen
@@ -289,7 +281,7 @@ function DienstleisterProfilePage() {
 
     try {
       const { isPartner: newPartnerStatus, error } = await caretakerPartnerService.togglePartner(user.id, dienstleister.id);
-      
+
       if (error) {
         console.error('Fehler beim Aktualisieren der Partner:', error);
         return;
@@ -328,7 +320,7 @@ function DienstleisterProfilePage() {
       'Arabisch': AE,
       'العربية': AE
     };
-    
+
     return languageMap[language] || null;
   };
 
@@ -341,7 +333,6 @@ function DienstleisterProfilePage() {
   }
 
   if (error || !dienstleister) {
-    const isPremiumError = error === 'Premium-Mitgliedschaft erforderlich';
     return (
       <div className="container-custom py-16 text-center">
         <h1 className="text-2xl font-bold mb-4">
@@ -350,23 +341,9 @@ function DienstleisterProfilePage() {
         <p className="mb-8">
           {error || 'Der gesuchte Dienstleister existiert nicht oder wurde entfernt.'}
         </p>
-        {isPremiumError ? (
-          <div className="flex flex-col gap-4 items-center">
-            <p className="text-gray-600">
-              Um andere Profile anzusehen, benötigst du eine Premium-Mitgliedschaft.
-            </p>
-            <Link to="/mitgliedschaften?feature=profile_view">
-              <Button variant="primary">Jetzt upgraden</Button>
-            </Link>
-            <Link to="/dienstleister">
-              <Button variant="outline">Zurück zur Suche</Button>
-            </Link>
-          </div>
-        ) : (
-          <Link to="/dienstleister">
-            <Button variant="primary">Zurück zur Suche</Button>
-          </Link>
-        )}
+        <Link to="/dienstleister">
+          <Button variant="primary">Zurück zur Suche</Button>
+        </Link>
       </div>
     );
   }
@@ -376,7 +353,7 @@ function DienstleisterProfilePage() {
   const location = `${dienstleister.plz} ${dienstleister.city}`;
   const rating = dienstleister.rating ? Number(dienstleister.rating) : 0;
   const reviewCount = reviews.length;
-  
+
   // Prüfe ob es ein Betreuer ist
   const isCaretakerUser = isCaretaker(
     dienstleister.search_type === 'caretaker' ? 'caretaker' : undefined,
@@ -390,7 +367,7 @@ function DienstleisterProfilePage() {
     if (dienstleister.hourly_rate && dienstleister.hourly_rate > 0) {
       return `ab ${formatCurrency(dienstleister.hourly_rate)}/Std`;
     }
-    
+
     // Ansonsten suche den niedrigsten Preis aus services_with_categories
     if (dienstleister.services_with_categories && Array.isArray(dienstleister.services_with_categories) && dienstleister.services_with_categories.length > 0) {
       const prices = dienstleister.services_with_categories
@@ -401,13 +378,13 @@ function DienstleisterProfilePage() {
           return null;
         })
         .filter((price: number | null) => price !== null) as number[];
-      
+
       if (prices.length > 0) {
         const minPrice = Math.min(...prices);
         return `ab ${formatCurrency(minPrice)}/Std`;
       }
     }
-    
+
     return 'Preis auf Anfrage';
   };
 
@@ -420,8 +397,8 @@ function DienstleisterProfilePage() {
             {/* Profile Image */}
             <div className="md:w-1/4 lg:w-1/5">
               <div className="relative rounded-xl overflow-hidden shadow-md">
-                <img 
-                  src={avatarUrl} 
+                <img
+                  src={avatarUrl}
                   alt={displayName}
                   className="w-full aspect-square object-cover"
                   onError={(e) => {
@@ -431,7 +408,7 @@ function DienstleisterProfilePage() {
                 />
               </div>
             </div>
-            
+
             {/* Profile Info */}
             <div className="flex-1">
               <div className="flex items-start justify-between mb-4">
@@ -481,25 +458,25 @@ function DienstleisterProfilePage() {
                         </Button>
                       )}
                       {/* Partner-Herz (für Dienstleister/Betreuer) */}
-                      {user && userProfile && (userProfile.user_type === 'caretaker' || 
+                      {user && userProfile && (userProfile.user_type === 'caretaker' ||
                         (userProfile.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type))) && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handlePartnerToggle}
-                          className="p-1 focus:ring-0 focus:ring-offset-0"
-                          disabled={isPartnerLoading}
-                          title={isPartner ? 'Partner entfernen' : 'Als Partner speichern'}
-                        >
-                          {isPartnerLoading ? (
-                            <div className="w-5 h-5 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
-                          ) : isPartner ? (
-                            <Heart className="h-5 w-5 text-primary-500 fill-primary-500" />
-                          ) : (
-                            <Heart className="h-5 w-5 text-primary-500 hover:text-primary-600" />
-                          )}
-                        </Button>
-                      )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handlePartnerToggle}
+                            className="p-1 focus:ring-0 focus:ring-offset-0"
+                            disabled={isPartnerLoading}
+                            title={isPartner ? 'Partner entfernen' : 'Als Partner speichern'}
+                          >
+                            {isPartnerLoading ? (
+                              <div className="w-5 h-5 border-2 border-primary-300 border-t-primary-600 rounded-full animate-spin" />
+                            ) : isPartner ? (
+                              <Heart className="h-5 w-5 text-primary-500 fill-primary-500" />
+                            ) : (
+                              <Heart className="h-5 w-5 text-primary-500 hover:text-primary-600" />
+                            )}
+                          </Button>
+                        )}
                     </div>
                   </div>
                   <div className="flex items-center text-gray-600 mb-2">
@@ -518,7 +495,7 @@ function DienstleisterProfilePage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start gap-3">
                   <div className="text-right">
                     {dienstleister.kategorie_name && (
@@ -532,7 +509,7 @@ function DienstleisterProfilePage() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Services / Spezialisierungen */}
               {dienstleister.spezialisierungen && Array.isArray(dienstleister.spezialisierungen) && dienstleister.spezialisierungen.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
@@ -548,14 +525,14 @@ function DienstleisterProfilePage() {
                     ))}
                 </div>
               )}
-              
+
               {/* Kurze Beschreibung im Header */}
               {dienstleister.short_about_me && (
                 <p className="text-gray-700 mb-6 whitespace-pre-wrap break-words w-full lg:w-3/5">
                   {dienstleister.short_about_me}
                 </p>
               )}
-              
+
               {/* Anmeldung-Aufforderung für nicht eingeloggte Benutzer */}
               {!user && (
                 <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -590,10 +567,10 @@ function DienstleisterProfilePage() {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="lg"
                   leftIcon={<MessageCircle className="h-4 w-4" />}
                   onClick={handleContactClick}
@@ -610,7 +587,7 @@ function DienstleisterProfilePage() {
 
       {/* Profile Banner Top */}
       <div className="container-custom py-4">
-        <AdvertisementBanner 
+        <AdvertisementBanner
           placement="profile_top"
           targetingOptions={{
             petTypes: userProfile?.pet_types || [],
@@ -660,8 +637,8 @@ function DienstleisterProfilePage() {
 
             {/* Verfügbarkeit - nur für Betreuer */}
             {isCaretakerUser && dienstleister.availability && (
-              <AvailabilityDisplay 
-                availability={dienstleister.availability} 
+              <AvailabilityDisplay
+                availability={dienstleister.availability}
                 overnightAvailability={dienstleister.overnight_availability}
               />
             )}
@@ -688,10 +665,10 @@ function DienstleisterProfilePage() {
                         'So': 'Sonntag'
                       };
                       const displayDay = dayNames[day] || day;
-                      
+
                       // Prüfe ob geschlossen
                       const isClosed = hours && typeof hours === 'object' && hours.closed === true;
-                      
+
                       return (
                         <div key={day} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
                           <span className="font-medium text-gray-700">{displayDay}</span>
@@ -699,10 +676,10 @@ function DienstleisterProfilePage() {
                             {isClosed
                               ? 'Geschlossen'
                               : hours && typeof hours === 'object' && hours.open && hours.close
-                              ? `${hours.open} - ${hours.close}`
-                              : hours && typeof hours === 'string'
-                              ? hours
-                              : 'Geschlossen'}
+                                ? `${hours.open} - ${hours.close}`
+                                : hours && typeof hours === 'string'
+                                  ? hours
+                                  : 'Geschlossen'}
                           </span>
                         </div>
                       );
@@ -727,8 +704,8 @@ function DienstleisterProfilePage() {
                   {dienstleister.portfolio_urls.map((url, index) => {
                     const urlString = typeof url === 'string' ? url : String(url);
                     return (
-                      <div 
-                        key={index} 
+                      <div
+                        key={index}
                         className="aspect-square bg-gray-200 rounded-lg overflow-hidden group cursor-pointer"
                         onClick={() => {
                           // Lightbox-Funktionalität könnte hier hinzugefügt werden
@@ -793,7 +770,7 @@ function DienstleisterProfilePage() {
                     const serviceName = service.name || 'Unbekannte Leistung';
                     const servicePrice = service.price;
                     const priceType = service.price_type || 'per_hour';
-                    
+
                     let displayPrice = 'Preis auf Anfrage';
                     if (servicePrice !== null && servicePrice !== undefined && Number(servicePrice) > 0) {
                       if (priceType === 'per_hour') {
@@ -811,7 +788,7 @@ function DienstleisterProfilePage() {
                         displayPrice = `${formatCurrency(Number(servicePrice))}`;
                       }
                     }
-                    
+
                     return (
                       <div key={index} className="flex justify-between items-start">
                         <div className="flex-1">
@@ -851,13 +828,13 @@ function DienstleisterProfilePage() {
                   {dienstleister.languages.map((language, index) => {
                     const FlagComponent = getLanguageFlag(language);
                     return (
-                      <div 
-                        key={index} 
+                      <div
+                        key={index}
                         className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-200"
                       >
                         {FlagComponent && (
-                          <FlagComponent 
-                            className="w-5 h-4 rounded-sm border border-gray-300 shadow-sm" 
+                          <FlagComponent
+                            className="w-5 h-4 rounded-sm border border-gray-300 shadow-sm"
                             title={language}
                           />
                         )}
@@ -897,7 +874,7 @@ function DienstleisterProfilePage() {
             </div>
 
             {/* Advertisement Banner */}
-            <AdvertisementBanner 
+            <AdvertisementBanner
               placement="profile_sidebar"
               targetingOptions={{
                 petTypes: userProfile?.pet_types || [],
@@ -924,7 +901,7 @@ function ReviewCard({ review, dienstleisterName }: ReviewCardProps) {
     return `${firstName || ''} ${lastName.charAt(0)}.`;
   };
 
-  const reviewerName = review.users 
+  const reviewerName = review.users
     ? formatReviewerName(review.users.first_name, review.users.last_name)
     : 'Anonym';
 
@@ -954,7 +931,7 @@ function ReviewCard({ review, dienstleisterName }: ReviewCardProps) {
         </span>
       </div>
       <p className="text-gray-700">{review.comment || ''}</p>
-      
+
       {/* Dienstleister Antwort */}
       {review.caretaker_response && (
         <div className="mt-3 ml-4 pl-4 border-l-2 border-primary-200 bg-primary-50 rounded-r-lg p-3">
