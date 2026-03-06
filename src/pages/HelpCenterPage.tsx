@@ -74,7 +74,7 @@ function HelpCenterPage() {
                             Hilfe-Center
                         </h1>
                         <p className="text-xl max-w-3xl mx-auto text-gray-300 leading-relaxed text-balance">
-                            Willkommen im Ressourcen-Bereich. Hier finden Sie alle unsere PDF-Ratgeber, Video-Tutorials und exklusiven Checklisten.
+                            Willkommen im Ressourcen-Bereich. Hier findest du alle unsere PDF-Ratgeber, Video-Tutorials und exklusiven Checklisten.
                         </p>
                     </div>
                 </div>
@@ -171,7 +171,7 @@ function HelpCenterPage() {
                         <h3 className="text-xl font-semibold text-gray-900 mb-2">Hier wird noch fleißig gewerkelt!</h3>
                         <p className="text-gray-500 max-w-lg mx-auto">
                             {searchTerm
-                                ? 'Für diesen Suchbegriff haben unsere Hamster leider noch nichts in den Regalen gefunden. Versuchen Sie einen anderen Begriff!'
+                                ? 'Wir konnten keine Inhalte finden, die deinen Suchkriterien entsprechen. Versuche einen anderen Suchbegriff oder Filter.'
                                 : 'Aktuell sind noch keine Daten hinterlegt. Unsere Redaktion arbeitet auf Hochtouren daran, diesen Bereich zeitnah mit spannenden Tutorials und PDFs zu füllen!'}
                         </p>
                         {searchTerm && (
