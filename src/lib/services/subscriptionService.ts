@@ -42,18 +42,35 @@ export class SubscriptionService {
 
       const { data: user, error } = await supabase
         .from('users')
-        .select('plan_type, plan_expires_at, show_ads, premium_badge')
+        .select('plan_type, plan_expires_at, show_ads, premium_badge, created_at')
         .eq('id', userId)
-        .single();
+        .single() as any;
 
       if (error) {
         console.error('❌ Error fetching user subscription:', error);
         return null;
       }
 
+      // 🎁 FREE PREMIUM PROMOTION: User die sich bis 30.04.2026 registrieren, erhalten 3 Monate gratis Premium
+      const PROMOTION_SIGNUP_DEADLINE = new Date('2026-04-30T23:59:59.000Z');
+      const registrationDate = user.created_at ? new Date(user.created_at) : null;
+      if (registrationDate && registrationDate < PROMOTION_SIGNUP_DEADLINE) {
+        // 3 Monate ab Registrierungsdatum
+        const promotionExpiresAt = new Date(registrationDate);
+        promotionExpiresAt.setMonth(promotionExpiresAt.getMonth() + 3);
+        if (new Date() < promotionExpiresAt) {
+          return {
+            plan_type: 'premium',
+            plan_expires_at: promotionExpiresAt.toISOString(),
+            show_ads: false,
+            premium_badge: true
+          };
+        }
+      }
+
       // Prüfe ob Premium-Plan abgelaufen ist
       const isExpired = user.plan_expires_at && new Date(user.plan_expires_at) <= new Date();
-      
+
       return {
         plan_type: isExpired ? 'free' : (user.plan_type || 'free'),
         plan_expires_at: user.plan_expires_at,
@@ -102,8 +119,8 @@ export class SubscriptionService {
    * Diese Methode wird von n8n nach erfolgreicher Zahlung aufgerufen
    */
   static async updateUserPlan(
-    userId: string, 
-    planType: 'free' | 'premium', 
+    userId: string,
+    planType: 'free' | 'premium',
     expiresAt?: string | null,
     stripeCustomerId?: string,
     stripeSubscriptionId?: string
@@ -174,8 +191,8 @@ export class SubscriptionService {
    */
   static async isPremiumUser(userId: string): Promise<boolean> {
     const subscription = await this.getUserSubscription(userId);
-    return subscription?.plan_type === 'premium' && 
-           (!subscription.plan_expires_at || new Date(subscription.plan_expires_at) > new Date());
+    return subscription?.plan_type === 'premium' &&
+      (!subscription.plan_expires_at || new Date(subscription.plan_expires_at) > new Date());
   }
 
   /**
@@ -183,7 +200,7 @@ export class SubscriptionService {
    */
   static async getRemainingPremiumDays(userId: string): Promise<number | null> {
     const subscription = await this.getUserSubscription(userId);
-    
+
     if (!subscription?.plan_expires_at || subscription.plan_type !== 'premium') {
       return null;
     }
@@ -192,7 +209,7 @@ export class SubscriptionService {
     const today = new Date();
     const diffTime = expiryDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return Math.max(0, diffDays);
   }
 } 

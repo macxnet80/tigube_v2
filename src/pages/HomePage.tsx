@@ -19,14 +19,14 @@ export default function HomePage() {
   useEffect(() => {
     if (isAuthenticated && !authLoading && userProfile) {
       const userType = userProfile.user_type;
-      const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' || 
-                             userType === 'tierarzt' || userType === 'hundetrainer' || 
-                             userType === 'tierfriseur' || userType === 'physiotherapeut' || 
-                             userType === 'ernaehrungsberater' || userType === 'tierfotograf' || 
-                             userType === 'sonstige')
-        ? '/dashboard-caretaker' 
+      const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' ||
+        userType === 'tierarzt' || userType === 'hundetrainer' ||
+        userType === 'tierfriseur' || userType === 'physiotherapeut' ||
+        userType === 'ernaehrungsberater' || userType === 'tierfotograf' ||
+        userType === 'sonstige')
+        ? '/dashboard-caretaker'
         : '/dashboard-owner';
-      
+
       console.log('🏠 HomePage redirect - userType:', userType, 'dashboardPath:', dashboardPath);
       navigate(dashboardPath, { replace: true });
     }
@@ -45,9 +45,9 @@ export default function HomePage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Search functionality
-    
+
     const queryParams = new URLSearchParams();
     if (service) queryParams.append('service', service);
     if (formLocation) queryParams.append('location', formLocation);
@@ -81,6 +81,28 @@ export default function HomePage() {
           </div>
         </div>
       )}
+
+      {/* 🎁 FREE PREMIUM PROMOTION BANNER */}
+      <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-lg">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          {/* Row 1: Headline + Benefits */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center">
+            <span className="text-3xl">🎁</span>
+            <div>
+              <span className="font-extrabold text-xl tracking-tight">3 Monate gratis Premium</span>
+              <span className="mx-2 opacity-60">·</span>
+              <span className="text-white/90 text-base">Keine Kreditkarte · Keine Kündigung nötig</span>
+            </div>
+          </div>
+          {/* Row 2: Deadline pill */}
+          <div className="mt-3 flex justify-center">
+            <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-4 py-1 text-sm font-medium">
+              <span>🗓️</span>
+              Gilt für alle Anmeldungen bis zum <strong className="ml-1">30. April 2026</strong>
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Hero Section */}
       <section className="relative bg-white py-16 md:py-24">
@@ -152,8 +174,8 @@ export default function HomePage() {
                       onChange={(e) => setSelectedTime(e.target.value)}
                     >
                       {availabilityTimeOptions.map(option => (
-                        <option 
-                          key={option.value} 
+                        <option
+                          key={option.value}
                           value={option.value}
                           className={option.value === '' ? 'text-gray-400' : 'text-gray-900'}
                         >
@@ -187,7 +209,7 @@ export default function HomePage() {
               />
               {/* Overlay-Badge */}
               <div className="absolute top-6 right-6 bg-white/90 rounded-xl shadow px-4 py-2 flex items-center gap-2 z-20">
-                <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.966c.3.922-.755 1.688-1.54 1.118l-3.385-2.46a1 1 0 00-1.175 0l-3.385 2.46c-.784.57-1.838-.196-1.539-1.118l1.287-3.966a1 1 0 00-.364-1.118L2.045 9.394c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.967z"/></svg>
+                <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.385 2.46a1 1 0 00-.364 1.118l1.287 3.966c.3.922-.755 1.688-1.54 1.118l-3.385-2.46a1 1 0 00-1.175 0l-3.385 2.46c-.784.57-1.838-.196-1.539-1.118l1.287-3.966a1 1 0 00-.364-1.118L2.045 9.394c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.967z" /></svg>
                 <span className="font-bold text-gray-900 text-lg">4.9/5</span>
               </div>
             </div>
@@ -201,7 +223,7 @@ export default function HomePage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">So funktioniert tigube?</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
             {/* Für Tierhalter:innen */}
             <div className="bg-white rounded-xl p-8 shadow-md">
@@ -295,7 +317,7 @@ export default function HomePage() {
               Vertrauen, Erfahrung und Leidenschaft für Tiere
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <FeatureCard
               icon={<UserCheck className="w-8 h-8" />}
@@ -327,7 +349,7 @@ export default function HomePage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Von Tiermenschen für Tiermenschen</h2>
           </div>
-          
+
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="p-8 lg:p-12">
               {/* Bilder Grid */}
@@ -354,7 +376,7 @@ export default function HomePage() {
                   />
                 </div>
               </div>
-              
+
               {/* Text */}
               <div className="max-w-3xl mx-auto">
                 <p className="text-gray-700 mb-4 text-lg leading-relaxed">
@@ -383,7 +405,7 @@ export default function HomePage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">Häufige Fragen</h2>
           </div>
-          
+
           <div className="max-w-3xl mx-auto space-y-6">
             <FAQItem
               question="Welche Tiere kann ich betreuen lassen?"
@@ -418,15 +440,15 @@ export default function HomePage() {
                   tigube bringt zusammen, was zusammengehört.
                 </p>
                 <div className="flex flex-wrap gap-4">
-                  <Button 
-                    variant="primary" 
+                  <Button
+                    variant="primary"
                     size="lg"
                     onClick={() => navigate('/registrieren')}
                   >
                     🐾 Kostenlos starten
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="lg"
                     onClick={() => navigate('/registrieren?type=caretaker')}
                   >
@@ -438,9 +460,9 @@ export default function HomePage() {
                 </p>
               </div>
               <div className="lg:col-span-2 relative hidden lg:block">
-                <img 
+                <img
                   src="https://images.pexels.com/photos/2123773/pexels-photo-2123773.jpeg?auto=compress&cs=tinysrgb"
-                  alt="Happy dog with caretaker" 
+                  alt="Happy dog with caretaker"
                   className="w-full h-full object-cover"
                 />
               </div>

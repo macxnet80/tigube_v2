@@ -1,4 +1,4 @@
- 
+
 import Button from '../components/ui/Button';
 import { MapPin, Phone, PawPrint, Edit, Shield, Heart, Trash, Check, X, Plus, Upload, Settings, AlertTriangle, Trash2, Briefcase, User, MessageCircle, KeyRound, Eye, EyeOff, Mail, Star, Crown } from 'lucide-react';
 import DienstleisterCategoryIcon, { getCategoryColor, getCategoryBgColor } from '../components/ui/DienstleisterCategoryIcon';
@@ -65,12 +65,12 @@ function PetPhotoUploader({ photoUrl, onEditClick, uploading }: {
     return (
       <div className="relative mt-1">
         <div className="relative group h-24 w-24">
-          <img 
-            src={previewUrl} 
-            alt="Tierfoto" 
+          <img
+            src={previewUrl}
+            alt="Tierfoto"
             className="h-24 w-24 object-cover rounded-xl border-2 border-gray-200"
           />
-          <div 
+          <div
             className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-xl flex items-center justify-center cursor-pointer"
             onClick={onEditClick}
           >
@@ -89,7 +89,7 @@ function PetPhotoUploader({ photoUrl, onEditClick, uploading }: {
   }
 
   return (
-    <div 
+    <div
       onClick={onEditClick}
       className="mt-1 border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:border-primary-400 transition-colors"
     >
@@ -114,15 +114,15 @@ function OwnerDashboardPage() {
   // Onboarding-Modal State
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingUserName, setOnboardingUserName] = useState<string>('');
-  
+
   // Payment Success Modal
   const { paymentSuccess, isValidating: paymentValidating, closeModal } = usePaymentSuccess();
-  
+
   // Refs to track if data has been loaded to prevent unnecessary reloads
   const vetDataLoadedRef = useRef(false);
   const emergencyDataLoadedRef = useRef(false);
   const prefsDataLoadedRef = useRef(false);
-  
+
   // Demo: initiale Services (später aus DB laden)
   const [services, setServices] = useState<string[]>([]);
   const [otherWishes, setOtherWishes] = useState<string[]>([]);
@@ -198,7 +198,7 @@ function OwnerDashboardPage() {
   // Stabilität wie im Caretaker-Dashboard
   const [optimisticAvatarUrl, setOptimisticAvatarUrl] = useState<string | null>(null);
   const [renderProfile, setRenderProfile] = useState<any>(null);
-  
+
   // Pet Image Cropper States
   const [showPetImageCropper, setShowPetImageCropper] = useState(false);
   const [petCropperMode, setPetCropperMode] = useState<'new' | 'edit'>('new');
@@ -207,7 +207,7 @@ function OwnerDashboardPage() {
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // Modal states für Betreuer löschen
   const [showDeleteCaretakerModal, setShowDeleteCaretakerModal] = useState(false);
   const [caretakerToDelete, setCaretakerToDelete] = useState<any | null>(null);
@@ -243,7 +243,7 @@ function OwnerDashboardPage() {
     // console.log('✨ OwnerDashboardPage userProfile effect triggered.'); // Clean up debug log
     // console.log('🔍 Current userProfile:', userProfile); // Clean up debug log
     // console.log('🔍 userProfile.postal_code:', userProfile?.postal_code); // Clean up debug log
-    
+
     if (userProfile) {
       setOwnerData({
         phoneNumber: userProfile.phone_number || '',
@@ -290,14 +290,14 @@ function OwnerDashboardPage() {
       if (user && !userProfile && !authLoading && profileLoadAttempts < 5) {
         console.log(`🔄 OwnerDashboard: userProfile missing, attempt ${profileLoadAttempts + 1}/5`);
         setProfileLoadAttempts(prev => prev + 1);
-        
+
         // Verzögerung zwischen Versuchen
         await new Promise(resolve => setTimeout(resolve, 300 * (profileLoadAttempts + 1)));
-        
+
         try {
           const { userService } = await import('../lib/supabase/db');
           const { data: freshProfile, error } = await userService.getUserProfile(user.id);
-          
+
           if (!error && freshProfile) {
             console.log('✅ OwnerDashboard: Profile manually reloaded:', freshProfile);
             // Zwinge einen Re-Render durch setzen der ownerData
@@ -411,7 +411,7 @@ function OwnerDashboardPage() {
   // Tierarzt-Infos aus DB laden - nur einmal und nicht im Edit-Modus
   useEffect(() => {
     if (activeTab !== 'einstellungen' || !user || editVet || vetDataLoadedRef.current) return;
-    
+
     setVetLoading(true);
     setVetError(null);
     ownerPreferencesService.getPreferences(user.id)
@@ -447,7 +447,7 @@ function OwnerDashboardPage() {
   // Notfallkontakt aus DB laden - nur einmal und nicht im Edit-Modus
   useEffect(() => {
     if (activeTab !== 'einstellungen' || !user || editEmergency || emergencyDataLoadedRef.current) return;
-    
+
     setEmergencyLoading(true);
     setEmergencyError(null);
     ownerPreferencesService.getPreferences(user.id)
@@ -473,7 +473,7 @@ function OwnerDashboardPage() {
   // Betreuungsvorlieben aus DB laden - nur einmal und nicht im Edit-Modus
   useEffect(() => {
     if (activeTab !== 'einstellungen' || !user || editPrefs || prefsDataLoadedRef.current) return;
-    
+
     setPrefsLoading(true);
     setPrefsError(null);
     ownerPreferencesService.getPreferences(user.id)
@@ -507,7 +507,7 @@ function OwnerDashboardPage() {
   useEffect(() => {
     const loadShareSettings = async () => {
       if (!user) return;
-      
+
       try {
         const { data, error } = await ownerPreferencesService.getShareSettings(user.id);
         if (error) {
@@ -649,17 +649,17 @@ function OwnerDashboardPage() {
     } else if (typeof newPet.image === 'string') {
       photoUrl = newPet.image;
     }
-          const petData = {
-        name: newPet.name,
-        type: typeValue,
-        breed: newPet.breed,
-        birthDate: newPet.birthDate,
-        weight: newPet.weight ? Number(newPet.weight) : undefined,
-        photoUrl: photoUrl,
-        description: newPet.description,
-        gender: newPet.gender || '',
-        neutered: newPet.neutered || false,
-      };
+    const petData = {
+      name: newPet.name,
+      type: typeValue,
+      breed: newPet.breed,
+      birthDate: newPet.birthDate,
+      weight: newPet.weight ? Number(newPet.weight) : undefined,
+      photoUrl: photoUrl,
+      description: newPet.description,
+      gender: newPet.gender || '',
+      neutered: newPet.neutered || false,
+    };
     try {
       const { error } = await petService.addPet(user.id, petData);
       if (error) throw error;
@@ -694,17 +694,17 @@ function OwnerDashboardPage() {
     } else if (typeof editPetData.image === 'string') {
       photoUrl = editPetData.image;
     }
-          const petData = {
-        name: editPetData.name,
-        type: editPetData.type === 'Andere' ? editPetData.typeOther : editPetData.type,
-        breed: editPetData.breed,
-        birthDate: editPetData.birthDate,
-        weight: editPetData.weight ? Number(editPetData.weight) : undefined,
-        photoUrl: photoUrl,
-        description: editPetData.description,
-        gender: editPetData.gender || '',
-        neutered: editPetData.neutered || false,
-      };
+    const petData = {
+      name: editPetData.name,
+      type: editPetData.type === 'Andere' ? editPetData.typeOther : editPetData.type,
+      breed: editPetData.breed,
+      birthDate: editPetData.birthDate,
+      weight: editPetData.weight ? Number(editPetData.weight) : undefined,
+      photoUrl: photoUrl,
+      description: editPetData.description,
+      gender: editPetData.gender || '',
+      neutered: editPetData.neutered || false,
+    };
     try {
       const { error } = await petService.updatePet(editPet, petData);
       if (error) throw error;
@@ -722,7 +722,7 @@ function OwnerDashboardPage() {
         neutered: pet.neutered || false,
       })));
       setEditPet(null);
-              setEditPetData({ name: '', type: '', typeOther: '', breed: '', birthDate: '', weight: '', image: '', description: '', gender: '', neutered: false });
+      setEditPetData({ name: '', type: '', typeOther: '', breed: '', birthDate: '', weight: '', image: '', description: '', gender: '', neutered: false });
     } catch (e) {
       setPetError('Fehler beim Bearbeiten des Tiers!');
     }
@@ -782,14 +782,14 @@ function OwnerDashboardPage() {
       const response = await fetch(croppedImageUrl);
       const blob = await response.blob();
       const file = new File([blob], `pet-${Date.now()}.jpg`, { type: 'image/jpeg' });
-      
+
       // Je nach Modus das entsprechende Pet-Objekt aktualisieren
       if (petCropperMode === 'new') {
         setNewPet(p => ({ ...p, image: file }));
       } else {
         setEditPetData(p => ({ ...p, image: file }));
       }
-      
+
       setShowPetImageCropper(false); // Modal schließen
     } catch (e: any) {
       setPetImageError('Fehler beim Bearbeiten des Tierfotos!');
@@ -801,18 +801,18 @@ function OwnerDashboardPage() {
 
   const handleEditPet = (pet: any) => {
     setEditPet(pet.id);
-          setEditPetData({
-        name: pet.name,
-        type: pet.type,
-        typeOther: '',
-        breed: pet.breed,
-        birthDate: pet.birthDate || '',
-        weight: pet.weight?.toString() || '',
-        image: pet.image,
-        description: pet.description || '',
-        gender: pet.gender || '',
-        neutered: pet.neutered || false,
-      });
+    setEditPetData({
+      name: pet.name,
+      type: pet.type,
+      typeOther: '',
+      breed: pet.breed,
+      birthDate: pet.birthDate || '',
+      weight: pet.weight?.toString() || '',
+      image: pet.image,
+      description: pet.description || '',
+      gender: pet.gender || '',
+      neutered: pet.neutered || false,
+    });
   };
 
   const handleDeleteContact = (caregiver: any, e: React.MouseEvent) => {
@@ -831,15 +831,15 @@ function OwnerDashboardPage() {
           alert('Fehler beim Entfernen des Betreuers. Bitte versuche es erneut.');
           return;
         }
-        
+
         // Aktualisiere lokalen State
         setContacts(prev => prev.filter(contact => contact.id !== caretakerToDelete.id));
-        
+
         // Modal schließen
         setShowDeleteCaretakerModal(false);
         setCaretakerToDelete(null);
         setDeleteCaretakerConfirmationText('');
-        
+
         // Erfolgsbenachrichtigung
         alert(`${caretakerToDelete.name} wurde erfolgreich entfernt und hat keinen Zugriff mehr auf dein Profil.`);
       } catch (error) {
@@ -859,23 +859,23 @@ function OwnerDashboardPage() {
   const handleRemoveFavorite = async (caregiver: any, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!user) return;
-    
+
     setRemovingFavoriteId(caregiver.id);
-    
+
     try {
       const { error } = await ownerCaretakerService.toggleFavorite(user.id, caregiver.id);
-      
+
       if (error) {
         console.error('Fehler beim Entfernen des Favoriten:', error);
         alert('Fehler beim Entfernen des Favoriten. Bitte versuche es erneut.');
         return;
       }
-      
+
       // Entferne den Favoriten aus der lokalen Liste
       setFavoriteCaretakers(prev => prev.filter(fav => fav.id !== caregiver.id));
-      
+
     } catch (error) {
       console.error('Unerwarteter Fehler beim Entfernen des Favoriten:', error);
       alert('Fehler beim Entfernen des Favoriten. Bitte versuche es erneut.');
@@ -887,9 +887,9 @@ function OwnerDashboardPage() {
   const handleStartChat = async (caregiver: any, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!user) return;
-    
+
     try {
       // Erstelle oder finde bestehende Konversation
       const { data: conversation, error } = await getOrCreateConversation({
@@ -915,22 +915,22 @@ function OwnerDashboardPage() {
 
   const handleShareToggle = async (setting: keyof ShareSettings) => {
     if (!user) return;
-    
+
     const newSettings = {
       ...shareSettings,
       [setting]: !shareSettings[setting]
     };
-    
+
     // Optimistisches Update für bessere UX
     setShareSettings(newSettings);
     setShareSettingsLoading(true);
     setShareSettingsError(null);
     setShareSettingsSaveMsg(null);
-    
+
     try {
       // Echte Datenbank-Speicherung
       const { error } = await ownerPreferencesService.saveShareSettings(user.id, newSettings);
-      
+
       if (error) {
         // Bei Fehler: Rollback der UI-Änderung
         setShareSettings(shareSettings);
@@ -969,7 +969,7 @@ function OwnerDashboardPage() {
 
   const handleEmailChange = (value: string) => {
     setOwnerData(d => ({ ...d, email: value }));
-    
+
     if (value.trim() === '') {
       setEmailError('E-Mail-Adresse ist ein Pflichtfeld');
     } else if (!validateEmail(value)) {
@@ -997,35 +997,35 @@ function OwnerDashboardPage() {
       const cityChanged = ownerData.location !== (userProfile?.city || '');
 
       if (plzChanged || cityChanged) {
-          // Check if PLZ+Stadt-Kombination exists in plzs table
-          const { data: existingPlzCity, error: plzError } = await plzService.getByPlzAndCity(ownerData.plz, ownerData.location);
+        // Check if PLZ+Stadt-Kombination exists in plzs table
+        const { data: existingPlzCity, error: plzError } = await plzService.getByPlzAndCity(ownerData.plz, ownerData.location);
 
-          if (plzError && plzError.code !== 'PGRST116') { // PGRST116 means not found, which is expected if new
-               console.error('Error checking PLZ+Stadt in plzs table:', plzError);
-               throw new Error(`Fehler bei der PLZ-Prüfung: ${plzError.message}`);
+        if (plzError && plzError.code !== 'PGRST116') { // PGRST116 means not found, which is expected if new
+          console.error('Error checking PLZ+Stadt in plzs table:', plzError);
+          throw new Error(`Fehler bei der PLZ-Prüfung: ${plzError.message}`);
+        }
+
+        if (!existingPlzCity) {
+          // PLZ+Stadt-Kombination does not exist, create it in plzs table
+          console.log('PLZ+Stadt not found in plzs table, creating...');
+          const { error: createPlzError } = await plzService.create(ownerData.plz, ownerData.location);
+
+          if (createPlzError) {
+            console.error('Error creating PLZ+Stadt in plzs table:', createPlzError);
+            // Continue updating user profile even if adding to plzs fails, but log error
+          } else {
+            console.log('PLZ+Stadt successfully created in plzs table.');
           }
+        }
 
-          if (!existingPlzCity) {
-              // PLZ+Stadt-Kombination does not exist, create it in plzs table
-              console.log('PLZ+Stadt not found in plzs table, creating...');
-              const { error: createPlzError } = await plzService.create(ownerData.plz, ownerData.location);
-
-              if (createPlzError) {
-                  console.error('Error creating PLZ+Stadt in plzs table:', createPlzError);
-                   // Continue updating user profile even if adding to plzs fails, but log error
-              } else {
-                   console.log('PLZ+Stadt successfully created in plzs table.');
-              }
-          }
-
-          // Add PLZ and City to dataToUpdate for users table
-          dataToUpdate.plz = ownerData.plz;
-          dataToUpdate.city = ownerData.location;
+        // Add PLZ and City to dataToUpdate for users table
+        dataToUpdate.plz = ownerData.plz;
+        dataToUpdate.city = ownerData.location;
       }
 
       // If no fields have changed, exit without saving
       if (Object.keys(dataToUpdate).length === 0) {
-          return;
+        return;
       }
 
       // Call the service to update the user profile
@@ -1059,14 +1059,14 @@ function OwnerDashboardPage() {
         gender: userProfile.gender || '',
       });
     } else if (user) {
-       // Fallback for users without a profile yet
-        setOwnerData(prev => ({
-          ...prev,
-          email: user.email || '' // Keep email from auth if profile is missing
-        }));
+      // Fallback for users without a profile yet
+      setOwnerData(prev => ({
+        ...prev,
+        email: user.email || '' // Keep email from auth if profile is missing
+      }));
     } else {
-       // Should not happen
-       setOwnerData({ phoneNumber: '', email: '', plz: '', street: '', location: '', dateOfBirth: '', gender: '' });
+      // Should not happen
+      setOwnerData({ phoneNumber: '', email: '', plz: '', street: '', location: '', dateOfBirth: '', gender: '' });
     }
     setEditData(false); // Exit edit mode
   };
@@ -1079,9 +1079,9 @@ function OwnerDashboardPage() {
     setVetError(null);
     try {
       const { error } = await ownerPreferencesService.saveVetInfo(
-        user.id, 
-        vetData.name, 
-        vetData.address, 
+        user.id,
+        vetData.name,
+        vetData.address,
         vetData.phone
       );
       if (error) {
@@ -1108,8 +1108,8 @@ function OwnerDashboardPage() {
     setEmergencyError(null);
     try {
       const { error } = await ownerPreferencesService.saveEmergencyContact(
-        user.id, 
-        emergencyData.name, 
+        user.id,
+        emergencyData.name,
         emergencyData.phone
       );
       if (error) {
@@ -1248,7 +1248,7 @@ function OwnerDashboardPage() {
       const response = await fetch(croppedImageUrl);
       const blob = await response.blob();
       const file = new File([blob], `profile-${user.id}-${Date.now()}.jpg`, { type: 'image/jpeg' });
-      
+
       const url = await uploadProfilePhoto(file);
       // Optimistisch sofort anzeigen und Modal schließen
       setOptimisticAvatarUrl(url);
@@ -1284,10 +1284,10 @@ function OwnerDashboardPage() {
 
       // Nach erfolgreichem Löschen: Ausloggen und zur Startseite
       await signOut();
-      navigate('/', { 
+      navigate('/', {
         replace: true,
-        state: { 
-          message: 'Dein Konto wurde erfolgreich gelöscht. Alle deine Daten wurden aus der Datenbank entfernt.' 
+        state: {
+          message: 'Dein Konto wurde erfolgreich gelöscht. Alle deine Daten wurden aus der Datenbank entfernt.'
         }
       });
     } catch (error) {
@@ -1450,28 +1450,28 @@ function OwnerDashboardPage() {
                 alt={fullName}
                 className="w-32 h-32 rounded-xl object-cover border-4 border-primary-100 shadow"
               />
-              
+
               {/* Overlay für Edit-Button */}
               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-xl flex items-center justify-center cursor-pointer"
-                   onClick={() => setShowImageCropper(true)}>
+                onClick={() => setShowImageCropper(true)}>
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white rounded-full p-2 shadow-lg">
                   <Edit className="h-5 w-5 text-primary-600" />
                 </div>
               </div>
-              
+
               {avatarUploading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-xl">
                   <LoadingSpinner />
                 </div>
               )}
-              
+
               {avatarError && (
                 <div className="absolute left-0 right-0 -bottom-8 text-xs text-red-500 text-center">
                   {avatarError}
                 </div>
               )}
             </div>
-            
+
             <div className="flex-1 w-full">
               <div className="flex flex-col lg:flex-row gap-8">
                 {/* Erste Spalte: Name und Tiere */}
@@ -1491,7 +1491,7 @@ function OwnerDashboardPage() {
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Pet-Badges */}
                   <div className="flex flex-wrap gap-2">
                     {pets.map((pet) => (
@@ -1500,10 +1500,10 @@ function OwnerDashboardPage() {
                       </span>
                     ))}
                   </div>
-                  
+
 
                 </div>
-                
+
                 {/* Kontaktdaten entfernt – jetzt eigener Tab */}
               </div>
             </div>
@@ -1512,7 +1512,7 @@ function OwnerDashboardPage() {
 
         {/* Owner Dashboard Banner */}
         <div className="mb-6">
-          <AdvertisementBanner 
+          <AdvertisementBanner
             placement="owner_dashboard"
             targetingOptions={{
               petTypes: userProfile?.pet_types || [],
@@ -1528,43 +1528,39 @@ function OwnerDashboardPage() {
             <nav className="-mb-px flex space-x-8">
               <button
                 onClick={() => setActiveTab('uebersicht')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'uebersicht'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'uebersicht'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <Heart className="h-4 w-4 inline mr-2" />
                 Übersicht
               </button>
               <button
                 onClick={() => setActiveTab('tiere')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'tiere'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'tiere'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <PawPrint className="h-4 w-4 inline mr-2" />
                 Meine Tiere
               </button>
               <button
                 onClick={() => setActiveTab('kontaktdaten')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'kontaktdaten'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'kontaktdaten'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 Kontaktdaten
               </button>
               <button
                 onClick={() => setActiveTab('einstellungen')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === 'einstellungen'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'einstellungen'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <Settings className="h-4 w-4 inline mr-2" />
                 Einstellungen
@@ -1572,16 +1568,21 @@ function OwnerDashboardPage() {
               {isPremiumUser && (
                 <button
                   onClick={() => setActiveTab('mitgliedschaft')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'mitgliedschaft'
-                      ? 'border-primary-500 text-primary-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'mitgliedschaft'
+                    ? 'border-primary-500 text-primary-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   <Crown className="h-4 w-4 inline mr-2" />
                   Mitgliedschaft
                 </button>
               )}
+              <Link
+                to="/hilfe-center"
+                className="py-2 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center"
+              >
+                Hilfe-Center
+              </Link>
             </nav>
           </div>
         </div>
@@ -1597,14 +1598,14 @@ function OwnerDashboardPage() {
                   <MessageCircle className="h-5 w-5" />
                   Meine Betreuer
                 </h2>
-                
+
                 {contactsLoading ? (
                   <div className="text-gray-500">Betreuer werden geladen ...</div>
                 ) : contactsError ? (
                   <div className="text-red-500">{contactsError}</div>
                 ) : contacts.length === 0 ? (
                   <div className="text-gray-500">
-                    Noch keine Betreuer gespeichert. 
+                    Noch keine Betreuer gespeichert.
                     <br />
                     <span className="text-sm">Verwende den "Als Betreuer speichern" Button in einem Chat, um Betreuer hier anzuzeigen.</span>
                   </div>
@@ -1622,8 +1623,8 @@ function OwnerDashboardPage() {
                           )}
                           {/* Profil ansehen */}
                           <Link
-                            to={caregiver.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(caregiver.user_type) 
-                              ? `/dienstleister/${caregiver.id}` 
+                            to={caregiver.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(caregiver.user_type)
+                              ? `/dienstleister/${caregiver.id}`
                               : `/betreuer/${caregiver.id}`}
                             className="text-gray-400 hover:text-primary-600 transition-colors"
                             title="Profil ansehen"
@@ -1684,7 +1685,7 @@ function OwnerDashboardPage() {
                   <Heart className="h-5 w-5" />
                   Favoriten
                 </h2>
-                
+
                 {favoritesLoading ? (
                   <div className="text-gray-500">Favoriten werden geladen ...</div>
                 ) : favoritesError ? (
@@ -1717,8 +1718,8 @@ function OwnerDashboardPage() {
                           </button>
                           {/* Profil ansehen */}
                           <Link
-                            to={caregiver.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(caregiver.user_type) 
-                              ? `/dienstleister/${caregiver.id}` 
+                            to={caregiver.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(caregiver.user_type)
+                              ? `/dienstleister/${caregiver.id}`
                               : `/betreuer/${caregiver.id}`}
                             className="text-gray-400 hover:text-primary-600 transition-colors"
                             title="Profil ansehen"
@@ -1749,9 +1750,9 @@ function OwnerDashboardPage() {
                           {caregiver.kategorie_name && (
                             <div className="flex items-center gap-1 mb-2">
                               {caregiver.kategorie_icon && (
-                                <DienstleisterCategoryIcon 
-                                  iconName={caregiver.kategorie_icon} 
-                                  size="sm" 
+                                <DienstleisterCategoryIcon
+                                  iconName={caregiver.kategorie_icon}
+                                  size="sm"
                                   className={getCategoryColor(caregiver.kategorie_name)}
                                 />
                               )}
@@ -1813,14 +1814,14 @@ function OwnerDashboardPage() {
                           >
                             <Edit className="h-4 w-4" />
                           </button>
-                          
+
                           {/* Header mit Foto und Name */}
                           <div className="flex items-center gap-4 mb-4">
                             {pet.image ? (
-                              <img 
-                                src={pet.image} 
-                                alt={pet.name} 
-                                className="w-16 h-16 rounded-2xl object-cover border-2 border-primary-100 shadow-sm" 
+                              <img
+                                src={pet.image}
+                                alt={pet.name}
+                                className="w-16 h-16 rounded-2xl object-cover border-2 border-primary-100 shadow-sm"
                               />
                             ) : (
                               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-100 to-primary-200 border-2 border-primary-100 flex items-center justify-center text-primary-600 shadow-sm">
@@ -1995,7 +1996,7 @@ function OwnerDashboardPage() {
                               </button>
                             </div>
                           </div>
-                          
+
                           {/* Delete-Button unten rechts */}
                           <button
                             type="button"
@@ -2178,10 +2179,10 @@ function OwnerDashboardPage() {
                       </div>
                       <div className="mb-2">
                         <span className="font-medium">Telefon:</span>
-                        <input 
-                          type="tel" 
-                          className="input mt-1" 
-                          value={vetData.phone} 
+                        <input
+                          type="tel"
+                          className="input mt-1"
+                          value={vetData.phone}
                           onChange={e => setVetData(d => ({ ...d, phone: e.target.value }))}
                           placeholder="+49 123 456789"
                         />
@@ -2229,10 +2230,10 @@ function OwnerDashboardPage() {
                       </div>
                       <div className="mb-2">
                         <span className="font-medium">Telefon:</span>
-                        <input 
-                          type="tel" 
-                          className="input mt-1" 
-                          value={emergencyData.phone} 
+                        <input
+                          type="tel"
+                          className="input mt-1"
+                          value={emergencyData.phone}
                           onChange={e => setEmergencyData(d => ({ ...d, phone: e.target.value }))}
                           placeholder="+49 123 456789"
                         />
@@ -2284,11 +2285,10 @@ function OwnerDashboardPage() {
                                 disabled
                                 className="sr-only"
                               />
-                              <div className={`w-4 h-4 border-2 rounded flex items-center justify-center ${
-                                services.includes(service) 
-                                  ? 'bg-green-600 border-green-600' 
-                                  : 'bg-white border-gray-300'
-                              }`}>
+                              <div className={`w-4 h-4 border-2 rounded flex items-center justify-center ${services.includes(service)
+                                ? 'bg-green-600 border-green-600'
+                                : 'bg-white border-gray-300'
+                                }`}>
                                 {services.includes(service) && (
                                   <Check className="w-3 h-3 text-white" />
                                 )}
@@ -2430,14 +2430,14 @@ function OwnerDashboardPage() {
                     <div className="text-sm">
                       <p className="font-medium text-blue-800">Datenschutz-Hinweis</p>
                       <p className="text-blue-700 mt-1">
-                        Wähle aus, welche Informationen du mit deinen Betreuern teilen möchtest. 
+                        Wähle aus, welche Informationen du mit deinen Betreuern teilen möchtest.
                         Diese Einstellungen gelten für alle aktuellen und zukünftigen Betreuer-Kontakte.
                         Deine Daten werden nur mit den von dir ausgewählten Betreuern geteilt und sind durch unsere Datenschutzrichtlinien geschützt.
                       </p>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <div>
@@ -2639,7 +2639,7 @@ function OwnerDashboardPage() {
                       <div className="text-sm text-yellow-800">
                         <p className="font-medium mb-1">Wichtiger Hinweis</p>
                         <p>
-                          Die Bestätigung der Änderung wird an deine <strong>alte E-Mail-Adresse</strong> gesendet 
+                          Die Bestätigung der Änderung wird an deine <strong>alte E-Mail-Adresse</strong> gesendet
                           und muss dort bestätigt werden, bevor die neue E-Mail-Adresse aktiv wird.
                         </p>
                       </div>
@@ -2895,7 +2895,7 @@ function OwnerDashboardPage() {
                     <div className="text-sm">
                       <p className="font-medium text-red-800">Achtung - Irreversible Aktion</p>
                       <p className="text-red-700 mt-1">
-                        Das Löschen deines Kontos ist endgültig und kann nicht rückgängig gemacht werden. 
+                        Das Löschen deines Kontos ist endgültig und kann nicht rückgängig gemacht werden.
                         Alle deine Daten, Haustier-Profile und Betreuungsverläufe werden endgültig entfernt.
                       </p>
                     </div>
@@ -2933,7 +2933,7 @@ function OwnerDashboardPage() {
                           Gib zur Bestätigung "KONTO LÖSCHEN" in das Feld unten ein:
                         </p>
                       </div>
-                      
+
                       <input
                         type="text"
                         className="input w-full max-w-xs"
@@ -2941,7 +2941,7 @@ function OwnerDashboardPage() {
                         value={deleteConfirmationText}
                         onChange={(e) => setDeleteConfirmationText(e.target.value)}
                       />
-                      
+
                       <div className="flex gap-3">
                         <button
                           type="button"
@@ -2999,7 +2999,7 @@ function OwnerDashboardPage() {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="text-center p-4 bg-white rounded-lg border">
                     <div className="text-2xl font-bold text-blue-600">Unlimited</div>
@@ -3091,7 +3091,7 @@ function OwnerDashboardPage() {
           </>
         )}
       </div>
-      
+
       {/* Delete Caretaker Confirmation Modal */}
       {showDeleteCaretakerModal && caretakerToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -3102,11 +3102,11 @@ function OwnerDashboardPage() {
               </div>
               <h2 className="text-lg font-semibold text-gray-900">Betreuer entfernen</h2>
             </div>
-            
+
             <p className="text-gray-700 mb-4 leading-relaxed">
               Möchtest du <span className="font-medium">{caretakerToDelete.name}</span> wirklich entfernen?
             </p>
-            
+
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
               <div className="flex items-start">
                 <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
@@ -3121,7 +3121,7 @@ function OwnerDashboardPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Gib zur Bestätigung "BETREUER ENTFERNEN" ein:
@@ -3134,7 +3134,7 @@ function OwnerDashboardPage() {
                 onChange={(e) => setDeleteCaretakerConfirmationText(e.target.value)}
               />
             </div>
-            
+
             <div className="flex gap-3">
               <button
                 type="button"
@@ -3188,7 +3188,7 @@ function OwnerDashboardPage() {
                   <X className="h-5 w-5 text-gray-500" />
                 </button>
               </div>
-              
+
               <ProfileImageCropper
                 photoUrl={avatarUrl}
                 onImageSave={handleCroppedImageSave}
@@ -3217,7 +3217,7 @@ function OwnerDashboardPage() {
                   <X className="h-5 w-5 text-gray-500" />
                 </button>
               </div>
-              
+
               <ProfileImageCropper
                 photoUrl={petCropperMode === 'new' ? getPetImageUrl(newPet.image) : getPetImageUrl(editPetData.image)}
                 onImageSave={handlePetCroppedImageSave}

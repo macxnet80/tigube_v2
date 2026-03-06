@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PricingGrid } from '../components/ui/SubscriptionCard';
 import { UsageLimitIndicator } from '../components/ui/UsageLimitIndicator';
 import { useAuth } from '../lib/auth/AuthContext';
@@ -10,11 +11,12 @@ import Button from '../components/ui/Button';
 
 export default function PricingPage() {
   console.log('🎯 PricingPage: Component loaded successfully');
-  
+
   try {
+    const navigate = useNavigate();
     const { user, userProfile } = useAuth();
-    const { subscription } = useSubscription();
-  
+    const { } = useSubscription();
+
     // Debug Stripe configuration on component mount
     React.useEffect(() => {
       console.log('[PricingPage] Stripe configuration check:', {
@@ -23,12 +25,12 @@ export default function PricingPage() {
         appUrl: config.app.url
       });
     }, []);
-  
+
     // Separate Usage Hooks für verschiedene Features
     const { currentUsage: contactUsage, isLoading: contactLoading } = useCurrentUsage('contact_request');
     const { currentUsage: profileUsage, isLoading: profileLoading } = useCurrentUsage('profile_view');
-    
-    
+
+
     // Setze den Default-Tab basierend auf dem User-Profil
     const [selectedUserType, setSelectedUserType] = useState<'owner' | 'caretaker'>('owner');
     const [hasInitialized, setHasInitialized] = useState(false);
@@ -47,10 +49,13 @@ export default function PricingPage() {
 
     const handleSelectPlan = async (plan: 'basic' | 'premium') => {
       console.log('Plan selected:', plan);
-      
-      // Basic plan ist kostenlos - keine Aktion nötig
+
+      // Basic plan ist kostenlos - für nicht-eingeloggte User zur Registrierung
       if (plan === 'basic') {
-        alert('Du bist bereits im Starter-Plan!');
+        if (!user) {
+          navigate('/registrieren');
+        }
+        // Eingeloggte User: nichts tun, sie sind bereits registriert
         return;
       }
 
@@ -63,7 +68,7 @@ export default function PricingPage() {
       try {
         console.log('🚀 Starting checkout process...');
         console.log('User:', { id: user.id, email: user.email, type: displayUserType });
-        
+
         // Check Stripe configuration first
         if (!StripeService.isStripeReady()) {
           console.error('❌ Stripe configuration issue');
@@ -76,7 +81,7 @@ export default function PricingPage() {
         console.log('Plan type:', planType);
 
         // Subscription initiated
-        
+
         // Start Stripe checkout
         console.log('Calling StripeService.startCheckout...');
         await StripeService.startCheckout({
@@ -85,16 +90,16 @@ export default function PricingPage() {
           userId: user.id,
           userEmail: user.email!
         });
-        
+
         console.log('✅ Checkout completed successfully');
-        
+
       } catch (error) {
         console.error('❌ Checkout error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler';
-        
+
         // Verbesserte Fehlermeldungen für Benutzer
         let userMessage = 'Fehler beim Starten des Zahlungsvorgangs:\n\n';
-        
+
         if (errorMessage.includes('Payment Link nicht konfiguriert')) {
           userMessage += '🔧 Das Zahlungssystem wird gerade konfiguriert.\n\nBitte versuche es in wenigen Minuten erneut oder kontaktiere den Support.';
         } else if (errorMessage.includes('Environment Variable')) {
@@ -105,16 +110,16 @@ export default function PricingPage() {
           userMessage += errorMessage;
           userMessage += '\n\nFalls das Problem weiterhin besteht, kontaktiere bitte den Support.';
         }
-        
+
         alert(userMessage);
-        
+
         // Log details for debugging
         console.error('Error details for debugging:', {
           message: errorMessage,
           error: error,
-                   userType: effectiveUserType,
-           planType: effectiveUserType === 'owner' ? 'premium' : 'professional',
-           userId: user.id
+          userType: effectiveUserType,
+          planType: effectiveUserType === 'owner' ? 'premium' : 'professional',
+          userId: user.id
         });
       }
     };
@@ -125,6 +130,29 @@ export default function PricingPage() {
 
     return (
       <div className="min-h-screen bg-gray-50">
+
+        {/* 🎁 FREE PREMIUM PROMOTION BANNER */}
+        <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-lg">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+            {/* Row 1: Headline + Benefits */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center">
+              <span className="text-3xl">🎁</span>
+              <div>
+                <span className="font-extrabold text-xl tracking-tight">3 Monate gratis Premium</span>
+                <span className="mx-2 opacity-60">·</span>
+                <span className="text-white/90 text-base">Kein Kreditkarte · Keine Kündigung nötig</span>
+              </div>
+            </div>
+            {/* Row 2: Deadline pill */}
+            <div className="mt-3 flex justify-center">
+              <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-4 py-1 text-sm font-medium">
+                <span>🗓️</span>
+                Gilt für alle Anmeldungen bis zum <strong className="ml-1">30. April 2026</strong>
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Hero Section */}
         <div className="bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -139,17 +167,17 @@ export default function PricingPage() {
           </div>
         </div>
 
-                {/* Main Pricing Section */}
-          <div className="py-12">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <PricingGrid 
-                userType={displayUserType}
-                onSelectPlan={handleSelectPlan}
-                onUserTypeChange={setSelectedUserType}
-                isUserLoggedIn={!!user}
-              />
-            </div>
+        {/* Main Pricing Section */}
+        <div className="py-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <PricingGrid
+              userType={displayUserType}
+              onSelectPlan={handleSelectPlan}
+              onUserTypeChange={setSelectedUserType}
+              isUserLoggedIn={!!user}
+            />
           </div>
+        </div>
 
         {/* Usage Overview (nur für eingeloggte User) */}
         {user && (
@@ -209,8 +237,8 @@ export default function PricingPage() {
                   Was passiert, wenn die Beta-Phase endet?
                 </h3>
                 <p className="text-gray-600">
-                  Ende Mai 2026 wechseln wir vom Beta-Modus zu unserem regulären Freemium-Modell. 
-                  Du behältst alle deine Daten und kannst weiterhin den kostenlosen Basic-Plan nutzen oder 
+                  Ende Mai 2026 wechseln wir vom Beta-Modus zu unserem regulären Freemium-Modell.
+                  Du behältst alle deine Daten und kannst weiterhin den kostenlosen Basic-Plan nutzen oder
                   zu Premium/Professional upgraden für erweiterte Features.
                 </p>
               </div>
@@ -220,8 +248,8 @@ export default function PricingPage() {
                   Kann ich meinen Plan jederzeit ändern?
                 </h3>
                 <p className="text-gray-600">
-                  Ja! Du kannst jederzeit upgraden oder downgraden. Bei einem Upgrade werden die neuen 
-                  Features sofort freigeschaltet. Bei einem Downgrade gelten die neuen Limits ab dem 
+                  Ja! Du kannst jederzeit upgraden oder downgraden. Bei einem Upgrade werden die neuen
+                  Features sofort freigeschaltet. Bei einem Downgrade gelten die neuen Limits ab dem
                   nächsten Abrechnungszyklus.
                 </p>
               </div>
@@ -233,9 +261,9 @@ export default function PricingPage() {
                   Unterscheiden sich die Pläne für Tierhalter und Betreuer?
                 </h3>
                 <p className="text-gray-600">
-                  Ja, beide nutzen das gleiche 2-Plan-System, aber mit unterschiedlichen Namen und Features: 
-                  Tierhalter erhalten "Premium" (€4,90/Monat) mit unlimited Kontakten und erweiterten Filtern. 
-                  Betreuer erhalten "Professional" (€12,90/Monat) mit zusätzlichen Business-Features wie 
+                  Ja, beide nutzen das gleiche 2-Plan-System, aber mit unterschiedlichen Namen und Features:
+                  Tierhalter erhalten "Premium" (€4,90/Monat) mit unlimited Kontakten und erweiterten Filtern.
+                  Betreuer erhalten "Professional" (€12,90/Monat) mit zusätzlichen Business-Features wie
                   Umgebungsbildern und erweiterten Analytics.
                 </p>
               </div>
@@ -245,7 +273,7 @@ export default function PricingPage() {
                   Werden meine Limits am Monatsende zurückgesetzt?
                 </h3>
                 <p className="text-gray-600">
-                  Ja, alle monatlichen Limits werden am ersten Tag des neuen Monats automatisch zurückgesetzt. 
+                  Ja, alle monatlichen Limits werden am ersten Tag des neuen Monats automatisch zurückgesetzt.
                   Du startest also jeden Monat mit vollen Kontingenten.
                 </p>
               </div>

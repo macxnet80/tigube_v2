@@ -32,6 +32,7 @@ const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const BlogListPage = lazy(() => import('./pages/BlogListPage'));
 const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
 const CleverreachRedirectPage = lazy(() => import('./pages/CleverreachRedirectPage'));
+const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
 
 // Debug components (only in development)
 
@@ -43,90 +44,91 @@ function App() {
       <Layout>
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/launch" element={<LaunchPage />} />
-          <Route path="/suche" element={<SearchPage />} />
-          <Route path="/dienstleister" element={<DienstleisterSearchPage />} />
-          <Route 
-            path="/betreuer/:id" 
-            element={
-              <SafeProtectedRoute>
-                <BetreuerProfilePage />
-              </SafeProtectedRoute>
-            }
-          />
-          <Route 
-            path="/dienstleister/:id" 
-            element={
-              <SafeProtectedRoute>
-                <DienstleisterProfilePage />
-              </SafeProtectedRoute>
-            }
-          />
-          <Route path="/registrieren" element={<RegisterPage />} />
-          <Route path="/anmelden" element={<LoginPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/impressum" element={<ImpressumPage />} />
-          <Route path="/datenschutz" element={<DatenschutzPage />} />
-          <Route path="/agb" element={<AgbPage />} />
-          <Route path="/ueber-uns" element={<AboutPage />} />
-          <Route path="/kontakt" element={<ContactPage />} />
-          <Route path="/hilfe" element={<HelpPage />} />
-          <Route path="/preise" element={<PricingPage />} />
-          <Route path="/mitgliedschaften" element={<PricingPage />} />
-          <Route path="/pricing" element={<Navigate to="/mitgliedschaften" replace />} />
-          <Route path="/payment/success" element={<PaymentSuccessPage />} />
-          <Route path="/blog" element={<BlogListPage />} />
-          <Route path="/blog/:slug" element={<BlogPostPage />} />
-          <Route path="/cleverreach" element={<CleverreachRedirectPage />} />
-          <Route path="/newsletter/redirect" element={<CleverreachRedirectPage />} />
-          <Route path="/newsletter/confirm" element={<CleverreachRedirectPage />} />
-          <Route path="/newsletter/unsubscribe" element={<CleverreachRedirectPage />} />
-          
-          {/* Test-Dashboard entfernt */}
-          
-          <Route 
-            path="/dashboard-owner" 
-            element={
-              <SafeProtectedRoute requireOwner={true}>
-                <OwnerDashboardPage />
-              </SafeProtectedRoute>
-            } 
-          />
-          <Route
-            path="/dashboard-caretaker"
-            element={
-              <SafeProtectedRoute requireCaretaker={true}>
-                <CaretakerDashboardPage />
-              </SafeProtectedRoute>
-            }
-          />
-          <Route 
-            path="/nachrichten" 
-            element={
-              <SafeProtectedRoute>
-                <MessagesPage />
-              </SafeProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/nachrichten/:conversationId" 
-            element={
-              <SafeProtectedRoute>
-                <MessagesPage />
-              </SafeProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/owner/:userId" 
-            element={
-              <SafeProtectedRoute>
-                <OwnerPublicProfilePage />
-              </SafeProtectedRoute>
-            } 
-          />
-          <Route path="*" element={<NotFoundPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/launch" element={<LaunchPage />} />
+            <Route path="/suche" element={<SearchPage />} />
+            <Route path="/dienstleister" element={<DienstleisterSearchPage />} />
+            <Route
+              path="/betreuer/:id"
+              element={
+                <SafeProtectedRoute>
+                  <BetreuerProfilePage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route
+              path="/dienstleister/:id"
+              element={
+                <SafeProtectedRoute>
+                  <DienstleisterProfilePage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route path="/registrieren" element={<RegisterPage />} />
+            <Route path="/anmelden" element={<LoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/impressum" element={<ImpressumPage />} />
+            <Route path="/datenschutz" element={<DatenschutzPage />} />
+            <Route path="/agb" element={<AgbPage />} />
+            <Route path="/ueber-uns" element={<AboutPage />} />
+            <Route path="/kontakt" element={<ContactPage />} />
+            <Route path="/hilfe" element={<HelpPage />} />
+            <Route path="/preise" element={<PricingPage />} />
+            <Route path="/mitgliedschaften" element={<PricingPage />} />
+            <Route path="/pricing" element={<Navigate to="/mitgliedschaften" replace />} />
+            <Route path="/payment/success" element={<PaymentSuccessPage />} />
+            <Route path="/blog" element={<BlogListPage />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/cleverreach" element={<CleverreachRedirectPage />} />
+            <Route path="/newsletter/redirect" element={<CleverreachRedirectPage />} />
+            <Route path="/newsletter/confirm" element={<CleverreachRedirectPage />} />
+            <Route path="/newsletter/unsubscribe" element={<CleverreachRedirectPage />} />
+            <Route path="/hilfe-center" element={<HelpCenterPage />} />
+
+            {/* Test-Dashboard entfernt */}
+
+            <Route
+              path="/dashboard-owner"
+              element={
+                <SafeProtectedRoute requireOwner={true}>
+                  <OwnerDashboardPage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard-caretaker"
+              element={
+                <SafeProtectedRoute requireCaretaker={true}>
+                  <CaretakerDashboardPage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route
+              path="/nachrichten"
+              element={
+                <SafeProtectedRoute>
+                  <MessagesPage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route
+              path="/nachrichten/:conversationId"
+              element={
+                <SafeProtectedRoute>
+                  <MessagesPage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route
+              path="/owner/:userId"
+              element={
+                <SafeProtectedRoute>
+                  <OwnerPublicProfilePage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>
       </Layout>

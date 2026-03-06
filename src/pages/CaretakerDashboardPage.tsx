@@ -372,12 +372,7 @@ function CaretakerDashboardPage() {
     'Fische',
     'Kleintiere',
   ];
-  const defaultQualifications = [
-    'Erste-Hilfe am Tier zertifiziert',
-    'Professioneller Hundetrainer',
-    'Tierarzterfahrung',
-    'Tierheim-Erfahrung',
-  ];
+
 
   // Vordefinierte Dienstleistungen nach Dienstleister-Kategorie (kategorie_id)
   const predefinedServicesByCategory: Record<number, string[]> = {
@@ -2815,6 +2810,14 @@ function CaretakerDashboardPage() {
                   Mitgliedschaft
                 </button>
               </li>
+              <li>
+                <Link
+                  to="/hilfe-center"
+                  className="w-full flex text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50 items-center"
+                >
+                  Hilfe-Center
+                </Link>
+              </li>
             </ul>
           </nav>
         </aside>
@@ -3127,30 +3130,22 @@ function CaretakerDashboardPage() {
                       <div className="mb-4">
                         <span className="font-semibold text-gray-900">Qualifikationen:</span>
                         <div className="mt-2 space-y-2">
-                          {defaultQualifications.map((qualification) => {
-                            const isActive = profile.qualifications?.includes(qualification);
-                            return (
-                              <div key={qualification} className={`flex items-center p-3 rounded-lg border ${isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                          {profile.qualifications?.length > 0 ? (
+                            profile.qualifications.map((q: string) => (
+                              <div key={q} className="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${isActive ? 'bg-primary-600 border-primary-600' : 'border-gray-300'}`}>
-                                    {isActive && <Check className="w-3 h-3 text-white" />}
+                                  <div className="w-4 h-4 rounded border-2 border-primary-600 bg-primary-600 flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-white" />
                                   </div>
-                                  <span className={`font-medium ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>{qualification}</span>
+                                  <span className="font-medium text-gray-900">{q}</span>
                                 </div>
                               </div>
-                            );
-                          })}
-                          {/* Individuelle Qualifikationen */}
-                          {profile.qualifications?.filter((q: string) => !defaultQualifications.includes(q)).map((q: string) => (
-                            <div key={q} className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <div className="w-4 h-4 rounded border-2 border-blue-300 bg-blue-100 flex items-center justify-center">
-                                  <Check className="w-3 h-3 text-blue-600" />
-                                </div>
-                                <span className="font-medium text-gray-900">{q}</span>
-                              </div>
+                            ))
+                          ) : (
+                            <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                              <span className="text-gray-400">Keine Qualifikationen angegeben</span>
                             </div>
-                          ))}
+                          )}
                         </div>
                       </div>
 
@@ -3220,15 +3215,8 @@ function CaretakerDashboardPage() {
                       <div>
                         <label className="block text-sm font-medium mb-1">Qualifikationen</label>
                         <div className="flex flex-wrap gap-2 mb-2">
-                          {/* Default-Checkboxen */}
-                          {defaultQualifications.map((q: string) => (
-                            <label key={q} className={`px-2 py-1 rounded text-xs cursor-pointer border ${qualificationsDraft.qualifications.includes(q) ? 'bg-primary-100 text-primary-700 border-primary-300' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
-                              <input type="checkbox" className="mr-1" checked={qualificationsDraft.qualifications.includes(q)} onChange={e => handleQualificationsChange('qualifications', e.target.checked ? [...qualificationsDraft.qualifications, q] : qualificationsDraft.qualifications.filter((x: string) => x !== q))} />
-                              {q}
-                            </label>
-                          ))}
-                          {/* Individuelle Qualifikationen als Chips */}
-                          {qualificationsDraft.qualifications.filter((q: string) => !defaultQualifications.includes(q)).map((q: string) => (
+                          {/* Qualifikationen als Chips */}
+                          {qualificationsDraft.qualifications.map((q: string) => (
                             <span key={q} className="flex items-center px-2 py-1 rounded text-xs bg-primary-100 text-primary-700 border border-primary-300">
                               {q}
                               <button type="button" className="ml-1 text-gray-400 hover:text-red-500" onClick={() => handleQualificationsChange('qualifications', qualificationsDraft.qualifications.filter((x: string) => x !== q))} title="Entfernen">

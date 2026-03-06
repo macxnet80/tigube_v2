@@ -1,5 +1,5 @@
-import React from 'react';
-import { Check, Crown, Star, Zap, Users, Calendar, Camera, TrendingUp, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, Crown, Star, Zap, Users, ExternalLink, X } from 'lucide-react';
 import Button from './Button';
 import { useSubscription } from '../../lib/auth/useSubscription';
 import { getPlanPrice, isStripeTestMode } from '../../lib/stripe/stripeConfig';
@@ -19,11 +19,15 @@ export function SubscriptionCard({
   className = '',
   highlighted = false
 }: SubscriptionCardProps) {
-  const { subscription, features } = useSubscription();
+  const { subscription } = useSubscription();
   const planConfig = getPlanConfig(plan, userType);
 
+  // Promotion: alle User die sich bis 30.04.2026 anmelden, erhalten 3 Monate gratis Premium
+  const PROMOTION_ACTIVE = new Date() < new Date('2026-05-01T00:00:00.000Z');
+  const [showPromoModal, setShowPromoModal] = useState(false);
+
   // Check if this is the user's current plan
-  const currentPlan = subscription?.plan_type || 'basic';
+  const currentPlan = subscription?.plan_type || 'free';
   const isCurrentPlan = currentPlan === plan;
 
   // Check if user is in beta
@@ -31,175 +35,207 @@ export function SubscriptionCard({
 
   // Handle subscription management
   const handleManageSubscription = () => {
-    // Stripe Customer Portal URL für Owner
     if (userType === 'owner') {
-      // Stripe Customer Portal URLs - konfiguriert im Stripe Dashboard
       const customerPortalUrl = isStripeTestMode()
-        ? 'https://billing.stripe.com/p/login/test_00w9AU8GVfV897Q8gJ2oE00'  // Test Mode Login
-        : 'https://billing.stripe.com/p/login/live_00000000000000000000000000'; // Live Mode Login (TODO: Mit echter URL ersetzen)
-
-      console.log('🔗 Opening Stripe Customer Portal:', customerPortalUrl);
+        ? 'https://billing.stripe.com/p/login/test_00w9AU8GVfV897Q8gJ2oE00'
+        : 'https://billing.stripe.com/p/login/live_00000000000000000000000000';
       window.open(customerPortalUrl, '_blank');
     } else {
-      // Caretaker Customer Portal (später mit separater URL)
-      const caretakerPortalUrl = isStripeTestMode()
-        ? 'https://billing.stripe.com/p/login/test_CARETAKER_URL'  // TODO: Caretaker Test URL
-        : 'https://billing.stripe.com/p/login/live_CARETAKER_URL'; // TODO: Caretaker Live URL
+      alert('Mitgliedschaftsverwaltung für Betreuer wird in Kürze verfügbar sein.');
+    }
+  };
 
-      console.log('🔗 Opening Caretaker Customer Portal:', caretakerPortalUrl);
-      alert('Mitgliedschaftsverwaltung für Betreuer wird in Kürze verfügbar sein.\n\nURL: ' + caretakerPortalUrl);
+  // Während Promotion: Modal statt Stripe-Checkout
+  const handlePremiumClick = () => {
+    if (PROMOTION_ACTIVE) {
+      setShowPromoModal(true);
+    } else {
+      onSelectPlan?.(plan);
     }
   };
 
   return (
-    <div className={`
-      subscription-card 
-      ${className}
-    `}>
-      <div className={`
-        relative bg-white rounded-xl border-2 p-6 h-full flex flex-col
-        ${highlighted ? 'border-primary-600 shadow-2xl transform scale-105' : 'border-gray-200 shadow-lg'}
-        transition-all duration-300 hover:shadow-xl
-      `}>
-        {/* Popular Badge */}
-        {highlighted && (
-          <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-            <span className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-1 rounded-full text-sm font-medium">
-              Am beliebtesten
-            </span>
+    <>
+      {/* 🎁 Humorvolles Promotion Modal */}
+      {showPromoModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPromoModal(false)}
+        >
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div
+            className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setShowPromoModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="text-5xl mb-4">🎉</div>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-3">
+              Woah, stopp mal kurz! 🐾
+            </h2>
+            <p className="text-gray-600 mb-5 leading-relaxed">
+              Du willst Premium kaufen? Süß – aber völlig unnötig!{' '}
+              <span className="font-semibold text-primary-700">
+                Alle Neulinge bekommen gerade 3 Monate Premium gratis.
+              </span>{' '}
+              Ohne Kreditkarte. Ohne Trick. Einfach so – weil wir nett sind. 🤷
+            </p>
+
+            <div className="bg-primary-50 border border-primary-200 rounded-xl p-4 mb-6">
+              <p className="text-sm text-primary-800 font-medium">
+                🗓️ Gilt für alle Anmeldungen bis zum{' '}
+                <strong>30. April 2026</strong>
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={() => { window.location.href = '/registrieren'; }}
+              >
+                🐕 Jetzt kostenlos registrieren
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowPromoModal(false)}
+              >
+                Verstanden!
+              </Button>
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center mb-3">
-            {planConfig.icon}
+      <div className={`subscription-card ${className}`}>
+        <div className={`
+          relative bg-white rounded-xl border-2 p-6 h-full flex flex-col
+          ${highlighted ? 'border-primary-600 shadow-2xl transform scale-105' : 'border-gray-200 shadow-lg'}
+          transition-all duration-300 hover:shadow-xl
+        `}>
+          {/* Popular Badge */}
+          {highlighted && (
+            <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+              <span className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-1 rounded-full text-sm font-medium">
+                Am beliebtesten
+              </span>
+            </div>
+          )}
+
+          {/* Header */}
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center mb-3">
+              {planConfig.icon}
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              {planConfig.name}
+            </h3>
+            <div className="mb-2">
+              <span className="text-4xl font-bold text-gray-900">{planConfig.price}</span>
+              {planConfig.price !== 'Kostenlos' && (
+                <span className="text-gray-500 ml-1">/Monat</span>
+              )}
+            </div>
+            <p className="text-gray-600 text-sm">{planConfig.description}</p>
           </div>
 
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            {planConfig.name}
-          </h3>
+          {/* Features */}
+          <div className="space-y-3 mb-6">
+            {planConfig.features.map((feature, index) => (
+              <div key={index} className="flex items-start gap-3">
+                <div className="flex-shrink-0 mt-0.5">
+                  {feature.available ? (
+                    <Check className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <span className={`text-sm ${feature.available ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {feature.name}
+                  </span>
+                  {feature.limit && (
+                    <span className="text-xs text-gray-500 ml-2">({feature.limit})</span>
+                  )}
+                  {feature.highlight && (
+                    <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full ml-2">
+                      {feature.highlight}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
 
-          <div className="mb-2">
-            <span className="text-4xl font-bold text-gray-900">{planConfig.price}</span>
-            {planConfig.price !== 'Kostenlos' && (
-              <span className="text-gray-500 ml-1">/Monat</span>
+          {/* Beta Notice */}
+          {isBetaUser && plan === 'premium' && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-800 text-center">
+                <strong>Beta-Test:</strong> Alle Features bereits kostenlos verfügbar.<br />
+                Upgrade nur zum Testen der Zahlungsabwicklung.
+              </p>
+            </div>
+          )}
+          {isBetaUser && plan === 'basic' && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-xs text-blue-800 text-center">
+                <strong>Beta-Phase:</strong> Alle Features bis 31. Oktober 2025 kostenlos verfügbar
+              </p>
+            </div>
+          )}
+
+          {/* CTA Button */}
+          <div className="pt-4 space-y-3 mt-auto">
+            {isCurrentPlan ? (
+              <>
+                <Button variant="outline" disabled className="w-full">
+                  Aktueller Plan
+                </Button>
+                {plan === 'premium' && !PROMOTION_ACTIVE && (
+                  <Button
+                    variant="primary"
+                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700"
+                    onClick={handleManageSubscription}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Mitgliedschaft verwalten
+                  </Button>
+                )}
+              </>
+            ) : isBetaUser && plan === 'premium' ? (
+              <Button
+                variant={highlighted ? 'primary' : 'outline'}
+                className="w-full"
+                onClick={() => onSelectPlan?.(plan)}
+              >
+                Premium testen (Beta)
+              </Button>
+            ) : isBetaUser ? (
+              <Button variant="outline" disabled className="w-full">
+                In Beta verfügbar
+              </Button>
+            ) : (
+              <Button
+                variant={highlighted ? 'primary' : 'outline'}
+                className="w-full"
+                onClick={plan === 'premium' ? handlePremiumClick : () => onSelectPlan?.(plan)}
+              >
+                {plan === 'basic' ? 'Kostenlos starten' : `Upgrade zu ${planConfig.name}`}
+              </Button>
             )}
           </div>
 
-          <p className="text-gray-600 text-sm">{planConfig.description}</p>
         </div>
-
-        {/* Features */}
-        <div className="space-y-3 mb-6">
-          {planConfig.features.map((feature, index) => (
-            <div key={index} className="flex items-start gap-3">
-              <div className="flex-shrink-0 mt-0.5">
-                {feature.available ? (
-                  <Check className="w-5 h-5 text-green-500" />
-                ) : (
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
-                )}
-              </div>
-              <div className="flex-1">
-                <span className={`text-sm ${feature.available ? 'text-gray-900' : 'text-gray-400'}`}>
-                  {feature.name}
-                </span>
-                {feature.limit && (
-                  <span className="text-xs text-gray-500 ml-2">({feature.limit})</span>
-                )}
-                {feature.highlight && (
-                  <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full ml-2">
-                    {feature.highlight}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-
-
-        {/* Beta Notice */}
-        {isBetaUser && plan === 'premium' && (
-          <div className="mb-4 p-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-800 text-center">
-              <strong>Beta-Test:</strong> Alle Features bereits kostenlos verfügbar.<br />
-              Upgrade nur zum Testen der Zahlungsabwicklung.
-            </p>
-          </div>
-        )}
-
-        {isBetaUser && plan === 'basic' && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-800 text-center">
-              <strong>Beta-Phase:</strong> Alle Features bis 31. Oktober 2025 kostenlos verfügbar
-            </p>
-          </div>
-        )}
-
-        {/* Test Mode Notice - zeige in DEV oder wenn Test-Keys verwendet werden */}
-        {isStripeTestMode && plan === 'premium' && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-xs text-yellow-800 text-center">
-              <strong>Test-Modus:</strong> Nutze Karte 4242 4242 4242 4242 für Test-Zahlungen
-            </p>
-          </div>
-        )}
-
-        {/* Stripe Test Mode Notice */}
-        {plan === 'premium' && isStripeTestMode && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-xs text-blue-800 text-center">
-              <strong>🔒 Stripe Test-Modus aktiv</strong><br />
-              Sichere Test-Umgebung - keine echten Zahlungen
-            </div>
-          </div>
-        )}
-
-        {/* CTA Button */}
-        <div className="pt-4 space-y-3">
-          {isCurrentPlan ? (
-            <>
-              <Button variant="outline" disabled className="w-full">
-                Aktueller Plan
-              </Button>
-              {plan === 'premium' && (
-                <Button
-                  variant="primary"
-                  className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700"
-                  onClick={() => handleManageSubscription()}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Mitgliedschaft verwalten
-                </Button>
-              )}
-            </>
-          ) : isBetaUser && plan === 'premium' ? (
-            <Button
-              variant={highlighted ? 'primary' : 'outline'}
-              className="w-full"
-              onClick={() => onSelectPlan?.(plan)}
-            >
-              Premium testen (Beta)
-            </Button>
-          ) : isBetaUser ? (
-            <Button variant="outline" disabled className="w-full">
-              In Beta verfügbar
-            </Button>
-          ) : (
-            <Button
-              variant={highlighted ? 'primary' : 'outline'}
-              className="w-full"
-              onClick={() => onSelectPlan?.(plan)}
-            >
-              {plan === 'basic' ? 'Kostenlos starten' : `Upgrade zu ${planConfig.name}`}
-            </Button>
-          )}
-        </div>
-
       </div>
-    </div>
+    </>
   );
 }
 
@@ -214,7 +250,6 @@ function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker
   const planPrice = getPlanPrice(userType, plan);
 
   if (userType === 'owner') {
-    // Owner-spezifische Pläne
     const ownerFeatures: Record<string, {
       name: string;
       price: string;
@@ -257,7 +292,6 @@ function getPlanConfig(plan: 'basic' | 'premium', userType: 'owner' | 'caretaker
     };
     return ownerFeatures[plan];
   } else {
-    // Caretaker-spezifische Pläne
     const caretakerFeatures: Record<string, {
       name: string;
       price: string;
@@ -306,11 +340,12 @@ interface PricingGridProps {
   onSelectPlan?: (plan: 'basic' | 'premium') => void;
   onUserTypeChange?: (userType: 'owner' | 'caretaker') => void;
   className?: string;
-  isUserLoggedIn?: boolean; // Neu: Flag ob User eingeloggt ist
+  isUserLoggedIn?: boolean;
 }
 
 export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, className = '', isUserLoggedIn = false }: PricingGridProps) {
-  const { isBetaUser } = useSubscription();
+  const { } = useSubscription();
+  const isBetaUser = false; // Beta phase ended
 
   return (
     <div className={`max-w-7xl mx-auto ${className}`}>
@@ -330,13 +365,13 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
               <button
                 onClick={() => onUserTypeChange('owner')}
                 className={`relative bg-white rounded-xl border transition-all duration-300 hover:shadow-lg p-6 text-left ${userType === 'owner'
-                    ? 'border-2 border-blue-500 shadow-lg transform scale-105 ring-2 ring-blue-500/20'
-                    : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-2 border-primary-600 shadow-lg transform scale-105 ring-2 ring-primary-600/20'
+                  : 'border-gray-200 hover:border-gray-300'
                   }`}
               >
                 {userType === 'owner' && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+                    <span className="bg-primary-600 text-white px-4 py-1 rounded-full text-sm font-medium">
                       Ausgewählt
                     </span>
                   </div>
@@ -353,13 +388,13 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
               <button
                 onClick={() => onUserTypeChange('caretaker')}
                 className={`relative bg-white rounded-xl border transition-all duration-300 hover:shadow-lg p-6 text-left ${userType === 'caretaker'
-                    ? 'border-2 border-blue-500 shadow-lg transform scale-105 ring-2 ring-blue-500/20'
-                    : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-2 border-primary-600 shadow-lg transform scale-105 ring-2 ring-primary-600/20'
+                  : 'border-gray-200 hover:border-gray-300'
                   }`}
               >
                 {userType === 'caretaker' && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-medium">
+                    <span className="bg-primary-600 text-white px-4 py-1 rounded-full text-sm font-medium">
                       Ausgewählt
                     </span>
                   </div>
@@ -397,7 +432,7 @@ export function PricingGrid({ userType, onSelectPlan, onUserTypeChange, classNam
           plan="premium"
           userType={userType}
           onSelectPlan={onSelectPlan}
-          highlighted={!isBetaUser} // Highlight Premium wenn nicht Beta
+          highlighted={!isBetaUser}
         />
       </div>
 
@@ -427,13 +462,11 @@ function FeatureComparisonTable({ userType }: { userType: 'owner' | 'caretaker' 
     { name: 'Werbung', basic: 'Mit Werbung', premium: 'Werbefrei' },
     { name: 'Support', basic: 'E-Mail Support', premium: 'Premium Chat' },
     ...(userType === 'caretaker' ? [
-      { name: 'Kontaktanfragen', basic: '3/Monat', premium: 'Unlimited' },
       { name: 'Priorität in Suche', basic: 'Normal', premium: 'Höchste' },
       { name: 'Umgebungsbilder', basic: '❌', premium: '✅ (6 max)' }
     ] : [
       { name: 'Bewertungen schreiben', basic: '✅', premium: '✅' },
       { name: 'Bewertungen lesen', basic: '❌', premium: '✅' },
-      { name: 'Favoriten-Listen', basic: '❌', premium: '✅' },
       { name: 'Erweiterte Filter', basic: '❌', premium: '✅' }
     ])
   ];
@@ -473,4 +506,4 @@ function FeatureComparisonTable({ userType }: { userType: 'owner' | 'caretaker' 
       </table>
     </div>
   );
-} 
+}
