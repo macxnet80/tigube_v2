@@ -17,6 +17,13 @@ export default function HomePage() {
 
   // Redirect eingeloggte Benutzer zum Dashboard
   useEffect(() => {
+    // Wenn ein Passwort-Reset-Link aufgerufen wurde, leite zur Reset-Seite weiter
+    // und verhindere den Login-Redirect
+    if (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')) {
+      navigate('/reset-password' + window.location.hash, { replace: true });
+      return;
+    }
+
     if (isAuthenticated && !authLoading && userProfile) {
       const userType = userProfile.user_type;
       const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' ||

@@ -8,7 +8,7 @@ function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, isAuthenticated, userProfile, loading: authLoading } = useAuth();
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,40 +28,46 @@ function LoginPage() {
   // Handle redirect after successful authentication and profile loading
   useEffect(() => {
     console.log('🔍 Login redirect effect - isAuthenticated:', isAuthenticated, 'authLoading:', authLoading, 'userProfile:', userProfile, 'redirectUrl:', redirectUrl, 'from:', from);
-    
+
+    // Verhindere Redirect, wenn ein Passwort-Recovery-Hash vorhanden ist
+    if (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')) {
+      navigate('/reset-password' + window.location.hash, { replace: true });
+      return;
+    }
+
     if (isAuthenticated && !authLoading && userProfile) {
       // Prüfe ob es eine spezifische redirectUrl gibt, die NICHT die Startseite oder Login-Seite ist
-      const hasSpecificRedirect = redirectUrl && 
-                                  redirectUrl !== '/' && 
-                                  redirectUrl !== '/anmelden' && 
-                                  redirectUrl !== '/login' &&
-                                  !redirectUrl.startsWith('/anmelden?') &&
-                                  !redirectUrl.startsWith('/login?');
-      
+      const hasSpecificRedirect = redirectUrl &&
+        redirectUrl !== '/' &&
+        redirectUrl !== '/anmelden' &&
+        redirectUrl !== '/login' &&
+        !redirectUrl.startsWith('/anmelden?') &&
+        !redirectUrl.startsWith('/login?');
+
       // Prüfe ob from eine spezifische Seite ist (nicht Startseite oder Login)
-      const hasSpecificFrom = from && 
-                              from !== '/' && 
-                              from !== '/anmelden' && 
-                              from !== '/login' &&
-                              !from.startsWith('/anmelden?') &&
-                              !from.startsWith('/login?');
-      
+      const hasSpecificFrom = from &&
+        from !== '/' &&
+        from !== '/anmelden' &&
+        from !== '/login' &&
+        !from.startsWith('/anmelden?') &&
+        !from.startsWith('/login?');
+
       console.log('🔍 hasSpecificRedirect:', hasSpecificRedirect, 'hasSpecificFrom:', hasSpecificFrom);
-      
+
       // Wenn keine spezifische Weiterleitung vorhanden ist, leite zum Dashboard weiter
       if (!hasSpecificRedirect && !hasSpecificFrom) {
         // Redirect to appropriate dashboard based on user type
         const userType = userProfile?.user_type;
         console.log('🔍 Login redirect - userType:', userType, 'userProfile:', userProfile);
-        
-        const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' || 
-                               userType === 'tierarzt' || userType === 'hundetrainer' || 
-                               userType === 'tierfriseur' || userType === 'physiotherapeut' || 
-                               userType === 'ernaehrungsberater' || userType === 'tierfotograf' || 
-                               userType === 'sonstige')
-          ? '/dashboard-caretaker' 
+
+        const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' ||
+          userType === 'tierarzt' || userType === 'hundetrainer' ||
+          userType === 'tierfriseur' || userType === 'physiotherapeut' ||
+          userType === 'ernaehrungsberater' || userType === 'tierfotograf' ||
+          userType === 'sonstige')
+          ? '/dashboard-caretaker'
           : '/dashboard-owner';
-        
+
         console.log('🧭 Navigating to dashboard:', dashboardPath);
         navigate(dashboardPath, { replace: true });
       } else {
@@ -75,37 +81,37 @@ function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     if (!email || !password) {
       setError('Bitte gib deine E-Mail-Adresse und dein Passwort ein.');
       return;
     }
-    
+
     try {
       setLoading(true);
       await signIn(email, password);
-      
+
       // Warte kurz, damit userProfile geladen werden kann
       // Dann leite direkt zum Dashboard weiter
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       // Handle different redirect scenarios
-      const hasSpecificRedirect = redirectUrl && 
-                                  redirectUrl !== '/' && 
-                                  redirectUrl !== '/anmelden' && 
-                                  redirectUrl !== '/login' &&
-                                  !redirectUrl.startsWith('/anmelden?') &&
-                                  !redirectUrl.startsWith('/login?');
-      
-      const hasSpecificFrom = from && 
-                              from !== '/' && 
-                              from !== '/anmelden' && 
-                              from !== '/login' &&
-                              !from.startsWith('/anmelden?') &&
-                              !from.startsWith('/login?');
-      
+      const hasSpecificRedirect = redirectUrl &&
+        redirectUrl !== '/' &&
+        redirectUrl !== '/anmelden' &&
+        redirectUrl !== '/login' &&
+        !redirectUrl.startsWith('/anmelden?') &&
+        !redirectUrl.startsWith('/login?');
+
+      const hasSpecificFrom = from &&
+        from !== '/' &&
+        from !== '/anmelden' &&
+        from !== '/login' &&
+        !from.startsWith('/anmelden?') &&
+        !from.startsWith('/login?');
+
       console.log('🔍 Post-login redirect check - redirectUrl:', redirectUrl, 'from:', from, 'hasSpecificRedirect:', hasSpecificRedirect, 'hasSpecificFrom:', hasSpecificFrom);
-      
+
       if (hasSpecificRedirect) {
         // Redirect to the originally requested page (aber nicht zu Login-Seiten)
         console.log('🧭 Redirecting to specific URL:', redirectUrl);
@@ -119,21 +125,21 @@ function LoginPage() {
         // Es gibt nur drei User-Typen: owner, caretaker, dienstleister
         // userProfile sollte jetzt geladen sein (wird vom signIn geladen)
         console.log('🔍 Post-login redirect - userProfile:', userProfile);
-        
+
         // Warte nochmal kurz und prüfe userProfile erneut
         await new Promise(resolve => setTimeout(resolve, 200));
-        
+
         // Prüfe userProfile aus dem Hook (wird automatisch aktualisiert)
         if (userProfile) {
           const userType = userProfile.user_type;
-          const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' || 
-                                 userType === 'tierarzt' || userType === 'hundetrainer' || 
-                                 userType === 'tierfriseur' || userType === 'physiotherapeut' || 
-                                 userType === 'ernaehrungsberater' || userType === 'tierfotograf' || 
-                                 userType === 'sonstige')
-            ? '/dashboard-caretaker' 
+          const dashboardPath = (userType === 'caretaker' || userType === 'dienstleister' ||
+            userType === 'tierarzt' || userType === 'hundetrainer' ||
+            userType === 'tierfriseur' || userType === 'physiotherapeut' ||
+            userType === 'ernaehrungsberater' || userType === 'tierfotograf' ||
+            userType === 'sonstige')
+            ? '/dashboard-caretaker'
             : '/dashboard-owner';
-          
+
           console.log('🧭 Navigating to dashboard:', dashboardPath, 'userType:', userType);
           navigate(dashboardPath, { replace: true });
         } else {
@@ -160,7 +166,7 @@ function LoginPage() {
           Willkommen zurück
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          {action === 'contact' && caretakerName 
+          {action === 'contact' && caretakerName
             ? `Melde dich an, um ${decodeURIComponent(caretakerName)} zu kontaktieren`
             : 'Melde dich an, um fortzufahren'
           }
@@ -180,14 +186,14 @@ function LoginPage() {
               </div>
             </div>
           )}
-          
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-start">
               <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
               <span>{error}</span>
             </div>
           )}
-          
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -272,7 +278,7 @@ function LoginPage() {
               </Button>
             </div>
           </form>
-          
+
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Noch kein Konto?{' '}
