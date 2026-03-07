@@ -1477,7 +1477,7 @@ function OwnerDashboardPage() {
                 {/* Erste Spalte: Name und Tiere */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-4">
-                    <h1 className="text-2xl font-bold">{fullName}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold">{fullName}</h1>
                     {/* Crown-Icon für Premium-Status mit Hovereffekt */}
                     {userProfile?.premium_badge && (
                       <div className="group relative">
@@ -1525,7 +1525,7 @@ function OwnerDashboardPage() {
         {/* Tab Navigation */}
         <div className="mb-8">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
+            <nav className="-mb-px flex space-x-6 sm:space-x-8 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
               <button
                 onClick={() => setActiveTab('uebersicht')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'uebersicht'

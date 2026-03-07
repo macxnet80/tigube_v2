@@ -2426,7 +2426,7 @@ function CaretakerDashboardPage() {
               <div className="flex-1 relative">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <h1 className="text-2xl font-bold">{fullName}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold">{fullName}</h1>
                     {/* Auge-Icon neben dem Namen mit Hovereffekt */}
                     <div className="group relative">
                       <Link
@@ -2665,14 +2665,14 @@ function CaretakerDashboardPage() {
       {/* Sidebar-Navigation + Content-Layout */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         <aside className="md:col-span-1">
-          <nav className="bg-white rounded-xl shadow p-4 md:sticky md:top-4">
-            <ul className="space-y-1">
+          <nav className="bg-white rounded-xl shadow p-2 sm:p-4 md:sticky md:top-4 overflow-x-auto scrollbar-hide">
+            <ul className="flex flex-row md:flex-col gap-2 md:gap-0 md:space-y-1">
               <li>
                 <button
                   type="button"
                   onClick={() => setActiveTab('kunden')}
                   aria-current={activeTab === 'kunden' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'kunden'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'kunden'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2685,7 +2685,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('uebersicht')}
                   aria-current={activeTab === 'uebersicht' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'uebersicht'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'uebersicht'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2698,7 +2698,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('kontaktdaten')}
                   aria-current={activeTab === 'kontaktdaten' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'kontaktdaten'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'kontaktdaten'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2711,7 +2711,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('verfuegbarkeit')}
                   aria-current={activeTab === 'verfuegbarkeit' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'verfuegbarkeit'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'verfuegbarkeit'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2724,7 +2724,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('fotos')}
                   aria-current={activeTab === 'fotos' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'fotos'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'fotos'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2737,7 +2737,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('texte')}
                   aria-current={activeTab === 'texte' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'texte'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'texte'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2750,7 +2750,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('bewertungen')}
                   aria-current={activeTab === 'bewertungen' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'bewertungen'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'bewertungen'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2763,7 +2763,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('sicherheit')}
                   aria-current={activeTab === 'sicherheit' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'sicherheit'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'sicherheit'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2776,7 +2776,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('verifizierung')}
                   aria-current={activeTab === 'verifizierung' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'verifizierung'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'verifizierung'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2789,7 +2789,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('partner')}
                   aria-current={activeTab === 'partner' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'partner'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'partner'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2802,7 +2802,7 @@ function CaretakerDashboardPage() {
                   type="button"
                   onClick={() => setActiveTab('mitgliedschaften')}
                   aria-current={activeTab === 'mitgliedschaften' ? 'page' : undefined}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'mitgliedschaften'
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'mitgliedschaften'
                     ? 'bg-primary-50 text-primary-700 border border-primary-200'
                     : 'text-gray-700 hover:bg-gray-50'
                     }`}
@@ -2813,7 +2813,7 @@ function CaretakerDashboardPage() {
               <li>
                 <Link
                   to="/hilfe-center"
-                  className="w-full flex text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50 items-center"
+                  className="w-full flex whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50 items-center"
                 >
                   Hilfe-Center
                 </Link>

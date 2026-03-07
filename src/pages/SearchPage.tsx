@@ -430,9 +430,9 @@ function SearchPage() {
     <div className="bg-gray-50 min-h-screen">
       {/* Main Content Layout */}
       <div className="container-custom py-8">
-        <div className="flex gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Filter Sidebar */}
-          <div className="w-80 flex-shrink-0">
+          <div className="w-full lg:w-80 flex-shrink-0">
             {/* Search Card Filter Box - Oberhalb der Filterbox */}
             <div className="mb-6">
               <AdvertisementBanner

@@ -431,7 +431,7 @@ function OwnerPublicProfilePage() {
             </div>
 
             <div className="flex-1 w-full text-center lg:text-left">
-              <h1 className="text-3xl font-bold text-gray-900 mb-4">{fullName}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">{fullName}</h1>
 
               {/* Haustier-Badges */}
               {profile.pets && profile.pets.length > 0 && (

@@ -91,21 +91,21 @@ export default function HomePage() {
 
       {/* 🎁 FREE PREMIUM PROMOTION BANNER */}
       <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-white shadow-lg">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
           {/* Row 1: Headline + Benefits */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center">
-            <span className="text-3xl">🎁</span>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-4 text-center">
+            <span className="text-2xl sm:text-3xl">🎁</span>
             <div>
-              <span className="font-extrabold text-xl tracking-tight">3 Monate gratis Premium</span>
-              <span className="mx-2 opacity-60">·</span>
-              <span className="text-white/90 text-base">Keine Kreditkarte · Keine Kündigung nötig</span>
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight">3 Monate gratis Premium</span>
+              <span className="hidden sm:inline mx-2 opacity-60">·</span>
+              <span className="block sm:inline text-white/90 text-sm sm:text-base mt-0.5 sm:mt-0">Keine Kreditkarte · Keine Kündigung nötig</span>
             </div>
           </div>
           {/* Row 2: Deadline pill */}
-          <div className="mt-3 flex justify-center">
-            <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-4 py-1 text-sm font-medium">
+          <div className="mt-2 sm:mt-3 flex justify-center">
+            <span className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-3 sm:px-4 py-1 text-xs sm:text-sm font-medium text-center">
               <span>🗓️</span>
-              Gilt für alle Anmeldungen bis zum <strong className="ml-1">30. April 2026</strong>
+              <span>Gilt für alle Anmeldungen bis zum <strong className="ml-1">30. April 2026</strong></span>
             </span>
           </div>
         </div>
@@ -117,12 +117,12 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             {/* Linke Seite: Text */}
             <div className="space-y-6 animate-fade-in">
-              <h1 className="text-6xl md:text-7xl font-bold leading-tight text-gray-900">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-gray-900">
                 Finde liebevolle<br />
                 <span className="text-primary-600 font-bold">Tierbetreuung</span><br />
                 in deiner Nähe
               </h1>
-              <p className="text-lg md:text-xl text-gray-700 max-w-xl">
+              <p className="text-base sm:text-lg md:text-xl text-gray-700 max-w-xl">
                 tigube verbindet Tierhalter:innen mit geprüften, engagierten Betreuungspersonen. Egal ob Hund, Katze oder Kleintier – hier findest du zuverlässige Hilfe für Alltag, Urlaub & Notfälle.
               </p>
               <form onSubmit={handleSearch} className="bg-white rounded-xl p-4 shadow-md grid grid-cols-1 md:grid-cols-4 gap-4 max-w-xl">
@@ -227,8 +227,8 @@ export default function HomePage() {
       {/* How It Works */}
       <section className="py-16 bg-gray-50">
         <div className="container-custom">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">So funktioniert tigube?</h2>
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">So funktioniert tigube?</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
@@ -318,9 +318,9 @@ export default function HomePage() {
       {/* Warum tigube? */}
       <section className="py-16 bg-white">
         <div className="container-custom">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Warum tigube?</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
+          <div className="text-center mb-10 md:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Warum tigube?</h2>
+            <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
               Vertrauen, Erfahrung und Leidenschaft für Tiere
             </p>
           </div>
@@ -353,8 +353,8 @@ export default function HomePage() {
       {/* Von Tiermenschen für Tiermenschen */}
       <section className="py-16 bg-gray-50">
         <div className="container-custom">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Von Tiermenschen für Tiermenschen</h2>
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Von Tiermenschen für Tiermenschen</h2>
           </div>
 
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -409,8 +409,8 @@ export default function HomePage() {
       {/* Häufige Fragen */}
       <section className="py-16 bg-white">
         <div className="container-custom">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Häufige Fragen</h2>
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Häufige Fragen</h2>
           </div>
 
           <div className="max-w-3xl mx-auto space-y-6">
