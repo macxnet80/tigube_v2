@@ -116,16 +116,16 @@ export default function HomePage() {
         <div className="container-custom">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             {/* Linke Seite: Text */}
-            <div className="space-y-6 animate-fade-in">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-gray-900">
+            <div className="space-y-6 animate-fade-in flex flex-col items-center md:items-start">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-gray-900 text-center md:text-left">
                 Finde liebevolle<br />
                 <span className="text-primary-600 font-bold">Tierbetreuung</span><br />
                 in deiner Nähe
               </h1>
-              <p className="text-base sm:text-lg md:text-xl text-gray-700 max-w-xl">
+              <p className="text-base sm:text-lg md:text-xl text-gray-700 max-w-xl text-center md:text-left">
                 tigube verbindet Tierhalter:innen mit geprüften, engagierten Betreuungspersonen. Egal ob Hund, Katze oder Kleintier – hier findest du zuverlässige Hilfe für Alltag, Urlaub & Notfälle.
               </p>
-              <form onSubmit={handleSearch} className="bg-white rounded-xl p-4 shadow-md grid grid-cols-1 md:grid-cols-4 gap-4 max-w-xl">
+              <form onSubmit={handleSearch} className="bg-white rounded-xl p-4 shadow-md grid grid-cols-1 md:grid-cols-4 gap-4 max-w-xl w-full">
 
                 <div className="flex flex-col md:col-span-2">
                   <label htmlFor="service" className="text-sm font-medium text-gray-700 mb-1">Ich suche</label>
@@ -439,7 +439,7 @@ export default function HomePage() {
         <div className="container-custom">
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-5">
-              <div className="lg:col-span-3 p-8 md:p-12">
+              <div className="lg:col-span-3 p-8 md:p-12 flex flex-col items-center lg:items-start text-center lg:text-left">
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-3xl font-bold">Bereit für mehr (Planungs-) Sicherheit im Alltag – für dich und dein Tier?</h2>
                 </div>

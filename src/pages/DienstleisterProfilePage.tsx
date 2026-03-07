@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Star, Clock, Shield, MessageCircle, Heart, Verified, Briefcase, CheckCircle, Globe, User, Award, Image, DollarSign, GraduationCap } from 'lucide-react';
+import { MapPin, Star, Clock, Shield, MessageCircle, Heart, Verified, Briefcase, CheckCircle, Globe, User, Award, Image, GraduationCap, Info, ArrowLeft } from 'lucide-react';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { DE, GB, FR, ES, IT, PT, NL, RU, PL, TR, AE } from 'country-flag-icons/react/3x2';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AvailabilityDisplay from '../components/ui/AvailabilityDisplay';
 import HomePhotosSection from '../components/ui/HomePhotosSection';
+import { ReviewForm } from '../components/ui/ReviewForm';
+import ResponseTimeDisplay from '../components/ui/ResponseTimeDisplay';
+import { calculateCaretakerResponseTime } from '../lib/supabase/responseTimeService';
 import { DienstleisterService } from '../lib/services/dienstleisterService';
 import { useAuth } from '../lib/auth/AuthContext';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
-
 import { getOrCreateConversation } from '../lib/supabase/chatService';
 import { ownerCaretakerService, caretakerPartnerService } from '../lib/supabase/db';
 import { formatCurrency, isCaretaker } from '../lib/utils';
@@ -35,8 +37,8 @@ interface Review {
 function DienstleisterProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, user, userProfile } = useAuth();
-  const { checkFeature, canSendContactRequest, trackUsage, subscription } = useFeatureAccess();
+  const { user, userProfile } = useAuth();
+  const { canSendContactRequest, trackUsage, subscription } = useFeatureAccess();
 
 
   const [dienstleister, setDienstleister] = useState<DienstleisterProfil | null>(null);
@@ -49,6 +51,11 @@ function DienstleisterProfilePage() {
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
   const [isPartner, setIsPartner] = useState(false);
   const [isPartnerLoading, setIsPartnerLoading] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [responseTime, setResponseTime] = useState<string | null>(null);
+  const [responseTimeLoading, setResponseTimeLoading] = useState(false);
+  const [responseTimeData, setResponseTimeData] = useState<{ text: string; messageCount: number } | null>(null);
 
   useEffect(() => {
     const fetchDienstleister = async () => {
@@ -134,6 +141,36 @@ function DienstleisterProfilePage() {
     fetchReviews();
   }, [id]);
 
+  // Lade Antwortzeit des Dienstleisters
+  useEffect(() => {
+    const fetchResponseTime = async () => {
+      if (!id) return;
+
+      setResponseTimeLoading(true);
+      try {
+        const responseTimeData = await calculateCaretakerResponseTime(id);
+        if (responseTimeData) {
+          setResponseTime(responseTimeData.responseTimeText);
+          setResponseTimeData({
+            text: responseTimeData.responseTimeText,
+            messageCount: responseTimeData.messageCount
+          });
+        } else {
+          setResponseTime(null);
+          setResponseTimeData(null);
+        }
+      } catch (error) {
+        console.error('Error fetching response time:', error);
+        setResponseTime(null);
+        setResponseTimeData(null);
+      } finally {
+        setResponseTimeLoading(false);
+      }
+    };
+
+    fetchResponseTime();
+  }, [id]);
+
   // Formatierung des Namens
   const formatDienstleisterName = (firstName: string | null, lastName: string | null) => {
     if (!firstName && !lastName) return 'Unbekannt';
@@ -183,6 +220,70 @@ function DienstleisterProfilePage() {
       navigate('/nachrichten');
     } finally {
       setIsContactLoading(false);
+    }
+  };
+
+  // Review Submit Handler - Nur für Owners
+  const handleReviewSubmit = async (rating: number, comment: string) => {
+    if (!user || !dienstleister?.id) {
+      console.error('User or dienstleister ID missing');
+      return;
+    }
+
+    // Zusätzliche Prüfung: Nur Owners können bewerten
+    if (userProfile?.user_type !== 'owner') {
+      console.error('Only owners can submit reviews');
+      return;
+    }
+
+    // Prüfung: Nur Owners können bewerten (kein Plan-Check mehr)
+    // Free-Owner können schreiben, Premium-Owner können lesen UND schreiben
+    if (subscription?.plan_type !== 'basic' && subscription?.plan_type !== 'premium' && subscription?.plan_type !== undefined) {
+      console.error('Invalid plan type');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .insert({
+          user_id: user.id,
+          caretaker_id: dienstleister.id,
+          rating,
+          comment: comment || null
+        });
+
+      if (error) {
+        console.error('Error submitting review:', error);
+        return;
+      }
+
+      // Refresh reviews list
+      const { data: newReviews, error: fetchError } = await supabase
+        .from('reviews')
+        .select(`
+            id,
+            rating,
+            comment,
+            created_at,
+            user_id,
+            caretaker_response,
+            caretaker_response_created_at,
+            users(first_name, last_name)
+          `)
+        .eq('caretaker_id', dienstleister.id)
+        .order('created_at', { ascending: false });
+
+      if (!fetchError && newReviews) {
+        setReviews(newReviews);
+      }
+
+      setShowReviewForm(false);
+    } catch (error) {
+      console.error('Unexpected error submitting review:', error);
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -500,7 +601,7 @@ function DienstleisterProfilePage() {
                 <div className="flex items-start gap-3">
                   <div className="text-right">
                     {dienstleister.kategorie_name && (
-                      <div className="text-lg font-semibold text-gray-900 mb-2">
+                      <div className="text-lg font-semibold text-gray-900 mb-1">
                         {dienstleister.kategorie_name}
                       </div>
                     )}
@@ -528,11 +629,20 @@ function DienstleisterProfilePage() {
               )}
 
               {/* Kurze Beschreibung im Header */}
-              {dienstleister.short_about_me && (
+              {dienstleister.bio && (
                 <p className="text-gray-700 mb-6 whitespace-pre-wrap break-words w-full lg:w-3/5">
-                  {dienstleister.short_about_me}
+                  {dienstleister.bio}
                 </p>
               )}
+
+              {/* Antwortzeit-Anzeige */}
+              <div className="mb-4">
+                <ResponseTimeDisplay
+                  responseTime={responseTime || dienstleister.response_time}
+                  messageCount={responseTimeData?.messageCount}
+                  isLoading={responseTimeLoading}
+                />
+              </div>
 
               {/* Anmeldung-Aufforderung für nicht eingeloggte Benutzer */}
               {!user && (
@@ -573,6 +683,7 @@ function DienstleisterProfilePage() {
                 <Button
                   variant="outline"
                   size="lg"
+                  className="w-full sm:w-auto"
                   leftIcon={<MessageCircle className="h-4 w-4" />}
                   onClick={handleContactClick}
                   isLoading={isContactLoading}
@@ -580,6 +691,19 @@ function DienstleisterProfilePage() {
                 >
                   Nachricht senden
                 </Button>
+
+                {/* Zurück zum Dashboard Button - nur für Dienstleister auf eigenem Profil */}
+                {user && (id === user.id) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={<ArrowLeft className="h-3 w-3" />}
+                    onClick={() => navigate('/dashboard-owner')} // Or appropriate dashboard
+                    className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                  >
+                    Dashboard
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -600,7 +724,7 @@ function DienstleisterProfilePage() {
 
       {/* Details Tabs */}
       <div className="container-custom py-12">
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* About Section */}
@@ -612,6 +736,19 @@ function DienstleisterProfilePage() {
                 </h2>
                 <p className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
                   {dienstleister.long_about_me || dienstleister.bio}
+                </p>
+              </div>
+            )}
+
+            {/* Kurze Beschreibung - analog zu Betreuern */}
+            {dienstleister.short_about_me && (
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Info className="h-5 w-5 text-primary-600" />
+                  Kurze Beschreibung
+                </h2>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">
+                  {dienstleister.short_about_me}
                 </p>
               </div>
             )}
@@ -653,7 +790,7 @@ function DienstleisterProfilePage() {
                 </h2>
                 <div className="space-y-2">
                   {Object.entries(dienstleister.oeffnungszeiten)
-                    .filter(([day, hours]) => hours !== null && hours !== undefined) // Filtere null-Werte heraus
+                    .filter(([_, hours]) => hours !== null && hours !== undefined)
                     .map(([day, hours]: [string, any]) => {
                       // Formatierung der Tagesnamen
                       const dayNames: Record<string, string> = {
@@ -741,19 +878,69 @@ function DienstleisterProfilePage() {
                 Bewertungen ({reviews.length})
               </h2>
 
+              {/* Review Form - Für alle Owner (Free & Premium) */}
+              {showReviewForm && dienstleister && userProfile?.user_type === 'owner' && (
+                <div className="mb-6">
+                  <ReviewForm
+                    caretakerId={dienstleister.id || ''}
+                    caretakerName={displayName}
+                    onSubmit={handleReviewSubmit}
+                    onCancel={() => setShowReviewForm(false)}
+                    isLoading={isSubmittingReview}
+                    reviewerName={userProfile ? `${userProfile.first_name} ${userProfile.last_name?.charAt(0) || ''}.` : undefined}
+                  />
+                </div>
+              )}
+
+              {/* Review Button - Für alle Owner anzeigen */}
+              {!showReviewForm && userProfile?.user_type === 'owner' && (
+                <div className="mb-6">
+                  <Button
+                    variant="primary"
+                    onClick={() => setShowReviewForm(true)}
+                    className="w-full sm:w-auto bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm"
+                  >
+                    ⭐ Bewertung schreiben
+                  </Button>
+                </div>
+              )}
+
+              {/* Info für Caretaker/Dienstleister */}
+              {(userProfile?.user_type === 'caretaker' || (userProfile?.user_type && ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type))) && (
+                <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-gray-700 text-sm">
+                    <strong>Bewertungen lesen:</strong> Nur Premium-Tierhalter können Bewertungen anderer Tierhalter sehen.
+                  </p>
+                </div>
+              )}
+
+              {/* Reviews-Anzeige: Nur für Premium-Owner sichtbar */}
+              {userProfile?.user_type === 'owner' && subscription?.plan_type !== 'premium' && (
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                  <p className="text-amber-800 text-sm">
+                    <strong>Bewertungen lesen:</strong> Du benötigst ein Premium-Abo, um Bewertungen zu lesen.
+                    <Link to="/mitgliedschaften" className="text-amber-900 underline ml-1">
+                      Jetzt upgraden →
+                    </Link>
+                  </p>
+                </div>
+              )}
+
               {reviewsLoading ? (
                 <div className="flex justify-center py-8">
                   <LoadingSpinner />
                 </div>
-              ) : reviews.length > 0 ? (
-                <div className="space-y-6">
-                  {reviews.map(review => (
-                    <ReviewCard key={review.id} review={review} dienstleisterName={displayName} />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-600">Noch keine Bewertungen vorhanden.</p>
-              )}
+              ) : subscription?.plan_type === 'premium' || userProfile?.user_type !== 'owner' ? (
+                reviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {reviews.map(review => (
+                      <ReviewCard key={review.id} review={review} dienstleisterName={displayName} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">Noch keine Bewertungen vorhanden.</p>
+                )
+              ) : null}
             </div>
           </div>
 
@@ -906,8 +1093,8 @@ function ReviewCard({ review, dienstleisterName }: ReviewCardProps) {
   };
 
   const reviewerName = review.users
-    ? formatReviewerName(review.users.first_name, review.users.last_name)
-    : 'Anonym';
+    ? formatReviewerName(review.users.first_name || null, review.users.last_name || null)
+    : 'Tierhalter';
 
   return (
     <div className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">

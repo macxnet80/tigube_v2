@@ -1,10 +1,10 @@
 import { supabase } from '../supabase/client'
-import { 
-  ApprovalStatus, 
-  CaretakerProfileWithApproval, 
-  ApprovalRequest, 
+import {
+  ApprovalStatus,
+  CaretakerProfileWithApproval,
+  ApprovalRequest,
   ApprovalDecision,
-  ProfileValidationResult 
+  ProfileValidationResult
 } from '../types/database.types'
 
 export class ApprovalService {
@@ -36,9 +36,10 @@ export class ApprovalService {
       }
 
       const missingFields: string[] = []
-      
       // Prüfe "Über mich" (short_about_me oder long_about_me)
-      const hasAboutMe = !!(profile.short_about_me || profile.long_about_me)
+      const shortAboutMe = profile.short_about_me?.trim() || '';
+      const longAboutMe = profile.long_about_me?.trim() || '';
+      const hasAboutMe = !!(shortAboutMe || longAboutMe);
       if (!hasAboutMe) {
         missingFields.push('Über mich')
       }
@@ -50,9 +51,9 @@ export class ApprovalService {
       }
 
       // Prüfe mindestens eine Leistung
-      const hasServices = !!(profile.services && 
-        (Array.isArray(profile.services) ? profile.services.length > 0 : 
-         typeof profile.services === 'object' && Object.keys(profile.services).length > 0))
+      const hasServices = !!(profile.services &&
+        (Array.isArray(profile.services) ? profile.services.length > 0 :
+          typeof profile.services === 'object' && Object.keys(profile.services).length > 0))
       if (!hasServices) {
         missingFields.push('Mindestens eine Leistung')
       }
@@ -77,7 +78,7 @@ export class ApprovalService {
     try {
       // Erst validieren
       const validation = await this.validateProfileForApproval(caretakerId)
-      
+
       if (!validation.isValid) {
         throw new Error(`Profil nicht vollständig. Fehlende Felder: ${validation.missingFields.join(', ')}`)
       }

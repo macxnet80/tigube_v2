@@ -47,7 +47,7 @@ export interface DienstleisterProfil {
   public_profile_visible: boolean;
   is_suspended: boolean;
   approval_status: string;
-  
+
   // Dienstleister-spezifische Felder
   kategorie_id: number;
   kategorie_name: string;
@@ -59,7 +59,8 @@ export interface DienstleisterProfil {
   portfolio_urls?: string[];
   oeffnungszeiten?: Record<string, any>;
   kontakt_info?: Record<string, any>;
-  
+  response_time?: string;
+
   // Bestehende Betreuer-Felder
   hourly_rate?: number;
   rating?: number;
@@ -78,7 +79,7 @@ export interface DienstleisterProfil {
   short_about_me?: string;
   long_about_me?: string;
   animal_types?: string[];
-  
+
   // Berechnete Felder
   search_type: 'caretaker' | 'service_provider';
   search_vector?: any;

@@ -13,7 +13,7 @@ export default function DienstleisterPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isPremiumUser, subscriptionLoading } = useSubscription();
   const isFirstRender = useRef(true);
-  
+
   // Filter States
   const [location, setLocation] = useState('');
   const [selectedKategorieId, setSelectedKategorieId] = useState<number | undefined>(undefined);
@@ -61,15 +61,15 @@ export default function DienstleisterPage() {
   const performSearch = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const filters: any = {};
-      
+
       // Kategorie-Filter
       if (selectedKategorieId) {
         filters.kategorie_id = selectedKategorieId;
       }
-      
+
       // Standort-Filter
       if (location.trim()) {
         // Prüfe ob es eine PLZ ist (5-stellige Zahl)
@@ -79,24 +79,24 @@ export default function DienstleisterPage() {
           filters.standort = { ort: location.trim() };
         }
       }
-      
+
       // Bewertungs-Filter
       if (selectedMinRating) {
         filters.bewertung = { min: parseFloat(selectedMinRating) };
       }
-      
+
       // Preis-Filter (nur wenn nicht default)
       if (maxPrice < 100) {
         filters.preis = { max: maxPrice };
       }
-      
+
       // Suche ausführen
       // Die dienstleister_search_view filtert bereits nach:
       // - approval_status = 'approved'
       // - kategorie_id != 1 (Betreuer ausgeschlossen)
       // - user_type != 'caretaker' (oder kategorie_id != 1)
       const searchResult = await DienstleisterService.searchDienstleister(filters, 50, 0);
-      
+
       setResults(searchResult.dienstleister || []);
       setTotalCount(searchResult.total_count);
     } catch (err) {
@@ -116,11 +116,11 @@ export default function DienstleisterPage() {
       isFirstRender.current = false;
       return;
     }
-    
+
     const timeoutId = setTimeout(() => {
       performSearch();
     }, 300);
-    
+
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, selectedKategorieId, selectedMinRating, maxPrice]);
@@ -145,12 +145,12 @@ export default function DienstleisterPage() {
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="container-custom py-8">
-        <div className="flex gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Filter Sidebar */}
-          <div className="w-80 flex-shrink-0">
+          <div className="w-full lg:w-80 flex-shrink-0">
             <div className="bg-white rounded-xl p-6 shadow-sm sticky top-8">
               <h2 className="text-lg font-semibold mb-6">Filter</h2>
-              
+
               <div className="space-y-6">
                 {/* Standort */}
                 <div>
@@ -166,7 +166,7 @@ export default function DienstleisterPage() {
                     />
                   </div>
                 </div>
-                
+
                 {/* Kategorie */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Kategorie</label>
@@ -247,7 +247,7 @@ export default function DienstleisterPage() {
           <div className="flex-1">
             {/* Header */}
             <div className="mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                 Dienstleister finden
               </h1>
               <p className="text-gray-600">
