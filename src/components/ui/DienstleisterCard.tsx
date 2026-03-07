@@ -17,7 +17,7 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
   const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
-  
+
   const handleViewProfile = (e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
@@ -29,7 +29,7 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
   useEffect(() => {
     const fetchFavoriteStatus = async () => {
       if (!user || !dienstleister.id) return;
-      
+
       try {
         const { isFavorite: favoriteStatus } = await ownerCaretakerService.isFavorite(user.id, dienstleister.id);
         setIsFavorite(favoriteStatus);
@@ -43,7 +43,7 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
 
   const handleFavoriteToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!user) {
       navigate('/anmelden?redirect=' + encodeURIComponent(`/dienstleister/${dienstleister.id}`));
       return;
@@ -53,7 +53,7 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
 
     try {
       const { isFavorite: newFavoriteStatus, error } = await ownerCaretakerService.toggleFavorite(user.id, dienstleister.id);
-      
+
       if (error) {
         console.error('Fehler beim Aktualisieren der Favoriten:', error);
         return;
@@ -80,7 +80,7 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
   const bio = dienstleister.bio || dienstleister.short_about_me || '';
 
   return (
-    <div 
+    <div
       className="card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm h-full flex flex-col cursor-pointer"
       onClick={handleViewProfile}
     >
@@ -104,15 +104,14 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
               </span>
             </div>
           )}
-          
-          {/* Badges overlay */}
-          <div className="absolute top-2 right-2 flex flex-col gap-1 items-center">
-            {/* Herz-Icon für Favoriten */}
+
+          {/* Herz-Icon für Favoriten - always top right fixed */}
+          <div className="absolute top-2 right-2 z-10">
             {user && (
               <button
                 onClick={handleFavoriteToggle}
                 disabled={isFavoriteLoading}
-                className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md hover:bg-white transition-colors disabled:opacity-50 z-10"
+                className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md hover:bg-white transition-colors disabled:opacity-50"
                 title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
               >
                 {isFavoriteLoading ? (
@@ -124,19 +123,23 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
                 )}
               </button>
             )}
+          </div>
+
+          {/* Badges overlay - Left edge, stacked */}
+          <div className="absolute top-4 left-0 flex flex-col gap-2 items-start z-10">
             {/* is_verified könnte je nach Datenstruktur variieren - optional anzeigen wenn vorhanden */}
             {(dienstleister as any).is_verified && (
-              <div className="bg-primary-500 text-white text-xs font-medium px-2 py-1 rounded-full text-center">
+              <div className="bg-primary-500 text-white text-xs font-medium px-3 py-1 rounded-r-lg shadow-md flex items-center">
                 Verifiziert
               </div>
             )}
             {dienstleister.is_commercial && (
-              <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md flex items-center justify-center">
+              <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-bold px-3 py-1 rounded-r-lg shadow-md flex items-center">
                 <Briefcase className="h-3 w-3 mr-1" /> Pro
               </div>
             )}
             {dienstleister.notfall_bereitschaft && (
-              <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center justify-center">
+              <div className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs font-semibold px-3 py-1 rounded-r-lg shadow-md flex items-center">
                 <Clock className="h-3 w-3 mr-1" /> Notfall
               </div>
             )}
@@ -151,14 +154,14 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
               <h3 className="font-semibold text-base group-hover:text-primary-600 transition-colors truncate" title={displayName}>
                 {displayName}
               </h3>
-              
+
               {/* Category */}
               {dienstleister.kategorie_name && (
                 <div className="flex items-center gap-1 mb-1">
                   {dienstleister.kategorie_icon && (
-                    <DienstleisterCategoryIcon 
-                      iconName={dienstleister.kategorie_icon} 
-                      size="sm" 
+                    <DienstleisterCategoryIcon
+                      iconName={dienstleister.kategorie_icon}
+                      size="sm"
                       className={getCategoryColor(dienstleister.kategorie_name)}
                     />
                   )}
@@ -167,9 +170,9 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
                   </p>
                 </div>
               )}
-              
+
               <p className="text-gray-600 text-xs flex items-center truncate" title={location}>
-                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" /> 
+                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
                 <span className="truncate">{location}</span>
               </p>
             </div>

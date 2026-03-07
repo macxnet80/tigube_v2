@@ -1021,14 +1021,13 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
             }}
           />
 
-          {/* Badges overlay */}
-          <div className="absolute top-2 right-2 flex flex-col gap-1 items-center">
-            {/* Herz-Icon für Favoriten */}
+          {/* Herz-Icon für Favoriten - always top right fixed */}
+          <div className="absolute top-2 right-2 z-10">
             {user && (
               <button
                 onClick={handleFavoriteToggle}
                 disabled={isFavoriteLoading}
-                className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md hover:bg-white transition-colors disabled:opacity-50 z-10"
+                className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 shadow-md hover:bg-white transition-colors disabled:opacity-50"
                 title={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
               >
                 {isFavoriteLoading ? (
@@ -1040,18 +1039,22 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
                 )}
               </button>
             )}
+          </div>
+
+          {/* Badges overlay - Left edge, stacked */}
+          <div className="absolute top-4 left-0 flex flex-col gap-2 items-start z-10">
             {caretaker.verified && (
-              <div className="bg-primary-500 text-white text-xs font-medium px-2 py-1 rounded-full text-center">
+              <div className="bg-primary-500 text-white text-xs font-medium px-3 py-1 rounded-r-lg shadow-md flex items-center">
                 Verifiziert
               </div>
             )}
             {caretaker.isCommercial && (
-              <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md flex items-center justify-center">
+              <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-bold px-3 py-1 rounded-r-lg shadow-md flex items-center">
                 <Briefcase className="h-3 w-3 mr-1" /> Pro
               </div>
             )}
             {caretaker.short_term_available && (
-              <div className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full flex items-center justify-center">
+              <div className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-semibold px-3 py-1 rounded-r-lg shadow-md flex items-center">
                 <Clock className="h-3 w-3 mr-1" /> Kurzfristig
               </div>
             )}
