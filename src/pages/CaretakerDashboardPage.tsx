@@ -579,7 +579,7 @@ function CaretakerDashboardPage() {
 
     // Füge auch einen neuen Service zur servicesWithCategories hinzu
     const newService: CategorizedService = {
-      name: '',
+      name: newKey,
       category_id: 8, // Default: Allgemein
       category_name: 'Allgemein'
     };
@@ -616,7 +616,7 @@ function CaretakerDashboardPage() {
 
       // 2. Custom-Services hinzufügen (aus prices, aber nicht in services)
       Object.keys(servicesDraft.prices).forEach(serviceName => {
-        if (!servicesDraft.services.includes(serviceName) && serviceName !== 'Anfahrkosten') {
+        if (!servicesDraft.services.includes(serviceName) && serviceName !== 'Anfahrkosten' && !serviceName.startsWith('custom_')) {
           const price = servicesDraft.prices[serviceName];
           if (price && price.trim() !== '') {
             // Finde die Kategorie für diesen Service
@@ -2946,7 +2946,7 @@ function CaretakerDashboardPage() {
                           {Object.entries(servicesDraft.prices).filter(([k, _]) => !defaultServices.includes(k)).map(([k, v], index) => {
                             // Finde die Kategorie für diesen Service
                             const serviceCategory = servicesDraft.servicesWithCategories.find(service =>
-                              service.name === k || (k.startsWith('custom_') && service.name === '')
+                              service.name === k
                             );
                             const currentCategoryId = serviceCategory?.category_id || 8;
 
@@ -2959,10 +2959,29 @@ function CaretakerDashboardPage() {
                                   onBlur={e => {
                                     const newKey = e.target.value.trim();
                                     if (newKey === '' || newKey === k) return;
+
+                                    // Update prices
                                     const newPrices = { ...servicesDraft.prices };
+                                    const priceVal = newPrices[k];
                                     delete newPrices[k];
-                                    newPrices[newKey] = v;
-                                    handleServicesChange('prices', newPrices);
+                                    newPrices[newKey] = priceVal;
+
+                                    // Update servicesWithCategories
+                                    const updatedServices = servicesDraft.servicesWithCategories.map(service => {
+                                      if (service.name === k) {
+                                        return {
+                                          ...service,
+                                          name: newKey
+                                        };
+                                      }
+                                      return service;
+                                    });
+
+                                    setServicesDraft(d => ({
+                                      ...d,
+                                      prices: newPrices,
+                                      servicesWithCategories: updatedServices
+                                    }));
                                   }}
                                 />
                                 <select
@@ -2974,7 +2993,7 @@ function CaretakerDashboardPage() {
                                     if (category) {
                                       // Aktualisiere die servicesWithCategories
                                       const updatedServices = servicesDraft.servicesWithCategories.map(service => {
-                                        if (service.name === k || (k.startsWith('custom_') && service.name === '')) {
+                                        if (service.name === k) {
                                           return {
                                             ...service,
                                             category_id: categoryId,

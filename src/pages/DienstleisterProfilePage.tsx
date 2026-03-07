@@ -371,6 +371,7 @@ function DienstleisterProfilePage() {
     // Ansonsten suche den niedrigsten Preis aus services_with_categories
     if (dienstleister.services_with_categories && Array.isArray(dienstleister.services_with_categories) && dienstleister.services_with_categories.length > 0) {
       const prices = dienstleister.services_with_categories
+        .filter((service: any) => !service.name?.startsWith('custom_'))
         .map((service: any) => {
           if (service.price && Number(service.price) > 0 && service.price_type === 'per_hour') {
             return Number(service.price);
@@ -385,7 +386,7 @@ function DienstleisterProfilePage() {
       }
     }
 
-    return 'Preis auf Anfrage';
+    return <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>;
   };
 
   return (
@@ -514,7 +515,7 @@ function DienstleisterProfilePage() {
               {dienstleister.spezialisierungen && Array.isArray(dienstleister.spezialisierungen) && dienstleister.spezialisierungen.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
                   {dienstleister.spezialisierungen
-                    .filter(spec => typeof spec === 'string')
+                    .filter(spec => typeof spec === 'string' && !spec.startsWith('custom_') && !spec.toLowerCase().includes('anfahr'))
                     .map((spec, index) => (
                       <span
                         key={index}
@@ -765,44 +766,47 @@ function DienstleisterProfilePage() {
                 Leistungen & Preise
               </h2>
               <div className="space-y-6">
-                {dienstleister.services_with_categories && Array.isArray(dienstleister.services_with_categories) && dienstleister.services_with_categories.length > 0 ? (
-                  dienstleister.services_with_categories.map((service: any, index: number) => {
-                    const serviceName = service.name || 'Unbekannte Leistung';
-                    const servicePrice = service.price;
-                    const priceType = service.price_type || 'per_hour';
+                {dienstleister.services_with_categories && Array.isArray(dienstleister.services_with_categories) &&
+                  dienstleister.services_with_categories.filter((s: any) => !s.name?.startsWith('custom_')).length > 0 ? (
+                  dienstleister.services_with_categories
+                    .filter((s: any) => !s.name?.startsWith('custom_'))
+                    .map((service: any, index: number) => {
+                      const serviceName = service.name || 'Unbekannte Leistung';
+                      const servicePrice = service.price;
+                      const priceType = service.price_type || 'per_hour';
 
-                    let displayPrice = 'Preis auf Anfrage';
-                    if (servicePrice !== null && servicePrice !== undefined && Number(servicePrice) > 0) {
-                      if (priceType === 'per_hour') {
-                        displayPrice = `${formatCurrency(Number(servicePrice))}/Std`;
-                      } else if (priceType === 'per_visit') {
-                        // Spezielle Behandlung für Anfahrkosten
-                        if (serviceName.toLowerCase().includes('anfahr') || serviceName.toLowerCase().includes('fahrt')) {
-                          displayPrice = `${formatCurrency(Number(servicePrice))}/km`;
+                      let displayPrice: React.ReactNode = <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>;
+                      if (servicePrice !== null && servicePrice !== undefined && Number(servicePrice) > 0) {
+                        if (priceType === 'per_hour') {
+                          displayPrice = `${formatCurrency(Number(servicePrice))}/Std`;
+                        } else if (priceType === 'per_visit') {
+                          // Spezielle Behandlung für Anfahrkosten
+                          if (serviceName.toLowerCase().includes('anfahr') || serviceName.toLowerCase().includes('fahrt')) {
+                            displayPrice = `${formatCurrency(Number(servicePrice))}/km`;
+                          } else {
+                            displayPrice = `${formatCurrency(Number(servicePrice))}/Besuch`;
+                          }
+                        } else if (priceType === 'per_day') {
+                          displayPrice = `${formatCurrency(Number(servicePrice))}/Tag`;
                         } else {
-                          displayPrice = `${formatCurrency(Number(servicePrice))}/Besuch`;
+                          displayPrice = `${formatCurrency(Number(servicePrice))}`;
                         }
-                      } else if (priceType === 'per_day') {
-                        displayPrice = `${formatCurrency(Number(servicePrice))}/Tag`;
-                      } else {
-                        displayPrice = `${formatCurrency(Number(servicePrice))}`;
                       }
-                    }
 
-                    return (
-                      <div key={index} className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <span className="text-gray-800 font-medium block">{serviceName}</span>
-                          {service.beschreibung && (
-                            <span className="text-sm text-gray-600 block mt-1">{service.beschreibung}</span>
-                          )}
+                      return (
+                        <div key={index} className="flex justify-between items-start gap-4">
+                          <div className="flex-1 min-w-0">
+                            <span className="text-gray-800 font-medium block break-words">{serviceName}</span>
+                            {service.beschreibung && (
+                              <span className="text-sm text-gray-600 block mt-1 break-words">{service.beschreibung}</span>
+                            )}
+                          </div>
+                          <span className="text-lg font-semibold text-primary-600 text-right shrink-0 whitespace-nowrap">
+                            {displayPrice}
+                          </span>
                         </div>
-                        <span className="text-lg font-semibold text-primary-600 ml-4 whitespace-nowrap">
-                          {displayPrice}
-                        </span>
-                      </div>
-                    );
-                  })
+                      );
+                    })
                 ) : dienstleister.hourly_rate && dienstleister.hourly_rate > 0 ? (
                   <div className="text-center py-4">
                     <span className="text-lg font-semibold text-primary-600">
@@ -811,7 +815,7 @@ function DienstleisterProfilePage() {
                   </div>
                 ) : (
                   <div className="text-center py-4">
-                    <span className="text-gray-600">Preis auf Anfrage</span>
+                    <span className="text-gray-600 cursor-help border-b border-dotted" title="Preis auf Anfrage">a. A.</span>
                   </div>
                 )}
               </div>

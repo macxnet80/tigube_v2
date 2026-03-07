@@ -27,7 +27,7 @@ function SearchPage() {
   const { contactLimit, subscription } = useFeatureAccess();
   const { currentUsage: contactUsage } = useCurrentUsage('contact_request');
   const isFirstRender = useRef(true);
-  
+
   // Initialize filters from URL params
   const initialLocation = searchParams.get('location') || '';
   const initialPetType = searchParams.get('petType') || '';
@@ -35,7 +35,7 @@ function SearchPage() {
   const initialAvailabilityDays = searchParams.getAll('availabilityDay');
   const initialAvailabilityTime = searchParams.get('availabilityTime') || '';
   const initialMaxPrice = parseInt(searchParams.get('maxPrice') || '100');
-  
+
   // States
   const [location, setLocation] = useState(initialLocation);
   const [selectedPetType, setSelectedPetType] = useState(initialPetType);
@@ -54,7 +54,7 @@ function SearchPage() {
   const [noResults, setNoResults] = useState(false);
   const [totalResults, setTotalResults] = useState(0);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  
+
 
 
   // Filter options
@@ -114,20 +114,20 @@ function SearchPage() {
 
   // Search function using database with filters
   const performSearch = async () => {
-    
-    
+
+
     setLoading(true);
     setError(null);
     setNoResults(false);
     try {
       const filters: SearchFilters = {};
-      
+
       if (location.trim()) filters.location = location.trim();
       if (selectedPetType) filters.petType = selectedPetType;
       if (selectedService) filters.service = selectedService;
       if (selectedServiceCategory) filters.serviceCategory = selectedServiceCategory;
       if (selectedMinRating) filters.minRating = selectedMinRating;
-      
+
       // Nur Preis-Filter setzen wenn er nicht dem Default-Wert entspricht
       if (maxPrice < 100) {
         filters.maxPrice = maxPrice;
@@ -138,7 +138,7 @@ function SearchPage() {
       try {
         data = await searchCaretakersService(filters);
 
-        
+
         // Wenn der Service erfolgreich ist, verwende die echten Daten
         if (data && Array.isArray(data)) {
           console.log('✅ Using real data from service');
@@ -151,47 +151,47 @@ function SearchPage() {
         console.log('⚠️ Service failed, showing empty results');
         data = [];
       }
-      
-      
-      
+
+
+
       // Client-seitige Standort-Filterung (muss zuerst kommen)
       if (location.trim() && data) {
 
         const searchLocation = location.trim().toLowerCase();
         data = data.filter(caretaker => {
           const caretakerLocation = caretaker.location?.toLowerCase() || '';
-          
+
           // Wenn Betreuer "Unbekannt" oder ähnliche Werte hat, nicht anzeigen bei spezifischer PLZ-Suche
-          if (caretakerLocation === 'unbekannt' || 
-              caretakerLocation === 'unknown' || 
-              caretakerLocation === '' || 
-              caretakerLocation === 'n/a' ||
-              caretakerLocation === 'nicht angegeben' ||
-              caretakerLocation === 'ort nicht angegeben') {
+          if (caretakerLocation === 'unbekannt' ||
+            caretakerLocation === 'unknown' ||
+            caretakerLocation === '' ||
+            caretakerLocation === 'n/a' ||
+            caretakerLocation === 'nicht angegeben' ||
+            caretakerLocation === 'ort nicht angegeben') {
 
             return false;
           }
-          
+
           // Wenn eine PLZ gesucht wird (5-stellige Zahl), dann nur Betreuer mit PLZ anzeigen
           if (/^\d{5}$/.test(location.trim())) {
             // Prüfe ob der Betreuer eine PLZ in seinem Standort hat
             if (!/\d{5}/.test(caretakerLocation)) {
-  
+
               return false;
             }
           }
-          
-          // Prüfe ob Standort die gesuchte PLZ oder Stadt enthält
-          const matches = caretakerLocation.includes(searchLocation) || 
-                         searchLocation.includes(caretakerLocation);
-          
 
-          
+          // Prüfe ob Standort die gesuchte PLZ oder Stadt enthält
+          const matches = caretakerLocation.includes(searchLocation) ||
+            searchLocation.includes(caretakerLocation);
+
+
+
           return matches;
         });
 
       }
-      
+
       // Client-seitige Verfügbarkeits-Filterung (da noch keine DB-Unterstützung)
       if ((selectedAvailabilityDays.length > 0 || selectedAvailabilityTime) && data) {
 
@@ -213,11 +213,11 @@ function SearchPage() {
         data.forEach(caretaker => {
           console.log(`  - ${caretaker.name}: servicesWithCategories=`, caretaker.servicesWithCategories);
         });
-        
+
         data = data.filter(caretaker => {
           // Prüfe ob der Betreuer Services in der gewählten Kategorie hat
           if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
-            const hasCategory = caretaker.servicesWithCategories.some((service: any) => 
+            const hasCategory = caretaker.servicesWithCategories.some((service: any) =>
               service.category_id === parseInt(selectedServiceCategory)
             );
             console.log(`🏷️ ${caretaker.name}: has category ${selectedServiceCategory} = ${hasCategory}`);
@@ -232,23 +232,23 @@ function SearchPage() {
       // Client-seitige Preis-Filterung
       if (maxPrice < 100 && data && data.length > 0) {
 
-        
+
         // const originalLength = data.length;
         // const originalData = [...data]; // Backup für Debugging
-        
 
-        
+
+
         data = data.filter(caretaker => {
           // Preis-Ermittlung aus der neuen services_with_categories Struktur
           let lowestPrice = 0;
-          
+
           // 1. Neue Struktur: Preise aus services_with_categories
           if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
             const validPrices = caretaker.servicesWithCategories
-              .filter((service: any) => 
-                service.price && 
-                service.price !== '' && 
-                service.price !== null && 
+              .filter((service: any) =>
+                service.price &&
+                service.price !== '' &&
+                service.price !== null &&
                 service.price !== undefined &&
                 service.name !== 'Anfahrkosten' // Schließe Anfahrkosten aus
               )
@@ -257,12 +257,12 @@ function SearchPage() {
                 return isNaN(price) ? 0 : price;
               })
               .filter((price: number) => price > 0);
-            
+
             if (validPrices.length > 0) {
               lowestPrice = Math.min(...validPrices);
             }
           }
-          
+
           // 2. Fallback: Alte prices-Struktur (für Kompatibilität)
           if (lowestPrice === 0 && caretaker.prices && Object.keys(caretaker.prices).length > 0) {
             const pricesWithoutTravelCosts = Object.entries(caretaker.prices)
@@ -278,25 +278,25 @@ function SearchPage() {
                 return isNaN(num) ? 0 : num;
               })
               .filter(price => price > 0);
-            
+
             if (pricesWithoutTravelCosts.length > 0) {
               lowestPrice = Math.min(...pricesWithoutTravelCosts);
             }
           }
-          
+
           // 3. Fallback zu hourlyRate wenn keine service-spezifischen Preise vorhanden
           if (lowestPrice === 0 && caretaker.hourlyRate) {
             lowestPrice = caretaker.hourlyRate;
           }
-          
+
           // Prüfe ob Preis unter dem Max-Preis liegt
           const isWithinBudget = lowestPrice <= maxPrice;
-          
+
           return isWithinBudget;
         });
-        
 
-        
+
+
         if (data.length === 0) {
           console.log('💰 No caretakers found within price range €' + maxPrice);
         }
@@ -315,12 +315,12 @@ function SearchPage() {
         });
 
       }
-      
+
 
       setCaretakers(data || []);
-      
+
       // Search completed
-      
+
       // Cross-Search: Lade verwandte Dienstleister wenn Feature aktiviert
       let relatedServices: DienstleisterResult[] = [];
       if (showRelatedServices) {
@@ -333,7 +333,7 @@ function SearchPage() {
             minRating: filters.minRating,
             maxPrice: filters.maxPrice
           };
-          
+
           relatedServices = await searchRelatedDienstleister(crossSearchFilters);
           console.log(`🔍 Cross-Search: Found ${relatedServices.length} related Dienstleister`);
         } catch (crossSearchError) {
@@ -341,10 +341,10 @@ function SearchPage() {
           // Fehler bei Cross-Search sollten die Hauptsuche nicht beeinträchtigen
         }
       }
-      
+
       setRelatedDienstleister(relatedServices);
       setTotalResults((data?.length || 0) + relatedServices.length);
-      
+
       // Prüfe ob keine Ergebnisse gefunden wurden
       if ((!data || data.length === 0) && relatedServices.length === 0) {
         setNoResults(true);
@@ -353,7 +353,7 @@ function SearchPage() {
         setNoResults(false);
         setError(null);
       }
-      
+
       // URL aktualisieren
       const newParams = new URLSearchParams();
       if (location.trim()) newParams.set('location', location.trim());
@@ -368,7 +368,7 @@ function SearchPage() {
       if (selectedRadius) newParams.set('radius', selectedRadius);
       if (maxPrice < 100) newParams.set('maxPrice', maxPrice.toString());
       if (showRelatedServices) newParams.set('showRelatedServices', 'true');
-      
+
       setSearchParams(newParams);
     } catch (err) {
       console.error('🚨 Unexpected error:', err);
@@ -399,12 +399,12 @@ function SearchPage() {
       isFirstRender.current = false;
       return;
     }
-    
+
     const timeoutId = setTimeout(() => {
 
       performSearch();
     }, 300); // 300ms Debounce
-    
+
     return () => clearTimeout(timeoutId);
   }, [location, selectedPetType, selectedService, selectedServiceCategory, selectedAvailabilityDays, selectedAvailabilityTime, selectedMinRating, selectedRadius, maxPrice, showRelatedServices]); // Dependencies für Live-Suche
 
@@ -447,7 +447,7 @@ function SearchPage() {
 
             <div className="bg-white rounded-xl p-6 shadow-sm sticky top-8">
               <h2 className="text-lg font-semibold mb-6">Filter</h2>
-              
+
               <div className="space-y-6">
                 {/* PLZ/Stadt */}
                 <div>
@@ -463,7 +463,7 @@ function SearchPage() {
                     />
                   </div>
                 </div>
-                
+
                 {/* Tierart Dropdown */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Tierart</label>
@@ -563,7 +563,7 @@ function SearchPage() {
                     />
                   </div>
                 )}
-                
+
                 {/* Clear Filters Button */}
                 {hasActiveFilters && (
                   <div className="border-t pt-6">
@@ -631,10 +631,10 @@ function SearchPage() {
                           </button>
                         </div>
                       )}
-                      
+
                       {selectedAvailabilityDays.length > 0 && (
                         <div className="flex items-center bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm">
-                          🕒 {selectedAvailabilityDays.length === 1 
+                          🕒 {selectedAvailabilityDays.length === 1
                             ? getDayLabel(selectedAvailabilityDays[0])
                             : `${selectedAvailabilityDays.length} Tage ausgewählt`
                           }
@@ -703,158 +703,175 @@ function SearchPage() {
 
           {/* Main Content Area */}
           <div className="flex-1">
-        {/* Usage Limit Display for Contact Requests - Compact Badge */}
-        {subscription && subscription.user_type === 'owner' && (
-          <div className="mb-4">
-            <div className="inline-flex items-center gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                <span className="font-medium text-gray-700">Kontaktanfragen:</span>
-                <span className="text-gray-900 font-semibold">
-                  {contactUsage}/{contactLimit}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Search Filter Banner */}
-        <div className="mb-6">
-          <AdvertisementBanner 
-            placement="search_filters"
-            targetingOptions={{
-              petTypes: selectedPetType ? [selectedPetType] : undefined,
-              location: location || undefined,
-              subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
-            }}
-          />
-        </div>
-
-        {/* Results Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
-                <span className="text-gray-600">Suche läuft...</span>
-              </div>
-            ) : error ? (
-              <p className="text-red-600">{error}</p>
-            ) : (
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Tierbetreuer in allen Orten</h1>
-                <p className="text-gray-600">
-                  {totalResults} {totalResults === 1 ? 'Betreuer verfügbar' : 'Betreuer verfügbar'}
-                  {location && ` in ${location}`}
-                </p>
+            {/* Usage Limit Display for Contact Requests - Compact Badge */}
+            {subscription && subscription.user_type === 'owner' && (
+              <div className="mb-4">
+                <div className="inline-flex items-center gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2 text-sm shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <span className="font-medium text-gray-700">Kontaktanfragen:</span>
+                    <span className="text-gray-900 font-semibold">
+                      {contactUsage}/{contactLimit}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
-          </div>
-        </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex justify-center py-12">
-            <LoadingSpinner />
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && !loading && (
-          <div className="text-center py-12">
-            <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={performSearch}>
-              Erneut versuchen
-            </Button>
-          </div>
-        )}
-
-        {/* No Results - Humorvolle Nachricht */}
-        {!loading && !error && noResults && (
-          <div className="text-center py-12">
+            {/* Search Filter Banner */}
             <div className="mb-6">
-              <div className="text-6xl mb-4">🐕‍🦺</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Wuff! Keine Betreuer gefunden
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Auch unser bester Spürhund konnte keine passenden Tierbetreuer aufspüren! 
-              </p>
-              <p className="text-gray-500 text-sm">
-                {location && `Für "${location}" haben wir leider keine passenden Betreuer.`}
-              </p>
+              <AdvertisementBanner
+                placement="search_filters"
+                targetingOptions={{
+                  petTypes: selectedPetType ? [selectedPetType] : undefined,
+                  location: location || undefined,
+                  subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+                }}
+              />
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button onClick={clearAllFilters} variant="outline">
-                Filter zurücksetzen
-              </Button>
-              
-              <Button onClick={performSearch}>
-                Erneut suchen
-              </Button>
+
+            {/* Results Header */}
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-600"></div>
+                    <span className="text-gray-600">Suche läuft...</span>
+                  </div>
+                ) : error ? (
+                  <p className="text-red-600">{error}</p>
+                ) : (
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Tierbetreuer in allen Orten</h1>
+                    <p className="text-gray-600">
+                      {totalResults} {totalResults === 1 ? 'Betreuer verfügbar' : 'Betreuer verfügbar'}
+                      {location && ` in ${location}`}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* Results Grid */}
-        {!loading && !error && (caretakers.length > 0 || (showRelatedServices && relatedDienstleister.length > 0)) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(() => {
-              const items = [];
-              
-              // Add caretakers first
-              caretakers.forEach((caretaker, index) => {
-                items.push(
-                  <CaretakerCard key={`caretaker-${caretaker.id}`} caretaker={caretaker} />
-                );
-                
-                // Add advertisement card after every 5th caretaker (index 4, 9, 14, etc.)
-                if ((index + 1) % 5 === 0) {
-                  items.push(
-                    <AdvertisementBanner
-                      key={`ad-caretaker-${index}`}
-                      placement="search_results"
-                      targetingOptions={{
-                        petTypes: selectedPetType ? [selectedPetType] : undefined,
-                        location: location || undefined,
-                        subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
-                      }}
-                    />
-                  );
-                }
-              });
+            {/* Loading State */}
+            {loading && (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner />
+              </div>
+            )}
 
-              // Add related Dienstleister if showRelatedServices is enabled
-              if (showRelatedServices && relatedDienstleister.length > 0) {
-                // Add a separator/header for related services
-                if (caretakers.length > 0) {
-                  items.push(
-                    <div key="related-header" className="col-span-full">
-                      <div className="flex items-center my-6">
-                        <div className="flex-1 border-t border-gray-300"></div>
-                        <div className="px-4 text-sm font-medium text-gray-600 bg-gray-50 rounded-full">
-                          Verwandte Dienstleister
+            {/* Error State */}
+            {error && !loading && (
+              <div className="text-center py-12">
+                <p className="text-red-600 mb-4">{error}</p>
+                <Button onClick={performSearch}>
+                  Erneut versuchen
+                </Button>
+              </div>
+            )}
+
+            {/* No Results - Humorvolle Nachricht */}
+            {!loading && !error && noResults && (
+              <div className="text-center py-12">
+                <div className="mb-6">
+                  <div className="text-6xl mb-4">🐕‍🦺</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Wuff! Keine Betreuer gefunden
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Auch unser bester Spürhund konnte keine passenden Tierbetreuer aufspüren!
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    {location && `Für "${location}" haben wir leider keine passenden Betreuer.`}
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button onClick={clearAllFilters} variant="outline">
+                    Filter zurücksetzen
+                  </Button>
+
+                  <Button onClick={performSearch}>
+                    Erneut suchen
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Results Grid */}
+            {!loading && !error && (caretakers.length > 0 || (showRelatedServices && relatedDienstleister.length > 0)) && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(() => {
+                  const items = [];
+
+                  // Add caretakers first
+                  caretakers.forEach((caretaker, index) => {
+                    items.push(
+                      <CaretakerCard key={`caretaker-${caretaker.id}`} caretaker={caretaker} />
+                    );
+
+                    // Add advertisement card after every 5th caretaker (index 4, 9, 14, etc.)
+                    if ((index + 1) % 5 === 0) {
+                      items.push(
+                        <AdvertisementBanner
+                          key={`ad-caretaker-${index}`}
+                          placement="search_results"
+                          targetingOptions={{
+                            petTypes: selectedPetType ? [selectedPetType] : undefined,
+                            location: location || undefined,
+                            subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+                          }}
+                        />
+                      );
+                    }
+                  });
+
+                  // Add related Dienstleister if showRelatedServices is enabled
+                  if (showRelatedServices && relatedDienstleister.length > 0) {
+                    // Add a separator/header for related services
+                    if (caretakers.length > 0) {
+                      items.push(
+                        <div key="related-header" className="col-span-full">
+                          <div className="flex items-center my-6">
+                            <div className="flex-1 border-t border-gray-300"></div>
+                            <div className="px-4 text-sm font-medium text-gray-600 bg-gray-50 rounded-full">
+                              Verwandte Dienstleister
+                            </div>
+                            <div className="flex-1 border-t border-gray-300"></div>
+                          </div>
                         </div>
-                        <div className="flex-1 border-t border-gray-300"></div>
-                      </div>
-                    </div>
-                  );
-                }
+                      );
+                    }
 
-                relatedDienstleister.forEach((dienstleister, index) => {
-                  items.push(
-                    <DienstleisterCrossSearchCard 
-                      key={`dienstleister-${dienstleister.id}`} 
-                      dienstleister={dienstleister} 
-                    />
-                  );
-                  
-                  // Add advertisement after every 5th dienstleister
-                  if ((index + 1) % 5 === 0) {
+                    relatedDienstleister.forEach((dienstleister, index) => {
+                      items.push(
+                        <DienstleisterCrossSearchCard
+                          key={`dienstleister-${dienstleister.id}`}
+                          dienstleister={dienstleister}
+                        />
+                      );
+
+                      // Add advertisement after every 5th dienstleister
+                      if ((index + 1) % 5 === 0) {
+                        items.push(
+                          <AdvertisementBanner
+                            key={`ad-dienstleister-${index}`}
+                            placement="search_results"
+                            targetingOptions={{
+                              petTypes: selectedPetType ? [selectedPetType] : undefined,
+                              location: location || undefined,
+                              subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
+                            }}
+                          />
+                        );
+                      }
+                    });
+                  }
+
+                  // Add advertisement at the end if we have fewer than 5 caretakers or if the last caretaker wasn't at a 5th position
+                  if (caretakers.length < 5 || (caretakers.length % 5 !== 0)) {
                     items.push(
                       <AdvertisementBanner
-                        key={`ad-dienstleister-${index}`}
+                        key="ad-end"
                         placement="search_results"
                         targetingOptions={{
                           petTypes: selectedPetType ? [selectedPetType] : undefined,
@@ -864,28 +881,11 @@ function SearchPage() {
                       />
                     );
                   }
-                });
-              }
-              
-              // Add advertisement at the end if we have fewer than 5 caretakers or if the last caretaker wasn't at a 5th position
-              if (caretakers.length < 5 || (caretakers.length % 5 !== 0)) {
-                items.push(
-                  <AdvertisementBanner
-                    key="ad-end"
-                    placement="search_results"
-                    targetingOptions={{
-                      petTypes: selectedPetType ? [selectedPetType] : undefined,
-                      location: location || undefined,
-                      subscriptionType: subscription?.type === 'premium' ? 'premium' : 'free'
-                    }}
-                  />
-                );
-              }
-              
-              return items;
-            })()}
-          </div>
-        )}</div>
+
+                  return items;
+                })()}
+              </div>
+            )}</div>
         </div>
       </div>
     </div>
@@ -897,7 +897,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
   const { user } = useAuth();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isFavoriteLoading, setIsFavoriteLoading] = useState(false);
-  
+
   const handleViewProfile = (e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
@@ -909,7 +909,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
   useEffect(() => {
     const fetchFavoriteStatus = async () => {
       if (!user || !caretaker.id) return;
-      
+
       try {
         const { isFavorite: favoriteStatus } = await ownerCaretakerService.isFavorite(user.id, caretaker.id);
         setIsFavorite(favoriteStatus);
@@ -923,7 +923,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
 
   const handleFavoriteToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!user) {
       navigate('/anmelden?redirect=' + encodeURIComponent(`/betreuer/${caretaker.id}`));
       return;
@@ -933,7 +933,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
 
     try {
       const { isFavorite: newFavoriteStatus, error } = await ownerCaretakerService.toggleFavorite(user.id, caretaker.id);
-      
+
       if (error) {
         console.error('Fehler beim Aktualisieren der Favoriten:', error);
         return;
@@ -952,10 +952,10 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
     // 1. Neue Struktur: Preise aus services_with_categories
     if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
       const validPrices = caretaker.servicesWithCategories
-        .filter(service => 
-          service.price && 
-          service.price !== '' && 
-          service.price !== null && 
+        .filter(service =>
+          service.price &&
+          service.price !== '' &&
+          service.price !== null &&
           service.price !== undefined &&
           service.name !== 'Anfahrkosten' // Schließe Anfahrkosten aus
         )
@@ -964,13 +964,13 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
           return isNaN(price) ? 0 : price;
         })
         .filter(price => price > 0);
-      
+
       if (validPrices.length > 0) {
         const minPrice = Math.min(...validPrices);
         return `ab €${minPrice}/Std.`;
       }
     }
-    
+
     // 2. Fallback: Alte prices-Struktur (für Kompatibilität)
     if (caretaker.prices && Object.keys(caretaker.prices).length > 0) {
       const pricesWithoutTravelCosts = Object.entries(caretaker.prices)
@@ -986,24 +986,24 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
           return isNaN(num) ? 0 : num;
         })
         .filter(price => price > 0);
-      
+
       if (pricesWithoutTravelCosts.length > 0) {
         const minPrice = Math.min(...pricesWithoutTravelCosts);
         return `ab €${minPrice}/Std.`;
       }
     }
-    
+
     // 3. Fallback zu hourlyRate
     if (caretaker.hourlyRate && caretaker.hourlyRate > 0) {
       return `ab €${caretaker.hourlyRate}/Std.`;
     }
-    
+
     // 4. Standard-Text
-    return 'Preis auf Anfrage';
+    return <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>;
   };
 
   return (
-    <div 
+    <div
       className="card group hover:border-primary-200 transition-all duration-200 w-full max-w-sm h-full flex flex-col cursor-pointer"
       onClick={handleViewProfile}
     >
@@ -1020,7 +1020,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
               target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(caretaker.name)}&background=f3f4f6&color=374151&size=400`;
             }}
           />
-          
+
           {/* Badges overlay */}
           <div className="absolute top-2 right-2 flex flex-col gap-1 items-center">
             {/* Herz-Icon für Favoriten */}
@@ -1067,7 +1067,7 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
                 {caretaker.name}
               </h3>
               <p className="text-gray-600 text-xs flex items-center truncate" title={caretaker.location}>
-                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" /> 
+                <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
                 <span className="truncate">{caretaker.location}</span>
               </p>
             </div>

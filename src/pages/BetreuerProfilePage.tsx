@@ -648,7 +648,7 @@ function BetreuerProfilePage() {
                 <div className="flex items-start gap-3">
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary-600">
-                      {caretaker.hourlyRate > 0 ? `ab ${formatCurrency(caretaker.hourlyRate)}/Std` : 'Preis auf Anfrage'}
+                      {caretaker.hourlyRate > 0 ? `ab ${formatCurrency(caretaker.hourlyRate)}/Std` : <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>}
                     </div>
                   </div>
                 </div>
@@ -657,7 +657,7 @@ function BetreuerProfilePage() {
               {/* Services */}
               <div className="flex flex-wrap gap-2 mb-6">
                 {caretaker.services
-                  .filter(service => typeof service === 'string')
+                  .filter(service => typeof service === 'string' && !service.startsWith('custom_') && !service.toLowerCase().includes('anfahr'))
                   .map(service => (
                     <span
                       key={service}
@@ -895,7 +895,7 @@ function BetreuerProfilePage() {
               </h2>
               <div className="space-y-6">
                 {caretaker.services
-                  .filter(service => typeof service === 'string')
+                  .filter(service => typeof service === 'string' && !service.startsWith('custom_'))
                   .map(service => {
                     // Suche Service-spezifischen Preis
                     const servicePrice = caretaker.prices && caretaker.prices[service];
@@ -909,12 +909,12 @@ function BetreuerProfilePage() {
 
                     const displayPrice = hasValidPrice
                       ? (typeof servicePrice === 'string' ? `${servicePrice}€` : `${servicePrice}€`)
-                      : 'Preis auf Anfrage';
+                      : <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>;
 
                     return (
-                      <div key={service} className="flex justify-between items-center">
-                        <span className="text-gray-800 font-medium">{service}</span>
-                        <span className="text-lg font-semibold text-primary-600">
+                      <div key={service} className="flex justify-between items-start gap-4">
+                        <span className="text-gray-800 font-medium break-words flex-1">{service}</span>
+                        <span className="text-lg font-semibold text-primary-600 text-right shrink-0 whitespace-nowrap">
                           {displayPrice}
                         </span>
                       </div>
