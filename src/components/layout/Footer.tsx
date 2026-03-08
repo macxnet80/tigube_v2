@@ -51,21 +51,8 @@ function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Für Tierhalter</h3>
             <ul className="space-y-2">
-              <li><FooterLink to="/betreuer-finden">Betreuer finden</FooterLink></li>
-              <li><FooterLink to="/wie-funktioniert">Wie es funktioniert</FooterLink></li>
               <li><FooterLink to="/preise">Preise</FooterLink></li>
               <li><FooterLink to="/hilfe">FAQ</FooterLink></li>
-            </ul>
-          </div>
-
-          {/* Für Betreuer */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Für Betreuer</h3>
-            <ul className="space-y-2">
-              <li><FooterLink to="/betreuer-werden">Betreuer werden</FooterLink></li>
-              <li><FooterLink to="/voraussetzungen">Voraussetzungen</FooterLink></li>
-              <li><FooterLink to="/ressourcen">Ressourcen</FooterLink></li>
-              <li><FooterLink to="/betreuer-faq">Betreuer-FAQ</FooterLink></li>
             </ul>
           </div>
 

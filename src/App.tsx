@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import SafeProtectedRoute from './components/auth/SafeProtectedRoute';
 import ErrorBoundary from './components/auth/ErrorBoundary';
+import ScrollToTop from './components/ui/ScrollToTop';
 
 // Lazy loaded pages
 const HomePage = lazy(() => import('./pages/HomePage'));
@@ -24,7 +25,7 @@ const HelpPage = lazy(() => import('./pages/HelpPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const OwnerDashboardPage = lazy(() => import('./pages/OwnerDashboardPage'));
 const CaretakerDashboardPage = lazy(() => import('./pages/CaretakerDashboardPage'));
-const DienstleisterProfilePage = lazy(() => import('./pages/DienstleisterProfilePage').then(module => ({ default: module.default || module.DienstleisterProfilePage })));
+const DienstleisterProfilePage = lazy(() => import('./pages/DienstleisterProfilePage'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const OwnerPublicProfilePage = lazy(() => import('./pages/OwnerPublicProfilePage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
@@ -42,6 +43,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Layout>
+        <ScrollToTop />
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/" element={<HomePage />} />
