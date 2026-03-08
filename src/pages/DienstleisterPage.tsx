@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { MapPin, Star, X, ChevronDown, Briefcase, Search } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
@@ -12,7 +12,7 @@ import type { DienstleisterProfil, DienstleisterKategorie } from '../lib/types/d
 export default function DienstleisterPage() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { isPremiumUser, subscriptionLoading } = useSubscription();
-  const isFirstRender = useRef(true);
+
 
   // Filter States
   const [location, setLocation] = useState('');
@@ -111,12 +111,6 @@ export default function DienstleisterPage() {
 
   // Live-Suche bei Filter-Änderungen
   useEffect(() => {
-    // Skip first render to avoid double search
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
     const timeoutId = setTimeout(() => {
       performSearch();
     }, 300);
