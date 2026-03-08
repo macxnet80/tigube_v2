@@ -39,9 +39,15 @@ export class ApprovalService {
       // Prüfe "Über mich" (short_about_me oder long_about_me)
       const shortAboutMe = profile.short_about_me?.trim() || '';
       const longAboutMe = profile.long_about_me?.trim() || '';
-      const hasAboutMe = !!(shortAboutMe || longAboutMe);
+      const aboutMeLength = shortAboutMe.length + longAboutMe.length;
+      const hasAboutMe = aboutMeLength >= 20;
+
       if (!hasAboutMe) {
-        missingFields.push('Über mich')
+        if (aboutMeLength === 0) {
+          missingFields.push('Über mich');
+        } else {
+          missingFields.push('Über mich (zu kurz, min. 20 Zeichen)');
+        }
       }
 
       // Prüfe Profilbild
@@ -50,20 +56,30 @@ export class ApprovalService {
         missingFields.push('Profilbild')
       }
 
-      // Prüfe mindestens eine Leistung
-      const hasServices = !!(profile.services &&
-        (Array.isArray(profile.services) ? profile.services.length > 0 :
-          typeof profile.services === 'object' && Object.keys(profile.services).length > 0))
-      if (!hasServices) {
-        missingFields.push('Mindestens eine Leistung')
+      // Prüfe mindestens eine Leistung - services_with_categories bevorzugen
+      // "Anfahrkosten" zählt nicht als alleinige Leistung
+      const servicesSource = profile.services_with_categories || profile.services;
+      const services = Array.isArray(servicesSource)
+        ? servicesSource
+        : (typeof servicesSource === 'object' && servicesSource !== null
+          ? Object.values(servicesSource)
+          : []);
+
+      const hasRealServices = services.some((s: any) => {
+        if (typeof s === 'string') return s !== 'Anfahrkosten';
+        return s && s.name && s.name !== 'Anfahrkosten';
+      });
+
+      if (!hasRealServices) {
+        missingFields.push('Mindestens eine Leistung (außer Anfahrkosten)')
       }
 
       return {
-        isValid: hasAboutMe && hasProfilePhoto && hasServices,
+        isValid: hasAboutMe && hasProfilePhoto && hasRealServices,
         missingFields,
         hasProfilePhoto,
         hasAboutMe,
-        hasServices
+        hasServices: hasRealServices
       }
     } catch (error) {
       console.error('Fehler bei Profil-Validierung:', error)

@@ -1,10 +1,10 @@
 import { adminSupabase } from '../supabase/adminClient'
-import { 
-  ApprovalStatus, 
-  CaretakerProfileWithApproval, 
-  ApprovalRequest, 
+import {
+  ApprovalStatus,
+  CaretakerProfileWithApproval,
+  ApprovalRequest,
   ApprovalDecision,
-  ProfileValidationResult 
+  ProfileValidationResult
 } from '../types/database.types'
 
 export class AdminApprovalService {
@@ -14,7 +14,7 @@ export class AdminApprovalService {
   static async decideApproval(decision: ApprovalDecision): Promise<void> {
     try {
       console.log('[AdminApprovalService] Deciding approval:', decision);
-      
+
       const { error } = await adminSupabase
         .from('caretaker_profiles')
         .update({
@@ -42,14 +42,14 @@ export class AdminApprovalService {
    * Admin: Freigabe-Status für einen Caretaker setzen
    */
   static async setApprovalStatus(
-    caretakerId: string, 
-    status: ApprovalStatus, 
-    adminId: string, 
+    caretakerId: string,
+    status: ApprovalStatus,
+    adminId: string,
     notes?: string
   ): Promise<void> {
     try {
       console.log('[AdminApprovalService] Setting approval status:', { caretakerId, status, adminId, notes });
-      
+
       const updateData: any = {
         approval_status: status,
         updated_at: new Date().toISOString()
@@ -87,7 +87,7 @@ export class AdminApprovalService {
   static async getPendingApprovals(): Promise<CaretakerProfileWithApproval[]> {
     try {
       console.log('[AdminApprovalService] Getting pending approvals');
-      
+
       const { data, error } = await adminSupabase
         .from('caretaker_profiles')
         .select(`
@@ -143,7 +143,7 @@ export class AdminApprovalService {
   }> {
     try {
       console.log('[AdminApprovalService] Getting approval stats');
-      
+
       const { data, error } = await adminSupabase
         .from('caretaker_profiles')
         .select('approval_status');
@@ -188,7 +188,7 @@ export class AdminApprovalService {
   static async validateProfileForApproval(caretakerId: string): Promise<ProfileValidationResult> {
     try {
       console.log('[AdminApprovalService] Validating profile for approval:', caretakerId);
-      
+
       // Caretaker-Profil laden - caretakerId ist die ID in der caretaker_profiles Tabelle
       const { data: profile, error: profileError } = await adminSupabase
         .from('caretaker_profiles')
@@ -212,11 +212,19 @@ export class AdminApprovalService {
       }
 
       const missingFields: string[] = [];
-      
+
       // Prüfe "Über mich" (short_about_me oder long_about_me)
-      const hasAboutMe = !!(profile.short_about_me || profile.long_about_me);
+      const shortAboutMe = profile.short_about_me?.trim() || '';
+      const longAboutMe = profile.long_about_me?.trim() || '';
+      const aboutMeLength = shortAboutMe.length + longAboutMe.length;
+      const hasAboutMe = aboutMeLength >= 20;
+
       if (!hasAboutMe) {
-        missingFields.push('Über mich');
+        if (aboutMeLength === 0) {
+          missingFields.push('Über mich');
+        } else {
+          missingFields.push('Über mich (zu kurz, min. 20 Zeichen)');
+        }
       }
 
       // Prüfe Profilbild
@@ -226,19 +234,25 @@ export class AdminApprovalService {
       }
 
       // Prüfe mindestens eine Leistung - services_with_categories verwenden
-      const hasServices = !!(profile.services_with_categories && 
-        (Array.isArray(profile.services_with_categories) ? profile.services_with_categories.length > 0 : 
-         typeof profile.services_with_categories === 'object' && Object.keys(profile.services_with_categories).length > 0));
-      if (!hasServices) {
-        missingFields.push('Mindestens eine Leistung');
+      // "Anfahrkosten" zählt nicht als alleinige Leistung
+      const services = Array.isArray(profile.services_with_categories)
+        ? profile.services_with_categories
+        : (typeof profile.services_with_categories === 'object' && profile.services_with_categories !== null
+          ? Object.values(profile.services_with_categories)
+          : []);
+
+      const hasRealServices = services.some((s: any) => s && s.name && s.name !== 'Anfahrkosten');
+
+      if (!hasRealServices) {
+        missingFields.push('Mindestens eine Leistung (außer Anfahrkosten)');
       }
 
       const result = {
-        isValid: hasAboutMe && hasProfilePhoto && hasServices,
+        isValid: hasAboutMe && hasProfilePhoto && hasRealServices,
         missingFields,
         hasProfilePhoto,
         hasAboutMe,
-        hasServices
+        hasServices: hasRealServices
       };
 
       console.log('[AdminApprovalService] Validation result:', result);
@@ -255,10 +269,10 @@ export class AdminApprovalService {
   static async requestApproval(caretakerId: string): Promise<void> {
     try {
       console.log('[AdminApprovalService] Requesting approval for:', caretakerId);
-      
+
       // Erst validieren
       const validation = await this.validateProfileForApproval(caretakerId);
-      
+
       if (!validation.isValid) {
         throw new Error(`Profil nicht vollständig. Fehlende Felder: ${validation.missingFields.join(', ')}`);
       }
@@ -291,7 +305,7 @@ export class AdminApprovalService {
   static async resetApprovalStatus(caretakerId: string): Promise<void> {
     try {
       console.log('[AdminApprovalService] Resetting approval status for:', caretakerId);
-      
+
       const { error } = await adminSupabase
         .from('caretaker_profiles')
         .update({
