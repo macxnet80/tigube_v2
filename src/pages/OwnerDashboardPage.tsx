@@ -22,7 +22,6 @@ import RegistrationSuccessModal from '../components/ui/RegistrationSuccessModal'
 import ProfileImageCropper from '../components/ui/ProfileImageCropper';
 import OwnerContactTab from '../components/ui/OwnerContactTab';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
-import RefGrowDashboard from '../components/ui/RefGrowDashboard';
 
 
 const ALL_SERVICES = [
@@ -138,7 +137,7 @@ function OwnerDashboardPage() {
   const [petError, setPetError] = useState<string | null>(null);
   const [showAddPet, setShowAddPet] = useState(false);
   const [newPet, setNewPet] = useState<PetFormData>({ name: '', type: '', typeOther: '', breed: '', birthDate: '', weight: '', image: '', description: '', gender: '', neutered: false });
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'tiere' | 'affiliate' | 'kontaktdaten' | 'einstellungen' | 'mitgliedschaft'>('uebersicht');
+  const [activeTab, setActiveTab] = useState<'uebersicht' | 'tiere' | 'kontaktdaten' | 'einstellungen' | 'mitgliedschaft'>('uebersicht');
   const [editData, setEditData] = useState(false);
   const [ownerData, setOwnerData] = useState({
     phoneNumber: '',
@@ -1548,15 +1547,6 @@ function OwnerDashboardPage() {
                 Meine Tiere
               </button>
               <button
-                onClick={() => setActiveTab('affiliate')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'affiliate'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-              >
-                Affiliate Programm
-              </button>
-              <button
                 onClick={() => setActiveTab('kontaktdaten')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'kontaktdaten'
                   ? 'border-primary-500 text-primary-600'
@@ -1792,10 +1782,6 @@ function OwnerDashboardPage() {
               </div>
             </div>
           </>
-        )}
-
-        {activeTab === 'affiliate' && (
-          <RefGrowDashboard email={user.email || ''} />
         )}
 
         {activeTab === 'kontaktdaten' && (
@@ -3191,7 +3177,7 @@ function OwnerDashboardPage() {
       {/* Profilbild Editor Modal */}
       {showImageCropper && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900">Profilbild bearbeiten</h2>
@@ -3208,6 +3194,7 @@ function OwnerDashboardPage() {
                 onImageSave={handleCroppedImageSave}
                 uploading={avatarUploading}
                 error={avatarError}
+                infoText={"Lade bitte ein nettes Profilbild von Dir hoch – das schafft Vertrauen! 😊\n\nWichtig für Deine Freischaltung: Ein echtes Portrait (Gesicht gut erkennbar). Bitte keine KI-Bilder, Avatare, Sonnenbrillen oder weitere Personen."}
                 className="w-full"
               />
             </div>

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
-import { Upload, X, Check, Eye, EyeOff, Save, Move, User, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Upload, Save, Move, User, ZoomIn, ZoomOut, RotateCcw, Info } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import Button from './Button';
 
@@ -22,6 +22,7 @@ interface ProfileImageCropperProps {
   uploading?: boolean;
   error?: string | null;
   className?: string;
+  infoText?: string;
 }
 
 function ProfileImageCropper({
@@ -29,7 +30,8 @@ function ProfileImageCropper({
   onImageSave,
   uploading = false,
   error = null,
-  className = ""
+  className = "",
+  infoText
 }: ProfileImageCropperProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(photoUrl || null);
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -47,7 +49,6 @@ function ProfileImageCropper({
       return;
     }
 
-    // Für Remote-URLs: erst als Blob laden, um Canvas-CORS-Probleme zu vermeiden
     if (/^https?:\/\//i.test(photoUrl)) {
       fetch(photoUrl, { mode: 'cors' })
         .then(async (resp) => {
@@ -57,7 +58,6 @@ function ProfileImageCropper({
           setSelectedImage(localUrl);
         })
         .catch(() => {
-          // Fallback: nutze Original-URL, falls Fetch fehlschlägt
           setSelectedImage(photoUrl);
         });
     } else {
@@ -71,8 +71,6 @@ function ProfileImageCropper({
     };
   }, [photoUrl]);
 
-  // No longer using steps, reverting to single-page layout
-
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles[0]) {
       const file = acceptedFiles[0];
@@ -80,7 +78,6 @@ function ProfileImageCropper({
       reader.onload = () => {
         setSelectedImage(reader.result as string);
         setIsEditing(true);
-        // Reset crop settings
         setCrop({ x: 0, y: 0 });
         setZoom(1);
         setRotation(0);
@@ -124,8 +121,6 @@ function ProfileImageCropper({
     }
 
     const rotRad = (rotation * Math.PI) / 180;
-
-    // calculate bounding box of the rotated image
     const { width: bWidth, height: bHeight } = {
       width: Math.abs(Math.cos(rotRad) * image.width) + Math.abs(Math.sin(rotRad) * image.height),
       height: Math.abs(Math.sin(rotRad) * image.width) + Math.abs(Math.cos(rotRad) * image.height),
@@ -181,7 +176,6 @@ function ProfileImageCropper({
     } else {
       setSelectedImage(photoUrl);
     }
-    // Reset crop settings
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setRotation(0);
@@ -197,20 +191,11 @@ function ProfileImageCropper({
     setRotation((prev) => (prev + 90) % 360);
   };
 
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 0.1, 3));
-  };
-
-  const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 0.1, 1));
-  };
-
   const displayImage = selectedImage || photoUrl;
 
   if (isEditing && selectedImage) {
     return (
       <div className={`space-y-6 ${className}`}>
-        {/* Crop Editor */}
         <div className="relative h-96 w-full bg-gray-900 rounded-xl overflow-hidden shadow-inner">
           <Cropper
             image={selectedImage}
@@ -228,7 +213,6 @@ function ProfileImageCropper({
           />
         </div>
 
-        {/* Crop Controls */}
         <div className="space-y-4 bg-gray-50 p-6 rounded-xl border border-gray-100">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-4">
@@ -301,22 +285,20 @@ function ProfileImageCropper({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Restored instruction text */}
       <div className="bg-primary-50 border border-primary-100 p-4 rounded-xl">
         <div className="flex gap-3">
           <div className="p-2 bg-white rounded-lg shadow-sm h-fit">
-            <User className="h-5 w-5 text-primary-600" />
+            <Info className="h-5 w-5 text-primary-600" />
           </div>
-          <p className="text-sm text-primary-900 leading-relaxed">
-            Lass uns dein Profilbild zum Strahlen bringen! Ein freundliches Foto macht dein Profil direkt vertrauenswürdiger für Tierhalter.
+          <p className="text-sm text-primary-900 leading-relaxed whitespace-pre-wrap">
+            {infoText || "Lass uns dein Profilbild zum Strahlen bringen! Ein freundliches Foto schafft Vertrauen und macht dein Profil für Tierhalter direkt attraktiver."}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-        <div className="flex flex-col gap-6">
-          {/* Current Profile Picture Section (2/3 proportional height focus) */}
-          <div className={`flex-[2] flex flex-col items-center justify-center p-8 bg-gray-50 rounded-xl border border-gray-100 ${!displayImage ? 'min-h-[260px]' : 'min-h-[320px]'}`}>
+      <div className="flex flex-col items-center max-w-2xl mx-auto space-y-6">
+        <div className="w-full flex flex-col gap-6">
+          <div className={`flex flex-col items-center justify-center p-8 bg-gray-50 rounded-xl border border-gray-100 ${!displayImage ? 'min-h-[260px]' : 'min-h-[320px]'}`}>
             {displayImage ? (
               <div className="relative">
                 <img
@@ -344,10 +326,9 @@ function ProfileImageCropper({
             )}
           </div>
 
-          {/* Upload Area Section (1/3 proportional height focus) */}
           <div
             {...getRootProps()}
-            className={`flex-[1] border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${isDragActive
+            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${isDragActive
               ? 'border-primary-500 bg-primary-50 scale-[1.02]'
               : 'border-gray-300 bg-white hover:border-primary-400 hover:bg-primary-5'
               } ${(uploading || isSaving) ? 'opacity-50 pointer-events-none' : ''}`}
@@ -372,15 +353,6 @@ function ProfileImageCropper({
             )}
           </div>
         </div>
-
-        {/* Right Section: New Textless Example Image */}
-        <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden h-full flex items-center justify-center">
-          <img
-            src="/Image/profilbild_beispiel_ohne_text"
-            alt="Beispiel für ein ideales Profilbild"
-            className="w-full h-full object-contain"
-          />
-        </div>
       </div>
 
       {error && (
@@ -391,6 +363,5 @@ function ProfileImageCropper({
     </div>
   );
 }
-
 
 export default ProfileImageCropper;
