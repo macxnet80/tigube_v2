@@ -28,6 +28,7 @@ import ToastContainer from '../components/ui/ToastContainer';
 import { VerificationService, type VerificationDocument } from '../lib/services/verificationService';
 import CaretakerContactTab from '../components/ui/CaretakerContactTab';
 import { isCaretaker } from '../lib/utils';
+import RefGrowDashboard from '../components/ui/RefGrowDashboard';
 
 
 function CaretakerDashboardPage() {
@@ -1782,7 +1783,7 @@ function CaretakerDashboardPage() {
 
   // Tab-Navigation für Übersicht/Fotos
   // Standard-Tab: 'uebersicht' funktioniert für alle Dienstleister-Typen
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'kontaktdaten' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften' | 'verfuegbarkeit' | 'partner'>('uebersicht');
+  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'affiliate' | 'kontaktdaten' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften' | 'verfuegbarkeit' | 'partner'>('uebersicht');
 
   // Scroll-Position-Persistierung entfernt - Browser sollte das automatisch handhaben
   // Das Problem liegt woanders - wahrscheinlich an anderen useEffect-Hooks die Re-Renders verursachen
@@ -2743,6 +2744,19 @@ function CaretakerDashboardPage() {
                     }`}
                 >
                   Über mich
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('affiliate')}
+                  aria-current={activeTab === 'affiliate' ? 'page' : undefined}
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'affiliate'
+                    ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                    : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                >
+                  Affiliate Programm
                 </button>
               </li>
               <li>
@@ -4231,6 +4245,11 @@ function CaretakerDashboardPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Affiliate Programm Tab Content */}
+              {activeTab === 'affiliate' && (
+                <RefGrowDashboard email={user.email || ''} />
+              )}
             </div>
           )}
           {activeTab === 'kontaktdaten' && (
@@ -4743,7 +4762,7 @@ function CaretakerDashboardPage() {
       {/* Profilbild Editor Modal */}
       {showImageCropper && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900">Profilbild bearbeiten</h2>
@@ -4760,7 +4779,6 @@ function CaretakerDashboardPage() {
                 onImageSave={handleCroppedImageSave}
                 uploading={avatarUploading}
                 error={avatarError}
-                infoText="Bitte lade ein nettes Profilbild von Dir hoch, um Vertrauen zu schaffen und Deinen Account freizuschalten. 😊 Achte auf ein echtes Portrait (Gesicht gut erkennbar), ohne KI, Avatare, Sonnenbrillen oder weitere Personen."
                 className="w-full"
               />
             </div>

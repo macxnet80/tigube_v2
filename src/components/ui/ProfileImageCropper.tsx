@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
-import { Upload, Check, RotateCcw, ZoomIn, ZoomOut, Move, Info } from 'lucide-react';
+import { Upload, X, Check, Eye, EyeOff, Save, Move, User, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import Button from './Button';
 
@@ -22,7 +22,6 @@ interface ProfileImageCropperProps {
   uploading?: boolean;
   error?: string | null;
   className?: string;
-  infoText?: string;
 }
 
 function ProfileImageCropper({
@@ -30,8 +29,7 @@ function ProfileImageCropper({
   onImageSave,
   uploading = false,
   error = null,
-  className = "",
-  infoText
+  className = ""
 }: ProfileImageCropperProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(photoUrl || null);
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -73,6 +71,8 @@ function ProfileImageCropper({
     };
   }, [photoUrl]);
 
+  // No longer using steps, reverting to single-page layout
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles[0]) {
       const file = acceptedFiles[0];
@@ -97,98 +97,78 @@ function ProfileImageCropper({
     disabled: uploading || isSaving,
   });
 
-  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
+  const onCropComplete = useCallback((_showCroppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  const createCroppedImage = useCallback(async (): Promise<string> => {
-    if (!selectedImage || !croppedAreaPixels) {
-      throw new Error('Kein Bild oder Crop-Bereich verfügbar');
+  const createImage = (url: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener('load', () => resolve(image));
+      image.addEventListener('error', (error) => reject(error));
+      image.setAttribute('crossOrigin', 'anonymous');
+      image.src = url;
+    });
+
+  const getCroppedImg = async (
+    imageSrc: string,
+    pixelCrop: Area,
+    rotation = 0
+  ): Promise<string> => {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return '';
     }
 
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+    const rotRad = (rotation * Math.PI) / 180;
 
-      if (!ctx) {
-        reject(new Error('Canvas-Kontext nicht verfügbar'));
-        return;
-      }
+    // calculate bounding box of the rotated image
+    const { width: bWidth, height: bHeight } = {
+      width: Math.abs(Math.cos(rotRad) * image.width) + Math.abs(Math.sin(rotRad) * image.height),
+      height: Math.abs(Math.sin(rotRad) * image.width) + Math.abs(Math.cos(rotRad) * image.height),
+    };
 
-      const image = new Image();
-      // Verhindere Canvas-Tainting bei Remote-Images
-      image.crossOrigin = 'anonymous';
-      image.onload = () => {
-        try {
-          // Set canvas size to match crop area
-          canvas.width = croppedAreaPixels.width;
-          canvas.height = croppedAreaPixels.height;
+    canvas.width = bWidth;
+    canvas.height = bHeight;
 
-          // Apply rotation if needed
-          if (rotation !== 0) {
-            ctx.translate(canvas.width / 2, canvas.height / 2);
-            ctx.rotate((rotation * Math.PI) / 180);
-            ctx.translate(-canvas.width / 2, -canvas.height / 2);
-          }
+    ctx.translate(bWidth / 2, bHeight / 2);
+    ctx.rotate(rotRad);
+    ctx.translate(-image.width / 2, -image.height / 2);
 
-          // Draw the cropped image
-          ctx.drawImage(
-            image,
-            croppedAreaPixels.x,
-            croppedAreaPixels.y,
-            croppedAreaPixels.width,
-            croppedAreaPixels.height,
-            0,
-            0,
-            croppedAreaPixels.width,
-            croppedAreaPixels.height
-          );
+    ctx.drawImage(image, 0, 0);
 
-          // Convert to blob and resolve
-          try {
-            canvas.toBlob(
-              (blob) => {
-                if (blob) {
-                  const url = URL.createObjectURL(blob);
-                  resolve(url);
-                } else {
-                  reject(new Error('Fehler beim Erstellen des Bildes'));
-                }
-              },
-              'image/jpeg',
-              0.9
-            );
-          } catch (e) {
-            reject(e as Error);
-          }
-        } catch (e) {
-          reject(e as Error);
-        }
-      };
+    const data = ctx.getImageData(
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height
+    );
 
-      image.onerror = () => {
-        reject(new Error('Fehler beim Laden des Bildes'));
-      };
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
 
-      image.src = selectedImage;
-    });
-  }, [selectedImage, croppedAreaPixels, rotation]);
+    ctx.putImageData(data, 0, 0);
+
+    return canvas.toDataURL('image/jpeg');
+  };
 
   const handleSave = async () => {
-    if (!croppedAreaPixels) return;
-
-    setIsSaving(true);
     try {
-      console.log('🔄 Erstelle gecropptes Bild...');
-      const croppedImageUrl = await createCroppedImage();
-      console.log('✅ Gecropptes Bild erstellt, starte Upload...');
+      if (!selectedImage || !croppedAreaPixels) return;
 
-      await onImageSave(croppedImageUrl);
-      console.log('✅ Upload erfolgreich abgeschlossen');
+      setIsSaving(true);
+      const croppedImage = await getCroppedImg(
+        selectedImage,
+        croppedAreaPixels,
+        rotation
+      );
+      await onImageSave(croppedImage);
       setIsEditing(false);
     } catch (err) {
-      console.error('❌ Fehler beim Speichern des Bildes:', err);
-      // Fehler wird bereits in onImageSave behandelt, hier nur loggen
+      console.error('Error saving image:', err);
     } finally {
       setIsSaving(false);
     }
@@ -229,112 +209,85 @@ function ProfileImageCropper({
 
   if (isEditing && selectedImage) {
     return (
-      <div className={`space-y-4 ${className}`}>
+      <div className={`space-y-6 ${className}`}>
         {/* Crop Editor */}
-        <div className="relative">
-          <div className="relative w-full h-80 bg-black rounded-lg overflow-hidden">
-            <Cropper
-              image={selectedImage}
-              crop={crop}
-              zoom={zoom}
-              rotation={rotation}
-              aspect={1} // Square aspect ratio for profile photos
-              onCropChange={setCrop}
-              onCropComplete={onCropComplete}
-              onZoomChange={setZoom}
-              onRotationChange={setRotation}
-              showGrid={true}
-              cropShape="rect"
-              objectFit="contain"
-              style={{
-                cropAreaStyle: {
-                  borderRadius: '12px',
-                  border: '2px solid #3b82f6',
-                }
-              }}
-            />
-          </div>
+        <div className="relative h-96 w-full bg-gray-900 rounded-xl overflow-hidden shadow-inner">
+          <Cropper
+            image={selectedImage}
+            crop={crop}
+            zoom={zoom}
+            rotation={rotation}
+            aspect={1}
+            onCropChange={setCrop}
+            onCropComplete={onCropComplete}
+            onZoomChange={setZoom}
+            onRotationChange={setRotation}
+            showGrid={true}
+            cropShape="rect"
+            objectFit="contain"
+          />
+        </div>
 
-          {/* Crop Controls */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 rounded-full px-4 py-2 flex items-center gap-2">
-            <button
-              onClick={handleZoomOut}
-              className="p-2 text-white hover:text-primary-300 transition-colors"
-              title="Verkleinern"
-            >
-              <ZoomOut className="h-4 w-4" />
-            </button>
-
-            <div className="w-20 mx-2">
+        {/* Crop Controls */}
+        <div className="space-y-4 bg-gray-50 p-6 rounded-xl border border-gray-100">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-4">
+              <ZoomOut className="h-5 w-5 text-gray-400" />
               <input
                 type="range"
+                value={zoom}
                 min={1}
                 max={3}
                 step={0.1}
-                value={zoom}
+                aria-labelledby="Zoom"
                 onChange={(e) => setZoom(Number(e.target.value))}
-                className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
+                className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary-600 focus:outline-none"
               />
+              <ZoomIn className="h-5 w-5 text-gray-400" />
             </div>
 
-            <button
-              onClick={handleZoomIn}
-              className="p-2 text-white hover:text-primary-300 transition-colors"
-              title="Vergrößern"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </button>
-
-            <div className="w-px h-6 bg-gray-600 mx-2"></div>
-
-            <button
-              onClick={handleRotate}
-              className="p-2 text-white hover:text-primary-300 transition-colors"
-              title="Drehen"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </button>
-
-            <button
-              onClick={handleReset}
-              className="p-2 text-white hover:text-primary-300 transition-colors"
-              title="Zurücksetzen"
-            >
-              <Move className="h-4 w-4" />
-            </button>
+            <div className="flex justify-center gap-4">
+              <Button
+                variant="outline"
+                onClick={handleRotate}
+                title="Drehen"
+                className="flex items-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Drehen
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                title="Zurücksetzen"
+                className="flex items-center gap-2"
+              >
+                <Move className="h-4 w-4" />
+                Zurücksetzen
+              </Button>
+            </div>
           </div>
-        </div>
 
-        {/* Instructions */}
-        <div className="text-center">
-          <p className="text-sm text-gray-600 mb-2">
-            🖱️ Ziehe das Bild zum Positionieren • 🔍 Zoom mit Mausrad oder Schieberegler
-          </p>
-          <p className="text-xs text-gray-500">
-            Das Bild wird automatisch auf ein quadratisches Profilbild zugeschnitten
-          </p>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex justify-center gap-3">
-          <Button
-            variant="ghost"
-            onClick={handleCancel}
-            disabled={isSaving}
-            className="min-w-[100px]"
-          >
-            Abbrechen
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleSave}
-            disabled={!croppedAreaPixels || isSaving}
-            isLoading={isSaving}
-            leftIcon={<Check className="h-4 w-4" />}
-            className="min-w-[100px]"
-          >
-            Speichern
-          </Button>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="px-6"
+            >
+              Abbrechen
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSave}
+              disabled={!croppedAreaPixels || isSaving}
+              isLoading={isSaving}
+              className="px-8 shadow-sm"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Speichern
+            </Button>
+          </div>
         </div>
 
         {error && (
@@ -347,96 +300,87 @@ function ProfileImageCropper({
   }
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Information Notice */}
-      {infoText && (
-        <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 flex items-start gap-3">
-          <Info className="h-5 w-5 text-primary-600 mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-primary-800 leading-relaxed whitespace-pre-wrap">
-            {infoText}
+    <div className={`space-y-6 ${className}`}>
+      {/* Restored instruction text */}
+      <div className="bg-primary-50 border border-primary-100 p-4 rounded-xl">
+        <div className="flex gap-3">
+          <div className="p-2 bg-white rounded-lg shadow-sm h-fit">
+            <User className="h-5 w-5 text-primary-600" />
+          </div>
+          <p className="text-sm text-primary-900 leading-relaxed">
+            Lass uns dein Profilbild zum Strahlen bringen! Ein freundliches Foto macht dein Profil direkt vertrauenswürdiger für Tierhalter.
           </p>
         </div>
-      )}
+      </div>
 
-      {/* Current Image Display */}
-      {displayImage && (
-        <div className="flex justify-center mb-4">
-          <div className="relative">
-            <img
-              src={displayImage}
-              alt="Profilbild"
-              className="h-32 w-32 object-cover rounded-xl border-4 border-gray-200 shadow-sm"
-            />
-            <button
-              onClick={() => setIsEditing(true)}
-              className="absolute bottom-0 right-0 bg-primary-500 hover:bg-primary-600 text-white rounded-full p-2 shadow-lg transition-colors"
-              title="Bild bearbeiten"
-              disabled={uploading}
-            >
-              <Move className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Upload Area */}
-      <div
-        {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragActive
-          ? 'border-primary-500 bg-primary-50'
-          : 'border-gray-300 bg-gray-50 hover:border-primary-400 hover:bg-primary-25'
-          } ${(uploading || isSaving) ? 'opacity-50 pointer-events-none' : ''}`}
-      >
-        <input {...getInputProps()} />
-
-        <div className="flex flex-col items-center space-y-2">
-          {isDragActive ? (
-            <Upload className="h-12 w-12 text-primary-500" />
-          ) : (
-            <Upload className="h-12 w-12 text-gray-400" />
-          )}
-
-          <div>
-            <p className="text-sm font-medium text-gray-900">
-              {isDragActive
-                ? 'Profilbild hier ablegen'
-                : displayImage
-                  ? 'Neues Profilbild hochladen'
-                  : 'Profilbild hochladen'
-              }
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              PNG, JPG bis 10MB • Wird quadratisch zugeschnitten
-            </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+        <div className="flex flex-col gap-6">
+          {/* Current Profile Picture Section (2/3 proportional height focus) */}
+          <div className={`flex-[2] flex flex-col items-center justify-center p-8 bg-gray-50 rounded-xl border border-gray-100 ${!displayImage ? 'min-h-[260px]' : 'min-h-[320px]'}`}>
+            {displayImage ? (
+              <div className="relative">
+                <img
+                  src={displayImage}
+                  alt="Profilbild"
+                  className="h-60 w-60 object-cover rounded-2xl border-4 border-white shadow-xl"
+                />
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="absolute bottom-2 right-2 bg-primary-500 hover:bg-primary-600 text-white rounded-full p-3 shadow-lg transition-colors"
+                  title="Bild bearbeiten"
+                  disabled={uploading}
+                >
+                  <Move className="h-6 w-6" />
+                </button>
+              </div>
+            ) : (
+              <div className="text-gray-400 flex flex-col items-center">
+                <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center mb-4">
+                  <User className="h-14 w-14 text-gray-400" />
+                </div>
+                <p className="text-lg font-medium text-gray-500">Noch kein Foto</p>
+                <p className="text-sm text-gray-400 mt-1">Lade dein erstes Bild hoch.</p>
+              </div>
+            )}
           </div>
 
-          {!isDragActive && (
-            <Button
-              variant="ghost"
-              className="text-primary-600 border-primary-300 hover:bg-primary-50"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Trigger the dropzone input directly
-                const input = document.querySelector('input[type="file"]') as HTMLInputElement;
-                if (input) input.click();
-              }}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Datei auswählen
-            </Button>
-          )}
-        </div>
-
-        {(uploading || isSaving) && (
-          <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div className="bg-primary-600 h-2 rounded-full animate-pulse w-1/3"></div>
+          {/* Upload Area Section (1/3 proportional height focus) */}
+          <div
+            {...getRootProps()}
+            className={`flex-[1] border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-200 ${isDragActive
+              ? 'border-primary-500 bg-primary-50 scale-[1.02]'
+              : 'border-gray-300 bg-white hover:border-primary-400 hover:bg-primary-5'
+              } ${(uploading || isSaving) ? 'opacity-50 pointer-events-none' : ''}`}
+          >
+            <input {...getInputProps()} />
+            <div className="flex flex-col items-center space-y-2">
+              <Upload className={`h-8 w-8 ${isDragActive ? 'text-primary-600' : 'text-gray-400'}`} />
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  {displayImage ? 'Bild ändern' : 'Bild hochladen'}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">Ziehen oder klicken</p>
+              </div>
             </div>
-            <p className="text-xs text-primary-600 mt-1">
-              {uploading ? 'Wird hochgeladen...' : 'Wird bearbeitet...'}
-            </p>
+
+            {(uploading || isSaving) && (
+              <div className="mt-4 w-full max-w-[160px]">
+                <div className="w-full bg-gray-200 rounded-full h-1 overflow-hidden">
+                  <div className="bg-primary-600 h-full animate-[progress_2s_ease-in-out_infinite] w-1/3 origin-left"></div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Right Section: New Textless Example Image */}
+        <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden h-full flex items-center justify-center">
+          <img
+            src="/Image/profilbild_beispiel_ohne_text"
+            alt="Beispiel für ein ideales Profilbild"
+            className="w-full h-full object-contain"
+          />
+        </div>
       </div>
 
       {error && (
@@ -444,17 +388,9 @@ function ProfileImageCropper({
           <p className="text-sm">{error}</p>
         </div>
       )}
-
-      {/* Tips */}
-      {!displayImage && (
-        <div className="text-center py-2">
-          <p className="text-xs text-gray-500">
-            💡 Tipp: Nach dem Upload kannst du dein Bild zuschneiden und positionieren
-          </p>
-        </div>
-      )}
     </div>
   );
 }
 
-export default ProfileImageCropper; 
+
+export default ProfileImageCropper;

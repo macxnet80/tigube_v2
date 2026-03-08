@@ -247,6 +247,9 @@ function RegisterPage() {
         }
 
         // Registration completed
+        if (typeof (window as any).Refgrow === 'function') {
+          (window as any).Refgrow(0, 'signup', formStep1.email);
+        }
 
         const dashboardPath = userType === 'owner' ? '/dashboard-owner' : '/dashboard-caretaker';
         console.log('✅ Registration completed. Redirecting to dashboard for onboarding:', dashboardPath);
@@ -286,8 +289,8 @@ function RegisterPage() {
             <button
               type="button"
               className={`flex-1 py-3 px-4 rounded-lg text-center transition-colors ${userType === 'owner'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-transparent text-gray-600 hover:bg-gray-100'
+                ? 'bg-primary-500 text-white'
+                : 'bg-transparent text-gray-600 hover:bg-gray-100'
                 }`}
               onClick={() => setUserType('owner')}
             >
@@ -296,8 +299,8 @@ function RegisterPage() {
             <button
               type="button"
               className={`flex-1 py-3 px-4 rounded-lg text-center transition-colors ${userType === 'dienstleister'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-transparent text-gray-600 hover:bg-gray-100'
+                ? 'bg-primary-500 text-white'
+                : 'bg-transparent text-gray-600 hover:bg-gray-100'
                 }`}
               onClick={() => setUserType('dienstleister')}
             >
