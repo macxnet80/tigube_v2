@@ -4760,6 +4760,7 @@ function CaretakerDashboardPage() {
                 onImageSave={handleCroppedImageSave}
                 uploading={avatarUploading}
                 error={avatarError}
+                infoText="Bitte lade ein nettes Profilbild von Dir hoch, um Vertrauen zu schaffen und Deinen Account freizuschalten. 😊 Achte auf ein echtes Portrait (Gesicht gut erkennbar), ohne KI, Avatare, Sonnenbrillen oder weitere Personen."
                 className="w-full"
               />
             </div>

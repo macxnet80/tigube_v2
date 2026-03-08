@@ -1,6 +1,6 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Cropper from 'react-easy-crop';
-import { Upload, X, Check, RotateCcw, ZoomIn, ZoomOut, Move } from 'lucide-react';
+import { Upload, Check, RotateCcw, ZoomIn, ZoomOut, Move, Info } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import Button from './Button';
 
@@ -22,14 +22,16 @@ interface ProfileImageCropperProps {
   uploading?: boolean;
   error?: string | null;
   className?: string;
+  infoText?: string;
 }
 
-function ProfileImageCropper({ 
-  photoUrl, 
-  onImageSave, 
-  uploading = false, 
+function ProfileImageCropper({
+  photoUrl,
+  onImageSave,
+  uploading = false,
   error = null,
-  className = ""
+  className = "",
+  infoText
 }: ProfileImageCropperProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(photoUrl || null);
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
@@ -95,7 +97,7 @@ function ProfileImageCropper({
     disabled: uploading || isSaving,
   });
 
-  const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
+  const onCropComplete = useCallback((_croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
@@ -107,7 +109,7 @@ function ProfileImageCropper({
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
+
       if (!ctx) {
         reject(new Error('Canvas-Kontext nicht verfügbar'));
         return;
@@ -163,24 +165,24 @@ function ProfileImageCropper({
           reject(e as Error);
         }
       };
-      
+
       image.onerror = () => {
         reject(new Error('Fehler beim Laden des Bildes'));
       };
-      
+
       image.src = selectedImage;
     });
   }, [selectedImage, croppedAreaPixels, rotation]);
 
   const handleSave = async () => {
     if (!croppedAreaPixels) return;
-    
+
     setIsSaving(true);
     try {
       console.log('🔄 Erstelle gecropptes Bild...');
       const croppedImageUrl = await createCroppedImage();
       console.log('✅ Gecropptes Bild erstellt, starte Upload...');
-      
+
       await onImageSave(croppedImageUrl);
       console.log('✅ Upload erfolgreich abgeschlossen');
       setIsEditing(false);
@@ -252,7 +254,7 @@ function ProfileImageCropper({
               }}
             />
           </div>
-          
+
           {/* Crop Controls */}
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-75 rounded-full px-4 py-2 flex items-center gap-2">
             <button
@@ -262,7 +264,7 @@ function ProfileImageCropper({
             >
               <ZoomOut className="h-4 w-4" />
             </button>
-            
+
             <div className="w-20 mx-2">
               <input
                 type="range"
@@ -274,7 +276,7 @@ function ProfileImageCropper({
                 className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
               />
             </div>
-            
+
             <button
               onClick={handleZoomIn}
               className="p-2 text-white hover:text-primary-300 transition-colors"
@@ -282,9 +284,9 @@ function ProfileImageCropper({
             >
               <ZoomIn className="h-4 w-4" />
             </button>
-            
+
             <div className="w-px h-6 bg-gray-600 mx-2"></div>
-            
+
             <button
               onClick={handleRotate}
               className="p-2 text-white hover:text-primary-300 transition-colors"
@@ -292,7 +294,7 @@ function ProfileImageCropper({
             >
               <RotateCcw className="h-4 w-4" />
             </button>
-            
+
             <button
               onClick={handleReset}
               className="p-2 text-white hover:text-primary-300 transition-colors"
@@ -308,9 +310,9 @@ function ProfileImageCropper({
           <p className="text-sm text-gray-600 mb-2">
             🖱️ Ziehe das Bild zum Positionieren • 🔍 Zoom mit Mausrad oder Schieberegler
           </p>
-                     <p className="text-xs text-gray-500">
-             Das Bild wird automatisch auf ein quadratisches Profilbild zugeschnitten
-           </p>
+          <p className="text-xs text-gray-500">
+            Das Bild wird automatisch auf ein quadratisches Profilbild zugeschnitten
+          </p>
         </div>
 
         {/* Action Buttons */}
@@ -346,15 +348,25 @@ function ProfileImageCropper({
 
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* Information Notice */}
+      {infoText && (
+        <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 flex items-start gap-3">
+          <Info className="h-5 w-5 text-primary-600 mt-0.5 flex-shrink-0" />
+          <p className="text-sm text-primary-800 leading-relaxed whitespace-pre-wrap">
+            {infoText}
+          </p>
+        </div>
+      )}
+
       {/* Current Image Display */}
       {displayImage && (
         <div className="flex justify-center mb-4">
           <div className="relative">
-                         <img
-               src={displayImage}
-               alt="Profilbild"
-               className="h-32 w-32 object-cover rounded-xl border-4 border-gray-200 shadow-sm"
-             />
+            <img
+              src={displayImage}
+              alt="Profilbild"
+              className="h-32 w-32 object-cover rounded-xl border-4 border-gray-200 shadow-sm"
+            />
             <button
               onClick={() => setIsEditing(true)}
               className="absolute bottom-0 right-0 bg-primary-500 hover:bg-primary-600 text-white rounded-full p-2 shadow-lg transition-colors"
@@ -368,40 +380,39 @@ function ProfileImageCropper({
       )}
 
       {/* Upload Area */}
-      <div 
-        {...getRootProps()} 
-        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-          isDragActive 
-            ? 'border-primary-500 bg-primary-50' 
-            : 'border-gray-300 bg-gray-50 hover:border-primary-400 hover:bg-primary-25'
-        } ${(uploading || isSaving) ? 'opacity-50 pointer-events-none' : ''}`}
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragActive
+          ? 'border-primary-500 bg-primary-50'
+          : 'border-gray-300 bg-gray-50 hover:border-primary-400 hover:bg-primary-25'
+          } ${(uploading || isSaving) ? 'opacity-50 pointer-events-none' : ''}`}
       >
         <input {...getInputProps()} />
-        
+
         <div className="flex flex-col items-center space-y-2">
           {isDragActive ? (
             <Upload className="h-12 w-12 text-primary-500" />
           ) : (
             <Upload className="h-12 w-12 text-gray-400" />
           )}
-          
+
           <div>
             <p className="text-sm font-medium text-gray-900">
-              {isDragActive 
-                ? 'Profilbild hier ablegen' 
-                : displayImage 
+              {isDragActive
+                ? 'Profilbild hier ablegen'
+                : displayImage
                   ? 'Neues Profilbild hochladen'
                   : 'Profilbild hochladen'
               }
             </p>
-                         <p className="text-xs text-gray-500 mt-1">
-               PNG, JPG bis 10MB • Wird quadratisch zugeschnitten
-             </p>
+            <p className="text-xs text-gray-500 mt-1">
+              PNG, JPG bis 10MB • Wird quadratisch zugeschnitten
+            </p>
           </div>
-          
+
           {!isDragActive && (
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="text-primary-600 border-primary-300 hover:bg-primary-50"
               onClick={(e) => {
                 e.stopPropagation();
