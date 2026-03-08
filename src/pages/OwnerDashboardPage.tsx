@@ -22,6 +22,7 @@ import RegistrationSuccessModal from '../components/ui/RegistrationSuccessModal'
 import ProfileImageCropper from '../components/ui/ProfileImageCropper';
 import OwnerContactTab from '../components/ui/OwnerContactTab';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
+import RefGrowDashboard from '../components/ui/RefGrowDashboard';
 
 
 const ALL_SERVICES = [
@@ -137,7 +138,7 @@ function OwnerDashboardPage() {
   const [petError, setPetError] = useState<string | null>(null);
   const [showAddPet, setShowAddPet] = useState(false);
   const [newPet, setNewPet] = useState<PetFormData>({ name: '', type: '', typeOther: '', breed: '', birthDate: '', weight: '', image: '', description: '', gender: '', neutered: false });
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'tiere' | 'kontaktdaten' | 'einstellungen' | 'mitgliedschaft'>('uebersicht');
+  const [activeTab, setActiveTab] = useState<'uebersicht' | 'tiere' | 'affiliate' | 'kontaktdaten' | 'einstellungen' | 'mitgliedschaft'>('uebersicht');
   const [editData, setEditData] = useState(false);
   const [ownerData, setOwnerData] = useState({
     phoneNumber: '',
@@ -1439,16 +1440,16 @@ function OwnerDashboardPage() {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10">
-      <div className="container-custom">
+    <div className="bg-gray-50 min-h-screen py-6 sm:py-10">
+      <div className="container-custom px-4 sm:px-6 lg:px-8">
         {/* Profil-Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
           <div className="flex flex-col lg:flex-row items-start gap-6">
-            <div className="relative w-32 h-32 mx-auto lg:mx-0 group">
+            <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto lg:mx-0 group">
               <img
                 src={avatarUrl}
                 alt={fullName}
-                className="w-32 h-32 rounded-xl object-cover border-4 border-primary-100 shadow"
+                className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl object-cover border-4 border-primary-100 shadow"
               />
 
               {/* Overlay für Edit-Button */}
@@ -1475,9 +1476,9 @@ function OwnerDashboardPage() {
             <div className="flex-1 w-full">
               <div className="flex flex-col lg:flex-row gap-8">
                 {/* Erste Spalte: Name und Tiere */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-4">
-                    <h1 className="text-2xl sm:text-3xl font-bold">{fullName}</h1>
+                <div className="flex-1 text-center lg:text-left">
+                  <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-2 mb-4">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{fullName}</h1>
                     {/* Crown-Icon für Premium-Status mit Hovereffekt */}
                     {userProfile?.premium_badge && (
                       <div className="group relative">
@@ -1493,10 +1494,10 @@ function OwnerDashboardPage() {
                   </div>
 
                   {/* Pet-Badges */}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap justify-center lg:justify-start gap-2">
                     {pets.map((pet) => (
-                      <span key={pet.id} className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary-50 text-primary-700">
-                        <PawPrint className="h-4 w-4 mr-1" />{pet.name} ({pet.type})
+                      <span key={pet.id} className="inline-flex items-center px-3 py-1 rounded-full text-xs sm:text-sm bg-primary-50 text-primary-700 border border-primary-100">
+                        <PawPrint className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />{pet.name} ({pet.type})
                       </span>
                     ))}
                   </div>
@@ -1524,8 +1525,8 @@ function OwnerDashboardPage() {
 
         {/* Tab Navigation */}
         <div className="mb-8">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-6 sm:space-x-8 overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
+          <div className="border-b border-gray-200 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto whitespace-nowrap scrollbar-hide pb-0.5">
               <button
                 onClick={() => setActiveTab('uebersicht')}
                 className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'uebersicht'
@@ -1545,6 +1546,15 @@ function OwnerDashboardPage() {
               >
                 <PawPrint className="h-4 w-4 inline mr-2" />
                 Meine Tiere
+              </button>
+              <button
+                onClick={() => setActiveTab('affiliate')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'affiliate'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+              >
+                Affiliate Programm
               </button>
               <button
                 onClick={() => setActiveTab('kontaktdaten')}
@@ -1784,6 +1794,10 @@ function OwnerDashboardPage() {
           </>
         )}
 
+        {activeTab === 'affiliate' && (
+          <RefGrowDashboard email={user.email || ''} />
+        )}
+
         {activeTab === 'kontaktdaten' && (
           <OwnerContactTab />
         )}
@@ -1800,7 +1814,7 @@ function OwnerDashboardPage() {
               ) : pets.length === 0 ? (
                 <div className="text-gray-500 italic">Hier ist noch gähnende Leere…  Füge jetzt dein erstes Tier hinzu!</div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                   {pets.map((pet) => (
                     <div key={pet.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 relative hover:shadow-md transition-shadow duration-200">
                       {editPet !== pet.id ? (

@@ -28,6 +28,7 @@ import ToastContainer from '../components/ui/ToastContainer';
 import { VerificationService, type VerificationDocument } from '../lib/services/verificationService';
 import CaretakerContactTab from '../components/ui/CaretakerContactTab';
 import { isCaretaker } from '../lib/utils';
+import RefGrowDashboard from '../components/ui/RefGrowDashboard';
 
 
 function CaretakerDashboardPage() {
@@ -1782,7 +1783,7 @@ function CaretakerDashboardPage() {
 
   // Tab-Navigation für Übersicht/Fotos
   // Standard-Tab: 'uebersicht' funktioniert für alle Dienstleister-Typen
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'kontaktdaten' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften' | 'verfuegbarkeit' | 'partner'>('uebersicht');
+  const [activeTab, setActiveTab] = useState<'uebersicht' | 'fotos' | 'texte' | 'kunden' | 'bewertungen' | 'affiliate' | 'kontaktdaten' | 'sicherheit' | 'verifizierung' | 'mitgliedschaften' | 'verfuegbarkeit' | 'partner'>('uebersicht');
 
   // Scroll-Position-Persistierung entfernt - Browser sollte das automatisch handhaben
   // Das Problem liegt woanders - wahrscheinlich an anderen useEffect-Hooks die Re-Renders verursachen
@@ -2388,7 +2389,7 @@ function CaretakerDashboardPage() {
     setLoading(false);
   }
   return (
-    <div className="container-custom py-8">
+    <div className="container-custom px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       {/* Profilkarte */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
         <div className="flex flex-col lg:flex-row items-start gap-6">
@@ -2425,8 +2426,8 @@ function CaretakerDashboardPage() {
               {/* Name und Dienstleistung */}
               <div className="flex-1 relative">
                 <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h1 className="text-2xl sm:text-3xl font-bold">{fullName}</h1>
+                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 mb-4">
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{fullName}</h1>
                     {/* Auge-Icon neben dem Namen mit Hovereffekt */}
                     <div className="group relative">
                       <Link
@@ -2547,9 +2548,9 @@ function CaretakerDashboardPage() {
                   )}
 
                   {/* Rechte Seite: Kurzfristig verfügbar und Freigabe-Button untereinander, rechts oben am Rand */}
-                  <div className="absolute top-0 right-0 flex flex-col items-end gap-2">
+                  <div className="mt-4 lg:absolute lg:top-0 lg:right-0 flex flex-col items-center lg:items-end gap-2 w-full lg:w-auto">
                     {/* Kurzfristig Verfügbar Toggle */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between lg:justify-end gap-2 w-full sm:w-auto bg-gray-50 lg:bg-transparent p-2 rounded-lg lg:p-0">
                       <span className="text-sm text-gray-600">Kurzfristig verfügbar</span>
                       <button
                         onClick={handleShortTermAvailabilityToggle}
@@ -2574,11 +2575,11 @@ function CaretakerDashboardPage() {
 
                     {/* Profil-Freigabe Button */}
                     {profile?.approval_status !== 'approved' && (
-                      <div className="flex flex-col items-end gap-2">
+                      <div className="flex flex-col items-center lg:items-end gap-2 w-full sm:w-auto">
                         {profile?.approval_status === 'pending' ? (
                           <button
                             disabled
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-lg cursor-not-allowed"
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-lg cursor-not-allowed"
                           >
                             <Clock className="h-4 w-4" />
                             Profil wird überprüft
@@ -2587,7 +2588,7 @@ function CaretakerDashboardPage() {
                           <button
                             onClick={handleRequestApproval}
                             disabled={approvalLoading}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {approvalLoading ? (
                               <>
@@ -2605,7 +2606,7 @@ function CaretakerDashboardPage() {
                           <button
                             onClick={handleRequestApproval}
                             disabled={approvalLoading}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-700 text-sm font-medium rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-700 text-sm font-medium rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {approvalLoading ? (
                               <>
@@ -2663,10 +2664,10 @@ function CaretakerDashboardPage() {
       </div>
 
       {/* Sidebar-Navigation + Content-Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-        <aside className="md:col-span-1">
-          <nav className="bg-white rounded-xl shadow p-2 sm:p-4 md:sticky md:top-4 overflow-x-auto scrollbar-hide">
-            <ul className="flex flex-row md:flex-col gap-2 md:gap-0 md:space-y-1">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8 mb-8">
+        <aside className="lg:col-span-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <nav className="bg-white rounded-xl shadow p-2 sm:p-4 lg:sticky lg:top-4 overflow-x-auto scrollbar-hide">
+            <ul className="flex flex-row lg:flex-col gap-2 lg:gap-0 lg:space-y-1">
               <li>
                 <button
                   type="button"
@@ -2748,6 +2749,19 @@ function CaretakerDashboardPage() {
               <li>
                 <button
                   type="button"
+                  onClick={() => setActiveTab('affiliate')}
+                  aria-current={activeTab === 'affiliate' ? 'page' : undefined}
+                  className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'affiliate'
+                    ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                    : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                >
+                  Affiliate Programm
+                </button>
+              </li>
+              <li>
+                <button
+                  type="button"
                   onClick={() => setActiveTab('bewertungen')}
                   aria-current={activeTab === 'bewertungen' ? 'page' : undefined}
                   className={`w-full whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'bewertungen'
@@ -2821,7 +2835,7 @@ function CaretakerDashboardPage() {
             </ul>
           </nav>
         </aside>
-        <section className="md:col-span-3">
+        <section className="lg:col-span-3">
           {/* Tab-Inhalt */}
           {activeTab === 'uebersicht' && (
             <div className="space-y-8">
@@ -2846,22 +2860,22 @@ function CaretakerDashboardPage() {
                               const isTravelCosts = service.name === 'Anfahrkosten';
 
                               return (
-                                <div key={index} className={`flex items-center justify-between p-3 rounded-lg border ${isTravelCosts ? 'bg-orange-50 border-orange-200' :
+                                <div key={index} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg border gap-3 ${isTravelCosts ? 'bg-orange-50 border-orange-200' :
                                   isStandardService ? 'bg-green-50 border-green-200' :
                                     'bg-blue-50 border-blue-200'
                                   }`}>
                                   <div className="flex items-center gap-3">
-                                    <div className="w-4 h-4 rounded border-2 border-primary-300 bg-primary-100 flex items-center justify-center">
+                                    <div className="w-4 h-4 rounded border-2 border-primary-300 bg-primary-100 flex items-center justify-center shrink-0">
                                       <Check className="w-3 h-3 text-primary-600" />
                                     </div>
                                     <div className="flex flex-col">
-                                      <span className="font-medium text-gray-900">{service.name}</span>
+                                      <span className="font-medium text-gray-900 line-clamp-1">{service.name}</span>
                                       {service.category_name && service.category_name !== 'Allgemein' && (
                                         <span className="text-xs text-gray-500">{service.category_name}</span>
                                       )}
                                     </div>
                                   </div>
-                                  <div className="text-right">
+                                  <div className="text-right w-full sm:w-auto">
                                     {service.price ? (
                                       <span className="font-semibold text-primary-600">
                                         {service.price} €
@@ -4232,6 +4246,9 @@ function CaretakerDashboardPage() {
                 </div>
               </div>
             </div>
+          )}
+          {activeTab === 'affiliate' && (
+            <RefGrowDashboard email={user?.email || ''} />
           )}
           {activeTab === 'kontaktdaten' && (
             <CaretakerContactTab />
