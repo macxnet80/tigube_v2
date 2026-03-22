@@ -1833,6 +1833,282 @@ export type Database = {
           },
         ]
       }
+      marketplace_categories: {
+        Row: {
+          created_at: string
+          icon_name: string | null
+          id: string
+          is_active: boolean
+          name: string
+          parent_id: string | null
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_id?: string | null
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_favorites: {
+        Row: {
+          created_at: string
+          listing_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          listing_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          listing_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_favorites_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "caretaker_search_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "dienstleister_search_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_images: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string
+          sort_order: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id: string
+          sort_order?: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string
+          sort_order?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_images_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_listings: {
+        Row: {
+          admin_deactivated_at: string | null
+          admin_deactivated_by: string | null
+          admin_deactivation_reason: string | null
+          category_id: string
+          condition: string | null
+          created_at: string
+          description: string
+          expires_at: string | null
+          id: string
+          listing_type: string
+          location_city: string | null
+          location_zip: string | null
+          price: number | null
+          price_type: string
+          status: string
+          suitable_for: string[]
+          title: string
+          updated_at: string
+          user_id: string
+          view_count: number
+        }
+        Insert: {
+          admin_deactivated_at?: string | null
+          admin_deactivated_by?: string | null
+          admin_deactivation_reason?: string | null
+          category_id: string
+          condition?: string | null
+          created_at?: string
+          description: string
+          expires_at?: string | null
+          id?: string
+          listing_type?: string
+          location_city?: string | null
+          location_zip?: string | null
+          price?: number | null
+          price_type?: string
+          status?: string
+          suitable_for?: string[]
+          title: string
+          updated_at?: string
+          user_id: string
+          view_count?: number
+        }
+        Update: {
+          admin_deactivated_at?: string | null
+          admin_deactivated_by?: string | null
+          admin_deactivation_reason?: string | null
+          category_id?: string
+          condition?: string | null
+          created_at?: string
+          description?: string
+          expires_at?: string | null
+          id?: string
+          listing_type?: string
+          location_city?: string | null
+          location_zip?: string | null
+          price?: number | null
+          price_type?: string
+          status?: string
+          suitable_for?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "caretaker_search_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "dienstleister_search_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_listing_notices: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string | null
+          listing_title_snapshot: string | null
+          notice_type: string
+          read_at: string | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          listing_title_snapshot?: string | null
+          notice_type: string
+          read_at?: string | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          listing_title_snapshot?: string | null
+          notice_type?: string
+          read_at?: string | null
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listing_notices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "caretaker_search_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listing_notices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "dienstleister_search_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_listing_notices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       owner_preferences: {
         Row: {
           care_instructions: string | null
@@ -3363,6 +3639,18 @@ export type Database = {
       }
       increment_advertisement_impressions: {
         Args: { ad_id: string }
+        Returns: undefined
+      }
+      increment_marketplace_listing_view: {
+        Args: { p_listing_id: string }
+        Returns: undefined
+      }
+      admin_deactivate_marketplace_listing: {
+        Args: { p_listing_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_delete_marketplace_listing: {
+        Args: { p_listing_id: string; p_reason: string }
         Returns: undefined
       }
       log_admin_action: {

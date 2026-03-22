@@ -10,7 +10,7 @@ function Footer() {
   return (
     <footer className="bg-[#5A6B4B] bg-opacity-75 text-white">
       <div className="container-custom py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
           {/* Logo und Beschreibung */}
           <div className="lg:col-span-1">
             <Link to="/" className="flex items-center space-x-2 mb-4">
@@ -66,6 +66,18 @@ function Footer() {
               <li><FooterLink to="/impressum">Impressum</FooterLink></li>
               <li><FooterLink to="/datenschutz">Datenschutz</FooterLink></li>
               <li><FooterLink to="/agb">AGB</FooterLink></li>
+            </ul>
+          </div>
+
+          {/* Marktplatz */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Marktplatz</h3>
+            <ul className="space-y-2">
+              <li>
+                <FooterLink to="/marktplatz/nutzungsbedingungen">
+                  Nutzungsbedingungen
+                </FooterLink>
+              </li>
             </ul>
           </div>
         </div>

@@ -37,6 +37,12 @@ const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
 const OwnerJobsPage = lazy(() => import('./pages/OwnerJobsPage'));
 const ReleaseNotesListPage = lazy(() => import('./pages/ReleaseNotesListPage'));
 const ReleaseNotePage = lazy(() => import('./pages/ReleaseNotePage'));
+const MarketplacePage = lazy(() => import('./pages/MarketplacePage'));
+const MarketplaceDetailPage = lazy(() => import('./pages/MarketplaceDetailPage'));
+const CreateListingPage = lazy(() => import('./pages/CreateListingPage'));
+const MyListingsPage = lazy(() => import('./pages/MyListingsPage'));
+const EditListingPage = lazy(() => import('./pages/EditListingPage'));
+const MarketplaceTermsPage = lazy(() => import('./pages/MarketplaceTermsPage'));
 
 // Debug components (only in development)
 
@@ -92,6 +98,33 @@ function App() {
             <Route path="/newsletter/confirm" element={<CleverreachRedirectPage />} />
             <Route path="/newsletter/unsubscribe" element={<CleverreachRedirectPage />} />
             <Route path="/hilfe-center" element={<HelpCenterPage />} />
+            <Route path="/marktplatz" element={<MarketplacePage />} />
+            <Route
+              path="/marktplatz/neu"
+              element={
+                <SafeProtectedRoute>
+                  <CreateListingPage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route
+              path="/marktplatz/meine"
+              element={
+                <SafeProtectedRoute>
+                  <MyListingsPage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route
+              path="/marktplatz/bearbeiten/:id"
+              element={
+                <SafeProtectedRoute>
+                  <EditListingPage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route path="/marktplatz/nutzungsbedingungen" element={<MarketplaceTermsPage />} />
+            <Route path="/marktplatz/:id" element={<MarketplaceDetailPage />} />
 
             {/* Test-Dashboard entfernt */}
 

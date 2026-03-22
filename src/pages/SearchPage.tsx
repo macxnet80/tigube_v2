@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { MapPin, Star, Filter, X, ChevronDown, PawPrint, Briefcase, Clock, Heart } from 'lucide-react';
+import {
+  MapPin,
+  Star,
+  Filter,
+  X,
+  ChevronDown,
+  PawPrint,
+  Briefcase,
+  Clock,
+  Heart,
+} from 'lucide-react';
 import Button from '../components/ui/Button';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';

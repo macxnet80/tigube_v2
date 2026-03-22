@@ -36,6 +36,21 @@
 - Wo nötig: **getrennte Queries** statt eines komplexen Joins (RLS, Lesbarkeit)
 - Auth: Session/User-ID aus Supabase Auth für RLS-Kontext
 
+### Marktplatz-UI (`MarketplacePage`)
+- **Layout** an **Betreuer-Suche** (`SearchPage`) angeglichen: `bg-gray-50 min-h-screen`, linke Spalte `lg:w-80`, **`sticky top-8`**
+- **Zwei Karten** statt einer: (1) **Kategorie** — vertikale Liste via `MarketplaceCategoryBrowser` `variant="sidebar"` (Links mit `?kategorie=`), optional `max-h` + Scroll; (2) **Weitere Filter** — **ausklappbar** (`filtersExpanded`), Kopfzeile mit `SlidersHorizontal`, Chevron, Hinweis auf aktive Zusatzfilter; Inhalt = `MarketplaceFilters` **`layout="search"`** (Labels/Inputs wie SearchPage: Icons links, `py-2.5`, `focus:ring-primary-500`)
+- `MarketplaceFilters`: zusätzliche Layouts **`horizontal`** (Standard-Grid), **`sidebar`** (kompakt), **`search`** (Suche-Stil)
+
+### Footer
+- **`lg:grid-cols-5`**: Logo + Spalten **Für Tierhalter**, **Unternehmen**, **Marktplatz** (Link **Nutzungsbedingungen** → `/marktplatz/nutzungsbedingungen`)
+
+### Marktplatz-Recht & Formular
+- `MarketplaceTermsPage`: statische NB tigube-Marktplatz
+- `CreateListingForm`: bei **neuer** Anzeige Checkbox Zustimmung NB (Link in neuem Tab), Submit gesperrt ohne Zustimmung
+
+### Branding (Copy)
+- Schreibweise **tigube** durchgängig **klein** in UI- und Rechtstexten (Ausnahme: rechtliche Form „tigube UG“ wo nötig)
+
 ### UI
 - Modals statt `alert` wo möglich
 - Formulare: controlled components, konsistente Button-/Input-Klassen (`input`, Tailwind)

@@ -22,6 +22,10 @@ Tierhalter brauchen verlässliche Betreuung (Urlaub, Arbeit, kurzfristige Termin
 - Standort- und Service-Filter, Termine
 - Dienstleister-Kategorien ergänzen klassische Betreuer-Suche
 
+### Zubehör-Marktplatz
+- Tierhalter und andere Nutzer können **Zubehör-Anzeigen** schalten und stöbern (Filter, Kategorie per URL `?kategorie=`).
+- Rechtstext: **Nutzungsbedingungen tigube-Marktplatz** (eigene Seite, Verlinkung im Footer unter Spalte „Marktplatz“).
+
 ### Tierhalter-Jobs (Premium)
 - **Tierhalter (Premium)** können **Jobs** anlegen (Zeitraum, Ort, Budget-Hinweis, Service-Tags, verknüpfte Haustiere).
 - Jobs erscheinen auf dem **öffentlichen Tierhalter-Profil** und auf der **Übersichtsseite `/jobs`** (eingeloggt).

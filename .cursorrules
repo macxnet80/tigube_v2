@@ -40,9 +40,24 @@ export default Component;
 
 ### Routing-Struktur
 - **Deutsche URLs**: `/suche`, `/registrieren`, `/anmelden`
+- **Marktplatz**: `/marktplatz`, `/marktplatz/neu`, `/marktplatz/meine`, `/marktplatz/bearbeiten/:id`, `/marktplatz/nutzungsbedingungen` — **statische Route** `nutzungsbedingungen` **vor** `/marktplatz/:id` in `App.tsx` registrieren
 - **Lazy Loading**: Alle Seiten-Komponenten
 - **Layout-Wrapper**: Konsistente Seitenstruktur
-- **Query-Parameter**: Für Suchfilter
+- **Query-Parameter**: Für Suchfilter (Marktplatz: `?kategorie=`)
+
+### Marktplatz (Zubehör)
+- **UI**: An **SearchPage** (`/suche`) angeglichen — `bg-gray-50`, linke Spalte `lg:w-80`, weiße Karten `rounded-xl shadow-sm`, `sticky top-8`
+- **Kategorie**: eigene Box; Navigation als **Liste** (`MarketplaceCategoryBrowser` `variant="sidebar"`, Links mit `?kategorie=`)
+- **Weitere Filter**: **ausklappbar** (State z. B. `filtersExpanded`); Inhalt `MarketplaceFilters` mit `layout="search"` (Icon-in-Feld wie Betreuer-Suche)
+- **Komponenten**: `MarketplacePage`, `MarketplaceFilters` (Layouts: `horizontal` | `sidebar` | `search`), `MarketplaceCategoryBrowser`, `MarketplaceTermsPage`, `CreateListingForm` (NB-Checkbox nur bei **Create**)
+- **Service**: `src/lib/supabase/marketplaceService.ts`
+- **Admin-Moderation**: separates Repo **tigube-admin**, Tab Marktplatz, RPCs `admin_deactivate_marketplace_listing` / `admin_delete_marketplace_listing` (DB-Migration `marketplace_admin_moderation` im Repo)
+
+### Footer
+- Fünfte Spalte **Marktplatz** mit Link **Nutzungsbedingungen** → `/marktplatz/nutzungsbedingungen`; Grid **`lg:grid-cols-5`** in `Footer.tsx`
+
+### Schreibweise „tigube“
+- In **UI- und Rechtstexten** durchgängig **klein** schreiben: **tigube** (nicht „Tigube“); Ausnahmen nur wo rechtlich nötig (z. B. Firmenname „tigube UG“ in Impressum/NB)
 
 ### Styling-Präferenzen
 - **Mobile-First**: Responsive Design von Anfang an
@@ -187,6 +202,11 @@ interface SearchFilters {
 2. Mock-Daten → Filter-Logik → Ergebnisse anzeigen
 3. Betreuer-Cards → Profil-Links → BetreuerProfilePage
 
+#### Marktplatz
+1. Kategorie (URL `kategorie`) + `appliedFilters` → `listMarketplaceListings`
+2. Neue Anzeige: NB-Checkbox → `MarketplaceTermsPage` verlinkt; Footer-Spalte Marktplatz
+3. Moderation: Admin-App → RPCs + `marketplace_listing_notices` für Nutzerhinweise
+
 #### Authentifizierung (geplant)
 1. Supabase Auth Setup → Login/Register Forms
 2. Protected Routes mit JWT → User Context → State Management
@@ -239,7 +259,8 @@ interface SearchFilters {
 ### Phase 1: MVP (Aktuell)
 - Grundlegende Suchfunktionalität
 - Statische Betreuer-Profile
-- Mock-Daten-basiert
+- Zubehör-Marktplatz (Supabase, NB, Moderation via Admin-App)
+- Mock-Daten-basiert (teilweise durch Supabase ersetzt)
 
 ### Phase 2: Backend-Integration
 - Supabase-Integration

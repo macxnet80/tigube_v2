@@ -7,7 +7,10 @@ import { useNotifications } from '../../lib/notifications/NotificationContext';
 import { useSubscription } from '../../lib/auth/useSubscription';
 
 import NotificationBadge from '../ui/NotificationBadge';
-import { isJobsLinkNewBadgeActive } from '../../lib/constants/navigationBadges';
+import {
+  isJobsLinkNewBadgeActive,
+  isMarktplatzLinkNewBadgeActive,
+} from '../../lib/constants/navigationBadges';
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,6 +24,7 @@ function Header() {
 
   const isActive = (path: string) => location.pathname === path;
   const jobsNewBadge = isJobsLinkNewBadgeActive();
+  const marktplatzNewBadge = isMarktplatzLinkNewBadgeActive();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -118,6 +122,23 @@ function Header() {
                     </div>
                   )}
                 </div>
+                <NavLink
+                  to="/marktplatz"
+                  isActive={location.pathname.startsWith('/marktplatz')}
+                  aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    Marktplatz
+                    {marktplatzNewBadge ? (
+                      <span
+                        className="rounded bg-primary-600 px-1 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                        aria-hidden
+                      >
+                        NEW
+                      </span>
+                    ) : null}
+                  </span>
+                </NavLink>
                 <NavLink to="/blog" isActive={isActive('/blog')}>
                   tigube-Welt
                 </NavLink>
@@ -153,6 +174,23 @@ function Header() {
                 <NavLink to="/suche" isActive={isActive('/suche')}>
                   Betreuer finden
                 </NavLink>
+                <NavLink
+                  to="/jobs"
+                  isActive={isActive('/jobs')}
+                  aria-label={jobsNewBadge ? 'Jobs, neu' : undefined}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    Jobs
+                    {jobsNewBadge ? (
+                      <span
+                        className="rounded bg-primary-600 px-1 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                        aria-hidden
+                      >
+                        NEW
+                      </span>
+                    ) : null}
+                  </span>
+                </NavLink>
                 <div className="relative inline-block group">
                   <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
                     Wo finde ich...?
@@ -162,11 +200,28 @@ function Header() {
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-amber-500" />
                   </div>
                 </div>
-                <NavLink to="/mitgliedschaften" isActive={isActive('/mitgliedschaften') || isActive('/preise')}>
-                  Preise
+                <NavLink
+                  to="/marktplatz"
+                  isActive={location.pathname.startsWith('/marktplatz')}
+                  aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    Marktplatz
+                    {marktplatzNewBadge ? (
+                      <span
+                        className="rounded bg-primary-600 px-1 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                        aria-hidden
+                      >
+                        NEW
+                      </span>
+                    ) : null}
+                  </span>
                 </NavLink>
                 <NavLink to="/blog" isActive={isActive('/blog')}>
                   tigube-Welt
+                </NavLink>
+                <NavLink to="/mitgliedschaften" isActive={isActive('/mitgliedschaften') || isActive('/preise')}>
+                  Preise
                 </NavLink>
                 <Link
                   to="/anmelden"
@@ -246,6 +301,24 @@ function Header() {
                       </span>
                     )}
                   </div>
+                  <MobileNavLink
+                    to="/marktplatz"
+                    isActive={location.pathname.startsWith('/marktplatz')}
+                    onClick={() => setIsMenuOpen(false)}
+                    aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      Marktplatz
+                      {marktplatzNewBadge ? (
+                        <span
+                          className="rounded bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                          aria-hidden
+                        >
+                          NEW
+                        </span>
+                      ) : null}
+                    </span>
+                  </MobileNavLink>
                   <MobileNavLink to="/blog" isActive={isActive('/blog')} onClick={() => setIsMenuOpen(false)}>
                     tigube-Welt
                   </MobileNavLink>
@@ -289,6 +362,24 @@ function Header() {
                   <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
                     Betreuer finden
                   </MobileNavLink>
+                  <MobileNavLink
+                    to="/jobs"
+                    isActive={isActive('/jobs')}
+                    onClick={() => setIsMenuOpen(false)}
+                    aria-label={jobsNewBadge ? 'Jobs, neu' : undefined}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      Jobs
+                      {jobsNewBadge ? (
+                        <span
+                          className="rounded bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                          aria-hidden
+                        >
+                          NEW
+                        </span>
+                      ) : null}
+                    </span>
+                  </MobileNavLink>
                   <div className="relative group">
                     <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
                       Wo finde ich...?
@@ -298,11 +389,22 @@ function Header() {
                     </span>
                   </div>
                   <MobileNavLink
-                    to="/mitgliedschaften"
-                    isActive={isActive('/mitgliedschaften') || isActive('/preise')}
+                    to="/marktplatz"
+                    isActive={location.pathname.startsWith('/marktplatz')}
                     onClick={() => setIsMenuOpen(false)}
+                    aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
                   >
-                    Preise
+                    <span className="inline-flex items-center gap-2">
+                      Marktplatz
+                      {marktplatzNewBadge ? (
+                        <span
+                          className="rounded bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                          aria-hidden
+                        >
+                          NEW
+                        </span>
+                      ) : null}
+                    </span>
                   </MobileNavLink>
                   <MobileNavLink
                     to="/blog"
@@ -310,6 +412,13 @@ function Header() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     tigube-Welt
+                  </MobileNavLink>
+                  <MobileNavLink
+                    to="/mitgliedschaften"
+                    isActive={isActive('/mitgliedschaften') || isActive('/preise')}
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Preise
                   </MobileNavLink>
                   <div className="pt-2 flex flex-col space-y-2">
                     <Link

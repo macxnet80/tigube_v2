@@ -19,6 +19,7 @@ Tigube v2 ist eine moderne Web-Plattform zur Vermittlung von Haustierbetreuungsd
 - **Benutzerregistrierung**: Registrierung und Anmeldung (deutsche URLs z. B. `/anmelden`, `/registrieren`)
 - **Chat / Nachrichten**: Konversationen Tierhalter–Betreuer; **Bewerbung auf Jobs** per Chat (Premium Betreuer)
 - **Favoriten-System**: Tierhalter können Betreuer/Dienstleister favorisieren
+- **Zubehör-Marktplatz** (`/marktplatz`): Community-Anzeigen (Zubehör, kein Lebendtier-Verkauf); Kategorien aus Supabase; Favoriten; eigene Anzeigen unter `/marktplatz/meine`; **Nutzungsbedingungen** unter `/marktplatz/nutzungsbedingungen` (Pflicht-Checkbox beim Erstellen einer Anzeige)
 
 ### Benutzerrollen
 - **Owner (Tierhalter)**: Suchen, buchen, öffentliches Profil, optional Jobs einstellen (Premium)

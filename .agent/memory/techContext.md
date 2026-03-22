@@ -27,12 +27,13 @@
 - Ein **React-Baum** unter `src/main.tsx` / `App.tsx`
 - **Layout**-Wrapper (Header, Footer)
 - **Geschützte Routen**: `SafeProtectedRoute` (Owner/Caretaker-Flags)
-- **Deutsche URLs** z. B. `/suche`, `/anmelden`, `/dashboard-owner`, `/jobs`, `/owner/:userId`
+- **Deutsche URLs** z. B. `/suche`, `/anmelden`, `/dashboard-owner`, `/jobs`, `/owner/:userId`, **`/marktplatz`**, **`/marktplatz/neu`**, **`/marktplatz/meine`**, **`/marktplatz/bearbeiten/:id`**, **`/marktplatz/nutzungsbedingungen`** (Route vor **`/marktplatz/:id`** in `App.tsx`)
 
 ### Supabase
 - Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 - Migrationen: `supabase/migrations/*.sql` — u. a. `short_intro`, `owner_jobs` / `owner_job_pets`, Fix **`user_has_db_premium`** (Promo + Premium, März 2026)
-- Services in `src/lib/supabase/` (`db.ts`, `chatService.ts`, `ownerPublicService.ts`, `ownerJobService.ts`, …)
+- Services in `src/lib/supabase/` (`db.ts`, `chatService.ts`, `ownerPublicService.ts`, `ownerJobService.ts`, **`marketplaceService.ts`**, …)
+- **Separates Admin-Frontend** (`tigube-admin`, nicht in diesem Repo): Tab **Marktplatz** mit Moderation (Deaktivieren/Löschen per RPC, Nutzerhinweise über `marketplace_listing_notices`)
 
 ### Styling
 - Utility-First Tailwind

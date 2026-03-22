@@ -2,6 +2,15 @@
 
 ## Completed (Auszug, Stand 2026-03)
 
+### Zubehör-Marktplatz (Haupt-App)
+- [x] Routen `/marktplatz` (+ neu, meine, bearbeiten, Nutzungsbedingungen), Lazy in `App.tsx`
+- [x] Listings, Kategorien, Favoriten, `marketplaceService.ts`
+- [x] **MarketplacePage**: Layout wie SearchPage (`bg-gray-50`, linke Spalte sticky); **Kategorie** eigene weiße Box mit **Listen-Navigation** (`MarketplaceCategoryBrowser` sidebar); **Weitere Filter** **einklappbar**; `MarketplaceFilters` **`search`**-Layout
+- [x] **MarketplaceTermsPage** + Checkbox bei neuer Anzeige (`CreateListingForm`)
+- [x] **Footer**: Spalte „Marktplatz“ mit Link Nutzungsbedingungen; Grid `lg:grid-cols-5`
+- [x] Copy: **tigube** klein in NB; Hinweis „Kein Tierverkauf“ im Marktplatz-Header entfernt (Stand User-Wunsch)
+- [x] Admin-App (separates Repo): Marktplatz-Moderation UI + RPC-Aufrufe (siehe Memory techContext)
+
 ### Öffentliches Tierhalter-Profil & Dashboard
 - [x] `about_me`, Share-Settings, Public-Profil mit Datenschutz (kein Kontakt auf Public Page)
 - [x] `short_intro` (Kurzvorstellung), Migration + Dashboard + Public Hero
@@ -46,4 +55,5 @@
 - `20260322120000_add_short_intro_to_users.sql`
 - `20260323120000_create_owner_jobs.sql`, `20260323120100_pets_select_for_open_owner_jobs.sql`
 - `20260324100000_fix_user_has_db_premium_promo.sql`
+- Marktplatz: `20260326120000_create_marketplace.sql`, `20260326120200_marketplace_categories_grants.sql`, `20260327120000_marketplace_admin_moderation.sql` (Remote ggf. andere Versionsnamen — `list_migrations` prüfen)
 - Remote kann andere Timestamp-Namen haben (MCP `apply_migration`) — SQL-Inhalt ist maßgeblich
