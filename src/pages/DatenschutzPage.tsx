@@ -8,7 +8,7 @@ function DatenschutzPage() {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Datenschutz</h1>
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Datenschutzerklärung</h2>
           <p className="text-gray-600 mb-2">der tierisch gut betreut GmbH</p>
-          <p className="text-sm text-gray-500 mb-8">Stand: 05.03.2026</p>
+          <p className="text-sm text-gray-500 mb-8">Stand: 22.03.2026</p>
 
           <div className="space-y-10 text-gray-700">
 
@@ -310,7 +310,58 @@ function DatenschutzPage() {
                 </div>
 
                 <div>
-                  <h4 className="text-base font-semibold text-gray-800 mb-2">e) Abonnement- und Zahlungsabwicklung</h4>
+                  <h4 className="text-base font-semibold text-gray-800 mb-2">e) Zubehör-Marktplatz</h4>
+                  <div className="space-y-3 leading-relaxed">
+                    <p>
+                      <strong>Beschreibung und Umfang:</strong> Wenn Sie eine Anzeige auf dem tigube-Marktplatz erstellen,
+                      erheben und verarbeiten wir folgende Daten: Anzeigentitel, Beschreibung, Kategorie, Angebotstyp
+                      (Biete/Suche/Verschenke), Preisangabe, Zustand des Artikels, geeignete Tierarten, Standortangaben
+                      (PLZ, Ort) sowie von Ihnen hochgeladene Fotos (max. 6 pro Anzeige). Darüber hinaus speichern wir,
+                      welche Anzeigen Sie als Favoriten markiert haben.
+                    </p>
+                    <p>
+                      <strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung — Bereitstellung des
+                      Marktplatz-Dienstes) sowie Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Plattformsicherheit
+                      und Moderation).
+                    </p>
+                    <p>
+                      <strong>Zweck:</strong> Veröffentlichung und Darstellung Ihrer Anzeige auf dem Marktplatz,
+                      Kontaktanbahnung mit Interessenten, Favoritenverwaltung sowie Qualitätssicherung und Moderation
+                      (Einhaltung der Marktplatz-Nutzungsbedingungen).
+                    </p>
+                    <p>
+                      <strong>Sichtbarkeit:</strong> Ihre Anzeigen (Titel, Beschreibung, Fotos, Preis, Standort, Kategorie)
+                      sind auf der Plattform für alle Besucher öffentlich sichtbar. Ihr vollständiger Name wird dabei
+                      <strong> nicht</strong> angezeigt; sichtbar ist lediglich Ihr Vorname und der erste Buchstabe Ihres
+                      Nachnamens.
+                    </p>
+                    <p>
+                      <strong>Fotos:</strong> Hochgeladene Fotos werden in unserer Infrastruktur bei Supabase (Serverstandort
+                      Frankfurt, Deutschland) gespeichert. Bei Löschung einer Anzeige werden die zugehörigen Fotos ebenfalls
+                      gelöscht.
+                    </p>
+                    <p>
+                      <strong>Moderation:</strong> Wir behalten uns vor, Anzeigen zu deaktivieren oder zu löschen, die gegen
+                      die Marktplatz-Nutzungsbedingungen oder gesetzliche Vorschriften verstoßen. In diesem Fall werden Sie
+                      über den Grund der Maßnahme informiert. Die Begründung wird in Ihrem Nutzerkonto unter „Meine Anzeigen"
+                      angezeigt.
+                    </p>
+                    <p>
+                      <strong>Speicherdauer:</strong> Anzeigendaten werden gespeichert, solange die Anzeige aktiv ist oder
+                      Ihr Nutzerkonto besteht. Nach Löschung einer Anzeige durch Sie oder durch einen Administrator werden
+                      die zugehörigen Daten und Bilder gelöscht. Moderationshinweise verbleiben in Ihrem Konto, solange
+                      dieses aktiv ist.
+                    </p>
+                    <p>
+                      <strong>Zustimmung Nutzungsbedingungen:</strong> Beim Erstellen einer Anzeige bestätigen Sie die
+                      Marktplatz-Nutzungsbedingungen. Diese Zustimmung wird nicht separat gespeichert; sie ergibt sich aus
+                      dem Erstellen der Anzeige.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-base font-semibold text-gray-800 mb-2">f) Abonnement- und Zahlungsabwicklung</h4>
                   <div className="space-y-3 leading-relaxed">
                     <p>
                       <strong>Beschreibung und Umfang:</strong> Für die Abwicklung der Abonnementzahlungen arbeiten wir mit
@@ -669,7 +720,7 @@ function DatenschutzPage() {
             {/* Stand */}
             <section className="text-sm text-gray-500 border-t pt-6">
               <p>
-                <strong>Stand dieser Datenschutzerklärung:</strong> 05.03.2026
+                <strong>Stand dieser Datenschutzerklärung:</strong> 22.03.2026
               </p>
             </section>
           </div>
