@@ -259,3 +259,13 @@ interface SearchFilters {
 
 ## Memory Bank Integration
 Diese .cursorrules-Datei ergänzt die Memory Bank und wird kontinuierlich mit neuen Erkenntnissen und Patterns aktualisiert. Bei größeren Änderungen sollte auch die Memory Bank entsprechend aktualisiert werden.
+
+### Memory Bank Update und Supabase Release-MCP (Pflicht bei „update memory bank“)
+Wenn die Memory Bank aktualisiert wird (explizit durch **„update memory bank“** oder vergleichbare Aufforderung, oder nach abgeschlossenen größeren Features, die Schema oder sichtbare Produktänderungen betreffen), **immer zusätzlich** den Supabase-MCP für das Projekt **tigube** ausführen (`user-supabase_tigube`):
+
+1. **Tool-Schema zuerst lesen** (MCP-Deskriptoren unter dem konfigurierten MCP-Ordner), dann Tools aufrufen — nicht raten.
+2. **`apply_migration`**: Alle **noch nicht auf Remote angewendeten** SQL-Migrationen aus [`supabase/migrations/`](supabase/migrations/) auf die verbundene Supabase-Datenbank anwenden (gleicher SQL-Inhalt wie die Datei im Repo). DDL ausschließlich hier, nicht mit `execute_sql`.
+3. **`execute_sql`** (falls sinnvoll): Kompakter **Release-Hinweis** für Nutzer in `public.content_items` mit `type = 'release'`, `status = 'published'`, eindeutigem `slug`, kurzem `title`/`excerpt` — nur wenn die Änderung **nutzerrelevant** ist (kein reines internes Refactoring). Bei wiederholter Ausführung `ON CONFLICT (slug) DO NOTHING` oder gezieltes UPDATE nutzen.
+4. Optional: **`list_migrations`** prüfen, ob Remote mit dem Repo übereinstimmt.
+
+**Kurz:** Memory Bank schreiben ≠ fertig — Remote-DB und ggf. **Was ist neu** (`/was-ist-neu`) über den Supabase-MCP mitziehen, damit Dashboard-Teaser und Release-Seite zur Dokumentation passen.

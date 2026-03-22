@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, MessageCircle, LogOut } from 'lucide-react';
+import { Menu, X, LogOut } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../lib/auth/AuthContext';
 import { useNotifications } from '../../lib/notifications/NotificationContext';
 import { useSubscription } from '../../lib/auth/useSubscription';
 
 import NotificationBadge from '../ui/NotificationBadge';
-import PremiumBadge from '../ui/PremiumBadge';
+import { isJobsLinkNewBadgeActive } from '../../lib/constants/navigationBadges';
 
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,6 +20,7 @@ function Header() {
 
 
   const isActive = (path: string) => location.pathname === path;
+  const jobsNewBadge = isJobsLinkNewBadgeActive();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -89,6 +90,23 @@ function Header() {
                 <NavLink to="/suche" isActive={isActive('/suche')}>
                   Betreuer finden
                 </NavLink>
+                <NavLink
+                  to="/jobs"
+                  isActive={isActive('/jobs')}
+                  aria-label={jobsNewBadge ? 'Jobs, neu' : undefined}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    Jobs
+                    {jobsNewBadge ? (
+                      <span
+                        className="rounded bg-primary-600 px-1 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                        aria-hidden
+                      >
+                        NEW
+                      </span>
+                    ) : null}
+                  </span>
+                </NavLink>
                 <div className="relative inline-block group">
                   <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
                     Wo finde ich...?
@@ -109,8 +127,10 @@ function Header() {
                     Mitgliedschaften
                   </NavLink>
                 )}
-                <Link to="/nachrichten" className="inline-flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-primary-700 transition-colors relative">
-                  <MessageCircle className="h-5 w-5" />
+                <Link
+                  to="/nachrichten"
+                  className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-600 hover:text-primary-700 border-b-2 border-transparent hover:border-gray-300 transition-colors relative"
+                >
                   Nachrichten
                   <NotificationBadge count={unreadCount} className="ml-1" />
                 </Link>
@@ -198,6 +218,24 @@ function Header() {
                   <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
                     Betreuer finden
                   </MobileNavLink>
+                  <MobileNavLink
+                    to="/jobs"
+                    isActive={isActive('/jobs')}
+                    onClick={() => setIsMenuOpen(false)}
+                    aria-label={jobsNewBadge ? 'Jobs, neu' : undefined}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      Jobs
+                      {jobsNewBadge ? (
+                        <span
+                          className="rounded bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                          aria-hidden
+                        >
+                          NEW
+                        </span>
+                      ) : null}
+                    </span>
+                  </MobileNavLink>
                   <div className="relative group">
                     <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
                       Wo finde ich...?
@@ -221,8 +259,11 @@ function Header() {
                       Mitgliedschaften
                     </MobileNavLink>
                   )}
-                  <Link to="/nachrichten" className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-primary-700 relative" onClick={() => setIsMenuOpen(false)}>
-                    <MessageCircle className="h-5 w-5" />
+                  <Link
+                    to="/nachrichten"
+                    className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-primary-700 relative"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     Nachrichten
                     <NotificationBadge count={unreadCount} className="ml-1" />
                   </Link>
@@ -299,12 +340,14 @@ interface NavLinkProps {
   to: string;
   isActive: boolean;
   children: React.ReactNode;
+  'aria-label'?: string;
 }
 
-function NavLink({ to, isActive, children }: NavLinkProps) {
+function NavLink({ to, isActive, children, 'aria-label': ariaLabel }: NavLinkProps) {
   return (
     <Link
       to={to}
+      aria-label={ariaLabel}
       className={cn(
         'inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 transition-colors duration-200',
         isActive
@@ -321,10 +364,11 @@ interface MobileNavLinkProps extends NavLinkProps {
   onClick: () => void;
 }
 
-function MobileNavLink({ to, isActive, onClick, children }: MobileNavLinkProps) {
+function MobileNavLink({ to, isActive, onClick, children, 'aria-label': ariaLabel }: MobileNavLinkProps) {
   return (
     <Link
       to={to}
+      aria-label={ariaLabel}
       className={cn(
         'block px-3 py-2 rounded-md text-base font-medium',
         isActive

@@ -1,7 +1,10 @@
 import { supabase } from './client';
-import type { 
-  PublicOwnerProfile, 
-  OwnerCaretakerConnection, 
+import { ownerPreferencesService } from './db';
+import { ownerJobService } from './ownerJobService';
+import type {
+  PublicOwnerProfile,
+  PublicOwnerJob,
+  OwnerCaretakerConnection,
   OwnerCaretakerConnectionInsert,
   OwnerCaretakerConnectionUpdate
 } from './types';
@@ -91,33 +94,16 @@ export const ownerPublicService = {
   },
 
   /**
-   * Lädt das öffentliche Owner-Profil (nur für autorisierte Caretaker)
+   * Lädt das öffentliche Owner-Profil (eingeloggte Nutzer).
+   * Nur: Profilbild, Über mich, Haustiere (laut Share-Settings). Keine Kontaktdaten — nur Chat.
    */
   getPublicOwnerProfile: async (ownerId: string, viewerId: string): Promise<{ data: PublicOwnerProfile | null; error?: string }> => {
     try {
-      // 1. Zugriffsberechtigung prüfen
-      // Der Owner kann immer sein eigenes Profil sehen
-      let hasAccess = ownerId === viewerId;
-      
-      if (!hasAccess) {
-        // Prüfe ob der Viewer ein Caretaker mit Zugriff ist
-        const { hasAccess: caretakerAccess, error: accessError } = await ownerPublicService.checkCaretakerAccess(ownerId, viewerId);
-        
-        if (accessError) {
-          return { data: null, error: accessError };
-        }
-        
-        hasAccess = caretakerAccess;
-      }
-      
-      if (!hasAccess) {
-        return { data: null, error: 'UNAUTHORIZED' };
-      }
+      const isOwnProfile = ownerId === viewerId;
 
-      // 2. Basis-Profildaten laden
       const { data: userProfile, error: userError } = await supabase
         .from('users')
-        .select('id, first_name, last_name, profile_photo_url, phone_number, email, plz, city')
+        .select('id, first_name, last_name, profile_photo_url, short_intro, about_me')
         .eq('id', ownerId)
         .single();
 
@@ -125,14 +111,33 @@ export const ownerPublicService = {
         return { data: null, error: userError?.message || 'Owner nicht gefunden' };
       }
 
-      // 3. Owner-Präferenzen laden (für Datenschutz-Einstellungen)
-      const { data: preferences, error: prefError } = await supabase
-        .from('owner_preferences')
-        .select('*')
-        .eq('owner_id', ownerId)
-        .maybeSingle();
+      const { data: loadedShareSettings } = await ownerPreferencesService.getShareSettings(ownerId);
 
-      // 4. Haustiere laden
+      const shareSettings = isOwnProfile
+        ? { aboutMe: true, profilePhoto: true, petDetails: true }
+        : {
+            aboutMe: loadedShareSettings?.aboutMe ?? true,
+            profilePhoto: loadedShareSettings?.profilePhoto ?? true,
+            petDetails: loadedShareSettings?.petDetails ?? true
+          };
+
+      const publicProfile: PublicOwnerProfile = {
+        id: userProfile.id,
+        first_name: userProfile.first_name || '',
+        last_name: userProfile.last_name || '',
+        profile_photo_url: shareSettings.profilePhoto ? userProfile.profile_photo_url : null,
+        share_settings: shareSettings
+      };
+
+      if (shareSettings.aboutMe) {
+        if (userProfile.short_intro) {
+          publicProfile.short_intro = userProfile.short_intro;
+        }
+        if (userProfile.about_me) {
+          publicProfile.about_me = userProfile.about_me;
+        }
+      }
+
       const { data: pets, error: petsError } = await supabase
         .from('pets')
         .select('id, name, type, breed, age, photo_url, gender, neutered')
@@ -142,83 +147,6 @@ export const ownerPublicService = {
         console.warn('Fehler beim Laden der Haustiere:', petsError);
       }
 
-      // 5. Datenschutz-Einstellungen anwenden
-      // TODO: Diese sollten später aus einer separaten Tabelle/Spalte kommen
-      // Für jetzt verwenden wir Standard-Einstellungen
-      const shareSettings = {
-        phoneNumber: true,
-        email: false,
-        address: true,
-        vetInfo: true,
-        emergencyContact: false,
-        petDetails: true,
-        carePreferences: true
-      };
-
-      // 6. Gefilterte Profildaten zusammenstellen
-      const publicProfile: PublicOwnerProfile = {
-        id: userProfile.id,
-        first_name: userProfile.first_name || '',
-        last_name: userProfile.last_name || '',
-        profile_photo_url: userProfile.profile_photo_url,
-        share_settings: shareSettings
-      };
-
-      // Bedingt sichtbare Kontaktdaten
-      if (shareSettings.phoneNumber && userProfile.phone_number) {
-        publicProfile.phone_number = userProfile.phone_number;
-      }
-      if (shareSettings.email && userProfile.email) {
-        publicProfile.email = userProfile.email;
-      }
-      if (shareSettings.address) {
-        if (userProfile.plz) {
-          publicProfile.plz = userProfile.plz;
-        }
-        if (userProfile.city) {
-          publicProfile.city = userProfile.city;
-        }
-      }
-
-      // Betreuungsvorlieben
-      if (shareSettings.carePreferences && preferences) {
-        publicProfile.services = preferences.services;
-        publicProfile.other_services = preferences.other_services;
-      }
-
-      // Tierarzt-Informationen
-      if (shareSettings.vetInfo && preferences?.vet_info) {
-        try {
-          const vetInfo = typeof preferences.vet_info === 'string' 
-            ? JSON.parse(preferences.vet_info) 
-            : preferences.vet_info;
-          
-          if (vetInfo && (vetInfo.name || vetInfo.address || vetInfo.phone)) {
-            publicProfile.vet_info = {
-              name: vetInfo.name || '',
-              address: vetInfo.address || '',
-              phone: vetInfo.phone || ''
-            };
-          }
-        } catch (e) {
-          console.warn('Fehler beim Parsen der Tierarzt-Informationen:', e);
-        }
-      }
-
-      // Notfallkontakt
-      if (shareSettings.emergencyContact && preferences) {
-        if (preferences.emergency_contact_name || preferences.emergency_contact_phone) {
-          publicProfile.emergency_contact_name = preferences.emergency_contact_name;
-          publicProfile.emergency_contact_phone = preferences.emergency_contact_phone;
-        }
-      }
-
-      // Betreuungshinweise
-      if (shareSettings.carePreferences && preferences?.care_instructions) {
-        publicProfile.care_instructions = preferences.care_instructions;
-      }
-
-      // Haustiere
       if (shareSettings.petDetails && pets && pets.length > 0) {
         publicProfile.pets = pets.map(pet => ({
           id: pet.id,
@@ -230,6 +158,25 @@ export const ownerPublicService = {
           gender: pet.gender,
           neutered: pet.neutered
         }));
+      }
+
+      const { data: openJobs, error: jobsError } = await ownerJobService.listOpenJobsForOwner(ownerId);
+      if (jobsError) {
+        console.warn('Jobs für Owner-Profil:', jobsError);
+      } else if (openJobs && openJobs.length > 0) {
+        publicProfile.jobs = openJobs.map(
+          (j): PublicOwnerJob => ({
+            id: j.id,
+            title: j.title,
+            description: j.description,
+            date_from: j.date_from,
+            date_to: j.date_to,
+            location_text: j.location_text,
+            service_tags: j.service_tags,
+            budget_hint: j.budget_hint,
+            pets: j.pets
+          })
+        );
       }
 
       return { data: publicProfile };

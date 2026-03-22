@@ -34,6 +34,9 @@ const BlogListPage = lazy(() => import('./pages/BlogListPage'));
 const BlogPostPage = lazy(() => import('./pages/BlogPostPage'));
 const CleverreachRedirectPage = lazy(() => import('./pages/CleverreachRedirectPage'));
 const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
+const OwnerJobsPage = lazy(() => import('./pages/OwnerJobsPage'));
+const ReleaseNotesListPage = lazy(() => import('./pages/ReleaseNotesListPage'));
+const ReleaseNotePage = lazy(() => import('./pages/ReleaseNotePage'));
 
 // Debug components (only in development)
 
@@ -82,6 +85,8 @@ function App() {
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
             <Route path="/blog" element={<BlogListPage />} />
             <Route path="/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/was-ist-neu" element={<ReleaseNotesListPage />} />
+            <Route path="/was-ist-neu/:slug" element={<ReleaseNotePage />} />
             <Route path="/cleverreach" element={<CleverreachRedirectPage />} />
             <Route path="/newsletter/redirect" element={<CleverreachRedirectPage />} />
             <Route path="/newsletter/confirm" element={<CleverreachRedirectPage />} />
@@ -127,6 +132,14 @@ function App() {
               element={
                 <SafeProtectedRoute>
                   <OwnerPublicProfilePage />
+                </SafeProtectedRoute>
+              }
+            />
+            <Route
+              path="/jobs"
+              element={
+                <SafeProtectedRoute>
+                  <OwnerJobsPage />
                 </SafeProtectedRoute>
               }
             />

@@ -29,6 +29,7 @@ import { VerificationService, type VerificationDocument } from '../lib/services/
 import CaretakerContactTab from '../components/ui/CaretakerContactTab';
 import { isCaretaker } from '../lib/utils';
 import RefGrowDashboard from '../components/ui/RefGrowDashboard';
+import DashboardReleaseTeaser from '../components/dashboard/DashboardReleaseTeaser';
 
 
 function CaretakerDashboardPage() {
@@ -4787,6 +4788,7 @@ function CaretakerDashboardPage() {
 
       {/* Toast Notifications */}
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
+      <DashboardReleaseTeaser />
     </div>
   );
 }

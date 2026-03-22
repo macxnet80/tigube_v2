@@ -1,6 +1,6 @@
 import { supabase } from './client';
 
-export type ContentItemType = 'blog' | 'news';
+export type ContentItemType = 'blog' | 'news' | 'release';
 
 export interface ContentItem {
   id: string;
@@ -35,7 +35,9 @@ export async function getPublishedContent(options: GetPostsOptions = {}) {
     .order('published_at', { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (type !== 'all') {
+  if (type === 'all') {
+    query = query.in('type', ['blog', 'news']);
+  } else {
     query = query.eq('type', type);
   }
 

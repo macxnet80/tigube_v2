@@ -10,7 +10,9 @@ export const FEATURE_MATRIX = {
     priority_ranking: false,
     unlimited_messages: false,
     customer_support: false,
-    featured_listing: false
+    featured_listing: false,
+    post_owner_jobs: false,
+    apply_owner_jobs: false
   },
   premium: {
     max_contact_requests: 999,
@@ -20,7 +22,9 @@ export const FEATURE_MATRIX = {
     priority_ranking: true,
     unlimited_messages: true,
     customer_support: true,
-    featured_listing: true
+    featured_listing: true,
+    post_owner_jobs: true,
+    apply_owner_jobs: true
   }
 };
 

@@ -2,82 +2,52 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useAuth } from '../lib/auth/AuthContext';
+import { useSubscription } from '../lib/auth/useSubscription';
 import { getOrCreateConversation } from '../lib/supabase/chatService';
+import { applyToOwnerJobViaChat } from '../lib/supabase/ownerJobApply';
 import { ownerPublicService } from '../lib/supabase/ownerPublicService';
-import { supabase } from '../lib/supabase/client';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
-import { OwnerReviewForm } from '../components/ui/OwnerReviewForm';
-import type { PublicOwnerProfile } from '../lib/supabase/types';
+import AdvertisementBanner from '../components/ui/AdvertisementBanner';
+import OwnerJobCard from '../components/owner/OwnerJobCard';
+import type { PublicOwnerJob, PublicOwnerProfile } from '../lib/supabase/types';
+import { isCaretakerLikeUserType } from '../lib/utils';
 import {
   PawPrint,
-  MapPin,
-  Phone,
-  Mail,
-  Shield,
-  Heart,
-  Calendar,
   ArrowLeft,
   Lock,
   AlertTriangle,
-  Camera,
-  Star
+  User,
+  MessageCircle,
+  Briefcase,
+  Heart
 } from 'lucide-react';
 import Button from '../components/ui/Button';
+
+// Hilfsfunktion für Namensformatierung "Vorname N."
+const formatOwnerName = (firstName: string | null, lastName: string | null): string => {
+  if (!firstName && !lastName) return 'Tierhalter';
+  if (!lastName) return firstName || 'Tierhalter';
+  return `${firstName || ''} ${lastName.charAt(0)}.`;
+};
 
 function OwnerPublicProfilePage() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user, userProfile } = useAuth();
   const { subscription } = useFeatureAccess();
+  const { isPremiumUser, hasFeature } = useSubscription();
 
   const [profile, setProfile] = useState<PublicOwnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unauthorized, setUnauthorized] = useState(false);
-
-  // Owner-Review State
-  interface OwnerReview {
-    id: string;
-    rating: number;
-    comment: string | null;
-    created_at: string | null;
-    reviewer_id: string | null;
-    users?: { first_name: string | null; last_name: string | null } | null;
-  }
-  const [ownerReviews, setOwnerReviews] = useState<OwnerReview[]>([]);
-  const [ownerReviewsLoading, setOwnerReviewsLoading] = useState(false);
-  const [showOwnerReviewForm, setShowOwnerReviewForm] = useState(false);
-  const [isSubmittingOwnerReview, setIsSubmittingOwnerReview] = useState(false);
-
-  // Rate Limiting: Verhindert zu häufige Profile-Zugriffe
-  const checkRateLimit = (): boolean => {
-    const key = `profile_access_${userId}`;
-    const now = Date.now();
-    const lastAccess = localStorage.getItem(key);
-
-    if (lastAccess) {
-      const timeDiff = now - parseInt(lastAccess);
-      // Erlaubt maximal einen Zugriff alle 30 Sekunden pro Profil
-      if (timeDiff < 30000) {
-        return false; // Rate limit exceeded
-      }
-    }
-
-    localStorage.setItem(key, now.toString());
-    return true; // Access allowed
-  };
+  const [isContactLoading, setIsContactLoading] = useState(false);
+  const [applyingJobId, setApplyingJobId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
       if (!userId || !user) {
         setError('Benutzer nicht gefunden');
-        setLoading(false);
-        return;
-      }
-
-      // Rate Limiting Check
-      if (!checkRateLimit()) {
-        setError('Zu viele Zugriffe auf dieses Profil. Bitte warten Sie 30 Sekunden.');
         setLoading(false);
         return;
       }
@@ -110,88 +80,14 @@ function OwnerPublicProfilePage() {
     };
 
     loadProfile();
-  }, [userId, user]);
-
-  // Owner-Reviews laden
-  useEffect(() => {
-    const fetchOwnerReviews = async () => {
-      if (!userId) return;
-      setOwnerReviewsLoading(true);
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('owner_reviews')
-          .select(`
-            id,
-            rating,
-            comment,
-            created_at,
-            reviewer_id,
-            reviewer:users!owner_reviews_reviewer_id_fkey(first_name, last_name)
-          `)
-          .eq('owner_id', userId)
-          .order('created_at', { ascending: false });
-
-        if (!fetchError && data) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setOwnerReviews(data as any);
-        }
-      } catch (err) {
-        console.error('Error fetching owner reviews:', err);
-      } finally {
-        setOwnerReviewsLoading(false);
-      }
-    };
-    fetchOwnerReviews();
-  }, [userId]);
-
-  // Owner-Review einreichen
-  const handleOwnerReviewSubmit = async (rating: number, comment: string) => {
-    if (!user || !userId) return;
-
-    setIsSubmittingOwnerReview(true);
-    try {
-      const { error: insertError } = await supabase
-        .from('owner_reviews')
-        .insert({
-          owner_id: userId,
-          reviewer_id: user.id,
-          rating,
-          comment: comment || null
-        });
-
-      if (insertError) {
-        console.error('Error submitting owner review:', insertError);
-        return;
-      }
-
-      // Reviews neu laden
-      const { data: newReviews } = await supabase
-        .from('owner_reviews')
-        .select(`
-          id,
-          rating,
-          comment,
-          created_at,
-          reviewer_id,
-          reviewer:users!owner_reviews_reviewer_id_fkey(first_name, last_name)
-        `)
-        .eq('owner_id', userId)
-        .order('created_at', { ascending: false });
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (newReviews) setOwnerReviews(newReviews as any);
-      setShowOwnerReviewForm(false);
-    } catch (err) {
-      console.error('Unexpected error submitting owner review:', err);
-    } finally {
-      setIsSubmittingOwnerReview(false);
-    }
-  };
+    // `user?.id` statt `user`: gleiche Session, neue Objektreferenz würde sonst den Effect erneut triggern
+    // und nach erfolgreichem ersten Load fälschlich den 30s-Cooldown auslösen.
+  }, [userId, user?.id]);
 
   // SEO-Optimierung: Meta-Tags dynamisch setzen
   useEffect(() => {
     if (profile) {
-      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Tierhalter';
+      const fullName = formatOwnerName(profile.first_name, profile.last_name);
       const petNames = profile.pets?.map(pet => pet.name).join(', ') || '';
       const description = `Tierhalter-Profil von ${fullName}${petNames ? ` mit ${petNames}` : ''} auf tigube - Professionelle Tierbetreuung finden`;
 
@@ -259,20 +155,18 @@ function OwnerPublicProfilePage() {
   // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner />
-          <p className="text-gray-600 mt-4">Profil wird geladen...</p>
-        </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <LoadingSpinner />
       </div>
     );
   }
 
-  // Unauthorized Access - Humorvolle Fehlermeldung 😄
+  // Unauthorized Access
   if (unauthorized) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
+      <div className="bg-gray-50 min-h-screen">
+        <div className="container-custom py-16 px-4 flex items-center justify-center">
+          <div className="text-center max-w-md">
           <div className="relative mb-8">
             <PawPrint className="mx-auto h-24 w-24 text-gray-300" />
             <Lock className="absolute -top-2 -right-2 h-12 w-12 text-primary-500 bg-white rounded-full p-2 shadow-lg" />
@@ -317,6 +211,7 @@ function OwnerPublicProfilePage() {
             </Button>
           </div>
         </div>
+        </div>
       </div>
     );
   }
@@ -324,26 +219,24 @@ function OwnerPublicProfilePage() {
   // Error State
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <AlertTriangle className="mx-auto h-16 w-16 text-red-400 mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Oops! Etwas ist schief gelaufen
-          </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button onClick={() => window.location.reload()}>
-              Erneut versuchen
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => navigate(-1)}
-              className="flex items-center justify-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Zurück
-            </Button>
-          </div>
+      <div className="container-custom py-16 text-center px-4">
+        <AlertTriangle className="mx-auto h-16 w-16 text-red-400 mb-4" />
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Oops! Etwas ist schief gelaufen
+        </h2>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Button onClick={() => window.location.reload()}>
+            Erneut versuchen
+          </Button>
+          <Button
+            variant="secondary"
+            className="flex items-center justify-center gap-2 w-full sm:w-auto"
+            onClick={() => navigate('/suche')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Zurück zur Suche
+          </Button>
         </div>
       </div>
     );
@@ -352,14 +245,39 @@ function OwnerPublicProfilePage() {
   // Main Profile Content
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="container-custom py-16 text-center">
         <p className="text-gray-600">Profil nicht gefunden</p>
+        <Button variant="primary" className="mt-4" onClick={() => navigate('/suche')}>
+          Zurück zur Suche
+        </Button>
       </div>
     );
   }
 
-  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unbekannter Benutzer';
-  const avatarUrl = profile.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=f3f4f6&color=374151`;
+  const fullName = formatOwnerName(profile.first_name, profile.last_name);
+  const avatarUrl = profile.share_settings?.profilePhoto && profile.profile_photo_url
+    ? profile.profile_photo_url
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=f3f4f6&color=374151`;
+
+  const handleApplyToJob = async (job: PublicOwnerJob) => {
+    if (!user || !userId) return;
+    setApplyingJobId(job.id);
+    try {
+      const result = await applyToOwnerJobViaChat({
+        ownerId: userId,
+        caretakerId: user.id,
+        jobId: job.id,
+        jobTitle: job.title
+      });
+      if ('error' in result) {
+        console.error(result.error);
+        return;
+      }
+      navigate(`/nachrichten/${result.conversationId}`);
+    } finally {
+      setApplyingJobId(null);
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!user) {
@@ -369,146 +287,152 @@ function OwnerPublicProfilePage() {
 
     if (!userId) return;
 
-    const { data: conversation, error } = await getOrCreateConversation({
-      owner_id: userId,
-      caretaker_id: user.id
-    });
+    setIsContactLoading(true);
+    try {
+      const { data: conversation, error: convError } = await getOrCreateConversation({
+        owner_id: userId,
+        caretaker_id: user.id
+      });
 
-    if (error || !conversation) {
-      console.error('Fehler beim Öffnen der Konversation:', error);
-      navigate('/nachrichten');
-      return;
+      if (convError || !conversation) {
+        console.error('Fehler beim Öffnen der Konversation:', convError);
+        navigate('/nachrichten');
+        return;
+      }
+
+      navigate(`/nachrichten/${conversation.id}`);
+    } finally {
+      setIsContactLoading(false);
     }
+  };
 
-    navigate(`/nachrichten/${conversation.id}`);
+  const heroAboutSnippet = profile.short_intro?.trim()
+    ? profile.short_intro.trim()
+    : profile.about_me
+      ? profile.about_me.length > 280
+        ? `${profile.about_me.slice(0, 280).trim()}…`
+        : profile.about_me
+      : '';
+
+  const bannerTargeting = {
+    petTypes: userProfile?.pet_types || [],
+    location: userProfile?.location || '',
+    subscriptionType: subscription?.plan_type || 'free'
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen py-6 sm:py-10">
-      <div className="container-custom max-w-4xl">
-        {/* Breadcrumb Navigation */}
-        <div className="mb-6">
-          <nav className="flex items-center space-x-1 text-sm text-gray-500 mb-4">
-            <button
-              onClick={() => navigate('/')}
-              className="hover:text-primary-600 transition-colors"
-            >
-              Home
-            </button>
-            <span>/</span>
-            <button
-              onClick={() => navigate('/suche')}
-              className="hover:text-primary-600 transition-colors"
-            >
-              Betreuer suchen
-            </button>
-            <span>/</span>
-            <span className="text-gray-900">Tierhalter-Profil</span>
-          </nav>
-          <Button
-            variant="secondary"
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-sm"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Zurück
-          </Button>
-        </div>
-
-        {/* Profil-Header */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="flex flex-col lg:flex-row items-start gap-6">
-            <div className="relative w-32 h-32 mx-auto lg:mx-0 flex-shrink-0">
-              <img
-                src={avatarUrl}
-                alt={fullName}
-                className="w-32 h-32 rounded-xl object-cover border-4 border-primary-100 shadow"
-                loading="lazy"
-              />
-              <div className="absolute bottom-2 right-2 bg-primary-500 rounded-full p-2 shadow">
-                <Camera className="h-4 w-4 text-white" />
+    <div className="bg-gray-50 min-h-screen pb-16">
+      {/* Hero — analog BetreuerProfilePage */}
+      <div className="bg-white shadow-sm">
+        <div className="container-custom py-5 sm:py-8">
+          <div className="flex flex-col md:flex-row items-start gap-5 sm:gap-8">
+            <div className="md:w-1/4 lg:w-1/5 w-full max-w-[160px] sm:max-w-[200px] mx-auto md:mx-0 shrink-0">
+              <div className="relative rounded-xl overflow-hidden shadow-md">
+                <img
+                  src={avatarUrl}
+                  alt={fullName}
+                  className="w-full aspect-square object-cover"
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=f3f4f6&color=374151`;
+                  }}
+                />
               </div>
             </div>
 
-            <div className="flex-1 w-full text-center lg:text-left">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">{fullName}</h1>
+            <div className="flex-1 w-full min-w-0 text-center md:text-left">
+              <div className="flex items-start justify-center md:justify-start mb-3 sm:mb-4 gap-3 sm:gap-4">
+                <div className="min-w-0">
+                  <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2 break-words">{fullName}</h1>
+                </div>
+              </div>
 
-              {/* Haustier-Badges */}
               {profile.pets && profile.pets.length > 0 && (
-                <div className="flex flex-wrap gap-2 justify-center lg:justify-start mb-6">
+                <div className="flex flex-wrap gap-2 mb-5 sm:mb-6 justify-center md:justify-start">
                   {profile.pets.map((pet) => (
                     <span
                       key={pet.id}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary-50 text-primary-700"
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800"
                     >
-                      <PawPrint className="h-4 w-4 mr-1" />
+                      <PawPrint className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                       {pet.name} ({pet.type})
                     </span>
                   ))}
                 </div>
               )}
 
-              {/* Datenschutz-Hinweis */}
-              <div className="bg-blue-50 rounded-lg p-4 text-left">
-                <div className="flex items-start">
-                  <Shield className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
-                  <div className="text-sm">
-                    <p className="font-medium text-blue-800">Geteilte Informationen</p>
-                    <p className="text-blue-700 mt-1">
-                      Nur freigegebene Daten werden angezeigt. Der Tierhalter kann jederzeit
-                      kontrollieren, welche Informationen sichtbar sind.
-                    </p>
-                  </div>
-                </div>
+              {heroAboutSnippet ? (
+                <p className="text-gray-700 mb-5 sm:mb-6 text-sm sm:text-base whitespace-pre-wrap break-words w-full lg:w-3/5">
+                  {heroAboutSnippet}
+                </p>
+              ) : (
+                <p className="text-gray-500 mb-5 sm:mb-6 text-sm sm:text-base italic w-full lg:w-3/5">
+                  Noch keine Kurzvorstellung hinterlegt.
+                </p>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 flex-wrap w-full sm:w-auto items-stretch sm:items-start justify-center md:justify-start">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  leftIcon={<MessageCircle className="h-4 w-4" />}
+                  onClick={handleSendMessage}
+                  isLoading={isContactLoading}
+                  disabled={isContactLoading}
+                  className="w-full sm:w-auto justify-center"
+                >
+                  Nachricht senden
+                </Button>
+                {user && userId === user.id && userProfile?.user_type === 'owner' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    leftIcon={<ArrowLeft className="h-3 w-3" />}
+                    onClick={() => navigate('/dashboard-owner')}
+                    className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 w-full sm:w-auto justify-center"
+                  >
+                    Dashboard
+                  </Button>
+                )}
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Kontaktdaten */}
-        {(profile.phone_number || profile.email || profile.plz || profile.city) && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Kontaktdaten
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {profile.phone_number && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700">{profile.phone_number}</span>
-                </div>
-              )}
-              {profile.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700">{profile.email}</span>
-                </div>
-              )}
-              {(profile.plz || profile.city) && (
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700">
-                    {profile.plz && profile.city
-                      ? `${profile.plz} ${profile.city}`
-                      : profile.plz || profile.city}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+      <div className="container-custom py-4">
+        <AdvertisementBanner placement="profile_top" targetingOptions={bannerTargeting} />
+      </div>
 
-        {/* Haustiere */}
-        {profile.pets && profile.pets.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <PawPrint className="h-5 w-5" />
-              Haustiere
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="container-custom py-6 sm:py-10 lg:py-12">
+        <div className="grid lg:grid-cols-3 gap-5 sm:gap-8">
+          <div className="lg:col-span-2 space-y-5 sm:space-y-8 min-w-0">
+        {/* Über mich — immer als Karte (Hauptbereich unter Banner, linke Spalte) */}
+        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <User className="h-5 w-5 text-primary-600 shrink-0" />
+            Über mich
+          </h2>
+          {profile.about_me ? (
+            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">{profile.about_me}</p>
+          ) : (
+            <p className="text-gray-500 text-sm italic">
+              Hier ist noch kein Text hinterlegt oder die Anzeige ist in den Einstellungen deaktiviert.
+            </p>
+          )}
+        </div>
+
+        {/* Meine Tiere — immer als Karte */}
+        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <PawPrint className="h-5 w-5 text-primary-600 shrink-0" />
+            Meine Tiere
+          </h2>
+          {profile.pets && profile.pets.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {profile.pets.map((pet) => (
-                <div key={pet.id} className="flex gap-4 items-center">
+                <div key={pet.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                   {pet.photo_url ? (
                     <img
                       src={pet.photo_url}
@@ -516,7 +440,6 @@ function OwnerPublicProfilePage() {
                       className="w-20 h-20 rounded-xl object-cover border-2 border-primary-100"
                       loading="lazy"
                       onError={(e) => {
-                        // Fallback wenn Bild nicht laden kann
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
                         const fallback = target.nextElementSibling as HTMLElement;
@@ -526,15 +449,14 @@ function OwnerPublicProfilePage() {
                       }}
                     />
                   ) : null}
-                  {/* Fallback Avatar - wird angezeigt wenn kein Bild oder Fehler beim Laden */}
                   <div
                     className="w-20 h-20 rounded-xl bg-gray-100 border-2 border-primary-100 flex items-center justify-center text-gray-400 text-2xl font-bold"
                     style={{ display: pet.photo_url ? 'none' : 'flex' }}
                   >
                     {pet.name ? pet.name.charAt(0) : <PawPrint className="h-8 w-8" />}
                   </div>
-                  <div>
-                    <div className="font-bold text-lg">{pet.name}</div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-base sm:text-lg break-words">{pet.name}</div>
                     <div className="text-gray-600 text-sm">
                       {pet.type}
                       {pet.breed && ` • ${pet.breed}`}
@@ -548,197 +470,81 @@ function OwnerPublicProfilePage() {
                         {pet.neutered && ' (kastriert)'}
                       </div>
                     )}
-
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Veterinärinformationen */}
-        {profile.vet_info && typeof profile.vet_info === 'string' && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Tierarzt-Informationen
-            </h2>
-            <div className="text-gray-700 bg-gray-50 rounded-lg p-4">
-              {profile.vet_info.split('\n').map((line: string, index: number) => (
-                <p key={index} className="mb-1 last:mb-0">{line || '\u00A0'}</p>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Veterinärinformationen - Objekt-Format */}
-        {profile.vet_info && typeof profile.vet_info === 'object' && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Tierarzt-Informationen
-            </h2>
-            <div className="space-y-2 text-gray-700">
-              {profile.vet_info.name && (
-                <div><span className="font-medium">Name:</span> {profile.vet_info.name}</div>
-              )}
-              {profile.vet_info.address && (
-                <div><span className="font-medium">Adresse:</span> {profile.vet_info.address}</div>
-              )}
-              {profile.vet_info.phone && (
-                <div><span className="font-medium">Telefon:</span> {profile.vet_info.phone}</div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Notfallkontakt */}
-        {(profile.emergency_contact_name || profile.emergency_contact_phone) && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Notfallkontakt
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {profile.emergency_contact_name && (
-                <div className="flex items-center gap-3">
-                  <Heart className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700">{profile.emergency_contact_name}</span>
-                </div>
-              )}
-              {profile.emergency_contact_phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-gray-700">{profile.emergency_contact_phone}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Betreuungshinweise */}
-        {profile.care_instructions && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Betreuungshinweise
-            </h2>
-            <div className="text-gray-700 bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-400">
-              {profile.care_instructions.split('\n').map((line: string, index: number) => (
-                <p key={index} className="mb-1 last:mb-0">{line || '\u00A0'}</p>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Bewertungen von Dienstleistern */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Star className="h-5 w-5 text-primary-600" />
-            Bewertungen ({ownerReviews.length})
-          </h2>
-
-          {/* Bewertungsformular schreiben – für eingeloggte Caretaker/Dienstleister (Free + Premium) */}
-          {user && userProfile && userId !== user.id &&
-            (userProfile.user_type === 'caretaker' ||
-              ['hundetrainer', 'tierarzt', 'tierfriseur', 'physiotherapeut', 'ernaehrungsberater', 'tierfotograf', 'sonstige'].includes(userProfile.user_type || '')) && (
-              <>
-                {showOwnerReviewForm ? (
-                  <div className="mb-6">
-                    <OwnerReviewForm
-                      ownerName={profile?.first_name || 'Tierhalter'}
-                      onSubmit={handleOwnerReviewSubmit}
-                      onCancel={() => setShowOwnerReviewForm(false)}
-                      isLoading={isSubmittingOwnerReview}
-                      reviewerName={userProfile ? `${userProfile.first_name} ${userProfile.last_name?.charAt(0) || ''}.` : undefined}
-                    />
-                  </div>
-                ) : (
-                  <div className="mb-6">
-                    <Button
-                      variant="primary"
-                      onClick={() => setShowOwnerReviewForm(true)}
-                      className="w-full sm:w-auto"
-                    >
-                      ⭐ Bewertung schreiben
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-
-          {/* Bewertungen lesen – Premium Gate */}
-          {ownerReviewsLoading ? (
-            <div className="flex justify-center py-8">
-              <LoadingSpinner />
-            </div>
-          ) : subscription?.plan_type === 'premium' ? (
-            ownerReviews.length > 0 ? (
-              <div className="space-y-4">
-                {ownerReviews.map((review) => {
-                  const firstName = review.users?.first_name || null;
-                  const lastName = review.users?.last_name || null;
-                  const reviewerName = firstName
-                    ? `${firstName}${lastName ? ` ${lastName.charAt(0)}.` : ''}`
-                    : 'Dienstleister';
-                  return (
-                    <div key={review.id} className="border-b border-gray-200 last:border-b-0 pb-4 last:pb-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center">
-                          <div className="flex">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${i < review.rating
-                                  ? 'text-yellow-500 fill-yellow-500'
-                                  : 'text-gray-300'
-                                  }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="ml-2 text-sm font-medium text-gray-900">
-                            {reviewerName}
-                          </span>
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          {new Date(review.created_at || '').toLocaleDateString('de-DE')}
-                        </span>
-                      </div>
-                      {review.comment && (
-                        <p className="text-gray-700">{review.comment}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-gray-600">Noch keine Bewertungen vorhanden.</p>
-            )
           ) : (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-              <p className="text-amber-800 text-sm">
-                <strong>Bewertungen lesen:</strong> Du benötigst ein Premium-Abo, um Bewertungen zu lesen.
-                <Link to="/mitgliedschaften" className="text-amber-900 underline ml-1">
-                  Jetzt upgraden →
-                </Link>
-              </p>
-            </div>
+            <p className="text-gray-500 text-sm italic">
+              Keine Tiere auf diesem Profil sichtbar — es sind noch keine eingetragen oder die Anzeige ist in den
+              Einstellungen deaktiviert.
+            </p>
           )}
         </div>
 
-        {/* Kontakt-Aufruf */}
-        <div className="bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl p-6 text-center">
-          <h2 className="text-xl font-semibold mb-2">Interesse an einer Zusammenarbeit?</h2>
-          <p className="text-gray-600 mb-4">
-            Kontaktiere {profile?.first_name || 'den Tierhalter'} über die Nachrichtenfunktion!
-          </p>
-          <Button
-            onClick={handleSendMessage}
-            className="flex items-center justify-center gap-2 mx-auto"
+        {/* Offene Jobs */}
+        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Briefcase className="h-5 w-5 text-primary-600 shrink-0" />
+            Jobs
+          </h2>
+          {profile.jobs && profile.jobs.length > 0 ? (
+            <div className="space-y-4">
+              {profile.jobs.map((job) => {
+                const isOwnProfile = user?.id === userId;
+                const canApply =
+                  !!user &&
+                  !isOwnProfile &&
+                  isCaretakerLikeUserType(userProfile?.user_type) &&
+                  isPremiumUser &&
+                  hasFeature('apply_owner_jobs');
+                let hint: string | undefined;
+                if (!isOwnProfile && user && !isCaretakerLikeUserType(userProfile?.user_type)) {
+                  hint = 'Nur für Betreuer und Dienstleister.';
+                } else if (!isOwnProfile && user && (!isPremiumUser || !hasFeature('apply_owner_jobs'))) {
+                  hint = 'Mit Premium kannst du dich per Chat bewerben.';
+                }
+                return (
+                  <OwnerJobCard
+                    key={job.id}
+                    job={job}
+                    canApply={canApply}
+                    onApply={() => void handleApplyToJob(job)}
+                    applying={applyingJobId === job.id}
+                    applyBlockedHint={!canApply && !isOwnProfile && user ? hint : undefined}
+                  />
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Aktuell keine offenen Jobs von diesem Tierhalter.
+            </p>
+          )}
+          <Link
+            to="/jobs"
+            className="inline-block mt-4 text-sm text-primary-600 hover:underline font-medium"
           >
-            <Mail className="h-4 w-4" />
-            Nachricht senden
-          </Button>
+            Alle Tierhalter-Jobs
+          </Link>
+        </div>
+          </div>
+
+          {/* Sidebar — analog BetreuerProfil */}
+          <div className="space-y-5 sm:space-y-6 min-w-0">
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-primary-600 shrink-0" />
+                Kontakt
+              </h2>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Telefon, E-Mail und Adresse werden auf diesem Profil nicht angezeigt. Bitte nutze{' '}
+                <strong>Nachricht senden</strong>, um mit dem Tierhalter zu schreiben.
+              </p>
+            </div>
+
+            <AdvertisementBanner placement="profile_sidebar" targetingOptions={bannerTargeting} />
+          </div>
         </div>
       </div>
     </div>

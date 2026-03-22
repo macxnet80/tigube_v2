@@ -1,6 +1,6 @@
 
 import Button from '../components/ui/Button';
-import { MapPin, Phone, PawPrint, Edit, Shield, Heart, Trash, Check, X, Plus, Upload, Settings, AlertTriangle, Trash2, Briefcase, User, MessageCircle, KeyRound, Eye, EyeOff, Mail, Star, Crown } from 'lucide-react';
+import { MapPin, Phone, PawPrint, Edit, Shield, Heart, Trash, Check, X, Plus, Upload, Settings, AlertTriangle, Trash2, Briefcase, User, MessageCircle, KeyRound, Eye, EyeOff, Mail, Star, Crown, Info, Share2, BookUser, HelpCircle } from 'lucide-react';
 import DienstleisterCategoryIcon, { getCategoryColor, getCategoryBgColor } from '../components/ui/DienstleisterCategoryIcon';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -23,16 +23,9 @@ import ProfileImageCropper from '../components/ui/ProfileImageCropper';
 import OwnerContactTab from '../components/ui/OwnerContactTab';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import RefGrowDashboard from '../components/ui/RefGrowDashboard';
-
-
-const ALL_SERVICES = [
-  'Gassi-Service',
-  'Haustierbetreuung',
-  'Übernachtung',
-  'Kurzbesuche',
-  'Haussitting',
-  'Hundetagesbetreuung',
-];
+import OwnerDashboardJobsTab from '../components/owner/OwnerDashboardJobsTab';
+import { OWNER_SERVICE_TAGS } from '../lib/constants/ownerServices';
+import DashboardReleaseTeaser from '../components/dashboard/DashboardReleaseTeaser';
 
 // Typ für Haustier-Formulare
 interface PetFormData {
@@ -138,7 +131,16 @@ function OwnerDashboardPage() {
   const [petError, setPetError] = useState<string | null>(null);
   const [showAddPet, setShowAddPet] = useState(false);
   const [newPet, setNewPet] = useState<PetFormData>({ name: '', type: '', typeOther: '', breed: '', birthDate: '', weight: '', image: '', description: '', gender: '', neutered: false });
-  const [activeTab, setActiveTab] = useState<'uebersicht' | 'tiere' | 'affiliate' | 'kontaktdaten' | 'einstellungen' | 'mitgliedschaft'>('uebersicht');
+  const [activeTab, setActiveTab] = useState<
+    | 'uebersicht'
+    | 'oeffentlichesProfil'
+    | 'tiere'
+    | 'jobs'
+    | 'affiliate'
+    | 'kontaktdaten'
+    | 'einstellungen'
+    | 'mitgliedschaft'
+  >('uebersicht');
   const [editData, setEditData] = useState(false);
   const [ownerData, setOwnerData] = useState({
     phoneNumber: '',
@@ -179,7 +181,9 @@ function OwnerDashboardPage() {
     vetInfo: false,
     emergencyContact: false,
     petDetails: false,
-    carePreferences: false
+    carePreferences: false,
+    aboutMe: true,        // NEU - default sichtbar
+    profilePhoto: true    // NEU - default sichtbar
   });
   const [shareSettingsLoading, setShareSettingsLoading] = useState(false);
   const [shareSettingsError, setShareSettingsError] = useState<string | null>(null);
@@ -199,6 +203,19 @@ function OwnerDashboardPage() {
   // Stabilität wie im Caretaker-Dashboard
   const [optimisticAvatarUrl, setOptimisticAvatarUrl] = useState<string | null>(null);
   const [renderProfile, setRenderProfile] = useState<any>(null);
+
+  // Kurzvorstellung + Über mich (öffentliches Profil)
+  const SHORT_INTRO_MAX = 280;
+  const ABOUT_ME_MAX = 1000;
+  const [shortIntro, setShortIntro] = useState<string>('');
+  const [shortIntroDraft, setShortIntroDraft] = useState<string>('');
+  const [aboutMe, setAboutMe] = useState<string>('');
+  const [aboutMeDraft, setAboutMeDraft] = useState<string>('');
+  const [aboutMeSaving, setAboutMeSaving] = useState(false);
+  const [aboutMeError, setAboutMeError] = useState<string | null>(null);
+  const [aboutMeSuccess, setAboutMeSuccess] = useState(false);
+  const [editShortIntro, setEditShortIntro] = useState(false);
+  const [editAboutMe, setEditAboutMe] = useState(false);
 
   // Pet Image Cropper States
   const [showPetImageCropper, setShowPetImageCropper] = useState(false);
@@ -263,6 +280,17 @@ function OwnerDashboardPage() {
       }));
     }
   }, [userProfile, user, authLoading]);
+
+  // Load Kurzvorstellung + about_me from userProfile
+  useEffect(() => {
+    if (!userProfile) return;
+    const si = userProfile.short_intro ?? '';
+    const am = userProfile.about_me ?? '';
+    setShortIntro(si);
+    setShortIntroDraft(si);
+    setAboutMe(am);
+    setAboutMeDraft(am);
+  }, [userProfile]);
 
   // Onboarding nach Dashboard-Load starten (nur einmal, via sessionStorage)
   useEffect(() => {
@@ -1129,6 +1157,64 @@ function OwnerDashboardPage() {
     }
   };
 
+  const persistPublicProfileTexts = async (payload: { shortIntro: string | null; aboutMe: string | null }) => {
+    if (!user) return false;
+    setAboutMeSaving(true);
+    setAboutMeError(null);
+    setAboutMeSuccess(false);
+    try {
+      const { error } = await userService.updateUserProfile(user.id, {
+        shortIntro: payload.shortIntro,
+        aboutMe: payload.aboutMe
+      });
+      if (error) {
+        setAboutMeError('Fehler beim Speichern!');
+        setTimeout(() => setAboutMeError(null), 3000);
+        return false;
+      }
+      if (updateProfileState) {
+        updateProfileState({
+          short_intro: payload.shortIntro,
+          about_me: payload.aboutMe
+        });
+      }
+      setAboutMeSuccess(true);
+      setTimeout(() => {
+        setAboutMeSuccess(false);
+        setAboutMeError(null);
+      }, 3000);
+      return true;
+    } catch {
+      setAboutMeError('Fehler beim Speichern!');
+      setTimeout(() => setAboutMeError(null), 3000);
+      return false;
+    } finally {
+      setAboutMeSaving(false);
+    }
+  };
+
+  const handleSaveShortIntro = async () => {
+    const ok = await persistPublicProfileTexts({
+      shortIntro: shortIntroDraft.trim() || null,
+      aboutMe: aboutMe.trim() || null
+    });
+    if (ok) {
+      setShortIntro(shortIntroDraft);
+      setEditShortIntro(false);
+    }
+  };
+
+  const handleSaveAboutMeSection = async () => {
+    const ok = await persistPublicProfileTexts({
+      shortIntro: shortIntro.trim() || null,
+      aboutMe: aboutMeDraft.trim() || null
+    });
+    if (ok) {
+      setAboutMe(aboutMeDraft);
+      setEditAboutMe(false);
+    }
+  };
+
   // handleOtherWishKeyDown für das Wünsche-Input (Enter: hinzufügen, Escape: leeren)
   const handleOtherWishKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -1443,8 +1529,8 @@ function OwnerDashboardPage() {
     <div className="bg-gray-50 min-h-screen py-6 sm:py-10">
       <div className="container-custom px-4 sm:px-6 lg:px-8">
         {/* Profil-Header */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="flex flex-col lg:flex-row items-start gap-6">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6 sm:mb-8">
+        <div className="flex flex-col lg:flex-row items-start gap-5 sm:gap-6">
             <div className="relative w-24 h-24 sm:w-32 sm:h-32 mx-auto lg:mx-0 group">
               <img
                 src={avatarUrl}
@@ -1479,6 +1565,19 @@ function OwnerDashboardPage() {
                 <div className="flex-1 text-center lg:text-left">
                   <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-2 mb-4">
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{fullName}</h1>
+                    {/* Auge-Icon neben dem Namen mit Hovereffekt */}
+                    <div className="group relative">
+                      <Link
+                        to={`/owner/${user?.id}`}
+                        className="inline-flex items-center justify-center w-6 h-6 text-primary-600 hover:text-primary-700 transition-colors"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                      <div className="absolute left-1/2 transform -translate-x-1/2 top-8 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                        <div className="text-center">Zu meinem Profil</div>
+                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                      </div>
+                    </div>
                     {/* Crown-Icon für Premium-Status mit Hovereffekt */}
                     {userProfile?.premium_badge && (
                       <div className="group relative">
@@ -1523,80 +1622,141 @@ function OwnerDashboardPage() {
           />
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mb-8">
-          <div className="border-b border-gray-200 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <nav className="-mb-px flex space-x-4 sm:space-x-8 overflow-x-auto whitespace-nowrap scrollbar-hide pb-0.5">
-              <button
-                onClick={() => setActiveTab('uebersicht')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'uebersicht'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-              >
-                <Heart className="h-4 w-4 inline mr-2" />
-                Übersicht
-              </button>
-              <button
-                onClick={() => setActiveTab('tiere')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'tiere'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-              >
-                <PawPrint className="h-4 w-4 inline mr-2" />
-                Meine Tiere
-              </button>
-              <button
-                onClick={() => setActiveTab('affiliate')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'affiliate'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-              >
-                Affiliate Programm
-              </button>
-              <button
-                onClick={() => setActiveTab('kontaktdaten')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'kontaktdaten'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-              >
-                Kontaktdaten
-              </button>
-              <button
-                onClick={() => setActiveTab('einstellungen')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'einstellungen'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-              >
-                <Settings className="h-4 w-4 inline mr-2" />
-                Einstellungen
-              </button>
-              {isPremiumUser && (
-                <button
-                  onClick={() => setActiveTab('mitgliedschaft')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === 'mitgliedschaft'
-                    ? 'border-primary-500 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
-                >
-                  <Crown className="h-4 w-4 inline mr-2" />
-                  Mitgliedschaft
-                </button>
-              )}
-              <Link
-                to="/hilfe-center"
-                className="py-2 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center"
-              >
-                Hilfe-Center
-              </Link>
+        {/* Sidebar-Navigation + Inhalt (Layout wie Caretaker-Dashboard) */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 sm:gap-8 mb-8">
+          <aside className="lg:col-span-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <nav
+              className="bg-white rounded-xl shadow p-2 sm:p-4 lg:sticky lg:top-4 overflow-x-auto overscroll-x-contain scrollbar-hide pb-1 -mb-1 sm:pb-0 sm:mb-0 touch-pan-x"
+              aria-label="Dashboard-Bereiche"
+            >
+              <ul className="flex flex-row lg:flex-col gap-2 lg:gap-0 lg:space-y-1 min-w-0">
+                <li className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('uebersicht')}
+                    aria-current={activeTab === 'uebersicht' ? 'page' : undefined}
+                    className={`w-auto lg:w-full flex items-center gap-2 whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'uebersicht'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50 border border-transparent'
+                      }`}
+                  >
+                    <Heart className="h-4 w-4 shrink-0 opacity-80" />
+                    Übersicht
+                  </button>
+                </li>
+                <li className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('tiere')}
+                    aria-current={activeTab === 'tiere' ? 'page' : undefined}
+                    className={`w-auto lg:w-full flex items-center gap-2 whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'tiere'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50 border border-transparent'
+                      }`}
+                  >
+                    <PawPrint className="h-4 w-4 shrink-0 opacity-80" />
+                    Meine Tiere
+                  </button>
+                </li>
+                <li className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('oeffentlichesProfil')}
+                    aria-current={activeTab === 'oeffentlichesProfil' ? 'page' : undefined}
+                    className={`w-auto lg:w-full flex items-center gap-2 whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'oeffentlichesProfil'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50 border border-transparent'
+                      }`}
+                  >
+                    <User className="h-4 w-4 shrink-0 opacity-80" />
+                    Öffentliches Profil
+                  </button>
+                </li>
+                <li className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('jobs')}
+                    aria-current={activeTab === 'jobs' ? 'page' : undefined}
+                    className={`w-auto lg:w-full flex items-center gap-2 whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'jobs'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50 border border-transparent'
+                      }`}
+                  >
+                    <Briefcase className="h-4 w-4 shrink-0 opacity-80" />
+                    Jobs
+                  </button>
+                </li>
+                <li className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('affiliate')}
+                    aria-current={activeTab === 'affiliate' ? 'page' : undefined}
+                    className={`w-auto lg:w-full flex items-center gap-2 whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'affiliate'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50 border border-transparent'
+                      }`}
+                  >
+                    <Share2 className="h-4 w-4 shrink-0 opacity-80" />
+                    Affiliate Programm
+                  </button>
+                </li>
+                <li className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('kontaktdaten')}
+                    aria-current={activeTab === 'kontaktdaten' ? 'page' : undefined}
+                    className={`w-auto lg:w-full flex items-center gap-2 whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'kontaktdaten'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50 border border-transparent'
+                      }`}
+                  >
+                    <BookUser className="h-4 w-4 shrink-0 opacity-80" />
+                    Kontaktdaten
+                  </button>
+                </li>
+                <li className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('einstellungen')}
+                    aria-current={activeTab === 'einstellungen' ? 'page' : undefined}
+                    className={`w-auto lg:w-full flex items-center gap-2 whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'einstellungen'
+                      ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                      : 'text-gray-700 hover:bg-gray-50 border border-transparent'
+                      }`}
+                  >
+                    <Settings className="h-4 w-4 shrink-0 opacity-80" />
+                    Einstellungen
+                  </button>
+                </li>
+                {isPremiumUser && (
+                  <li className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('mitgliedschaft')}
+                      aria-current={activeTab === 'mitgliedschaft' ? 'page' : undefined}
+                      className={`w-auto lg:w-full flex items-center gap-2 whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'mitgliedschaft'
+                        ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                        : 'text-gray-700 hover:bg-gray-50 border border-transparent'
+                        }`}
+                    >
+                      <Crown className="h-4 w-4 shrink-0 opacity-80" />
+                      Mitgliedschaft
+                    </button>
+                  </li>
+                )}
+                <li className="shrink-0">
+                  <Link
+                    to="/hilfe-center"
+                    className="w-auto lg:w-full flex items-center gap-2 whitespace-nowrap text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-700 hover:bg-gray-50 border border-transparent"
+                  >
+                    <HelpCircle className="h-4 w-4 shrink-0 opacity-80" />
+                    Hilfe-Center
+                  </Link>
+                </li>
+              </ul>
             </nav>
-          </div>
-        </div>
-
+          </aside>
+          <section className="lg:col-span-3 min-w-0">
         {/* Tab Content */}
         {activeTab === 'uebersicht' && (
           <>
@@ -1622,9 +1782,9 @@ function OwnerDashboardPage() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {contacts.map((caregiver: any) => (
-                      <div key={caregiver.id} className="bg-white rounded-xl shadow-sm p-4 flex gap-4 items-center relative min-h-[110px]">
+                      <div key={caregiver.id} className="bg-white rounded-xl shadow-sm p-3 sm:p-4 flex gap-3 sm:gap-4 items-center relative min-h-[110px]">
                         {/* Action Icons oben rechts */}
-                        <div className="absolute top-4 right-4 flex gap-2">
+                        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex gap-1.5 sm:gap-2">
                           {/* Favoriten-Herz */}
                           {caregiver.isFavorite && (
                             <div className="text-primary-500" title="Favorit">
@@ -1661,10 +1821,10 @@ function OwnerDashboardPage() {
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                        <img src={caregiver.avatar} alt={caregiver.name} className="w-20 h-20 rounded-xl object-cover border-2 border-primary-100" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="font-bold text-lg truncate">{caregiver.name}</div>
+                        <img src={caregiver.avatar} alt={caregiver.name} className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl object-cover border-2 border-primary-100" />
+                        <div className="flex-1 min-w-0 pr-12 sm:pr-14">
+                          <div className="flex items-center gap-2 mb-1 min-w-0">
+                            <div className="font-bold text-base sm:text-lg truncate">{caregiver.name}</div>
                             {caregiver.isCommercial && (
                               <span className="bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md text-center flex items-center justify-center">
                                 <Briefcase className="h-3 w-3 mr-1" /> Pro
@@ -1709,9 +1869,9 @@ function OwnerDashboardPage() {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     {favoriteCaretakers.map((caregiver: any) => (
-                      <div key={`fav-${caregiver.id}`} className="bg-white rounded-xl shadow-sm p-4 flex gap-4 items-center relative min-h-[110px] border border-primary-100">
+                      <div key={`fav-${caregiver.id}`} className="bg-white rounded-xl shadow-sm p-3 sm:p-4 flex gap-3 sm:gap-4 items-center relative min-h-[110px] border border-primary-100">
                         {/* Action Icons oben rechts */}
-                        <div className="absolute top-4 right-4 flex gap-2">
+                        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex gap-1.5 sm:gap-2">
                           {/* Favoriten-Herz (klickbar zum Entfernen) */}
                           <button
                             type="button"
@@ -1746,10 +1906,10 @@ function OwnerDashboardPage() {
                             <MessageCircle className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                        <img src={caregiver.avatar} alt={caregiver.name} className="w-20 h-20 rounded-xl object-cover border-2 border-primary-100" />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className="font-bold text-lg truncate">{caregiver.name}</div>
+                        <img src={caregiver.avatar} alt={caregiver.name} className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl object-cover border-2 border-primary-100" />
+                        <div className="flex-1 min-w-0 pr-12 sm:pr-14">
+                          <div className="flex items-center gap-2 mb-1 min-w-0">
+                            <div className="font-bold text-base sm:text-lg truncate">{caregiver.name}</div>
                             {caregiver.isCommercial && (
                               <span className="bg-gradient-to-r from-purple-600 to-purple-700 text-white text-xs font-bold px-2 py-1 rounded-full shadow-md text-center flex items-center justify-center">
                                 <Briefcase className="h-3 w-3 mr-1" /> Pro
@@ -1790,6 +1950,177 @@ function OwnerDashboardPage() {
                   </div>
                 )}
               </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'oeffentlichesProfil' && (
+          <>
+            {/* Kurzvorstellung & Über mich (Tab: Öffentliches Profil) */}
+            <div className="mb-8">
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-900 mb-2">
+                <Info className="h-5 w-5" />
+                Kurzvorstellung
+              </h3>
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6 sm:mb-8 relative">
+                {!editShortIntro && (
+                  <button
+                    type="button"
+                    className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-gray-400 hover:text-primary-600"
+                    onClick={() => {
+                      setEditShortIntro(true);
+                      setShortIntroDraft(shortIntro);
+                    }}
+                    title="Bearbeiten"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <p className="text-xs text-gray-500 mb-3 pr-10">
+                  Erscheint oben auf deinem Tierhalter-Profil unter deinem Namen (max. {SHORT_INTRO_MAX} Zeichen).
+                </p>
+                {!editShortIntro ? (
+                  <div className="text-gray-700 min-h-[32px] whitespace-pre-wrap break-words">
+                    {shortIntro ? (
+                      <span>{shortIntro}</span>
+                    ) : (
+                      <span className="text-gray-400">Noch keine Kurzvorstellung hinterlegt.</span>
+                    )}
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void handleSaveShortIntro();
+                    }}
+                  >
+                    <textarea
+                      value={shortIntroDraft}
+                      onChange={(e) => {
+                        if (e.target.value.length <= SHORT_INTRO_MAX) {
+                          setShortIntroDraft(e.target.value);
+                        }
+                      }}
+                      placeholder="z. B. Zwei Hunde, viel Liebe zur Natur, suche verlässliche Betreuung …"
+                      rows={3}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      autoFocus
+                    />
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-2">
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <button
+                          type="submit"
+                          className="w-full sm:w-auto px-3 py-2.5 sm:py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-xs disabled:opacity-50 touch-manipulation"
+                          disabled={aboutMeSaving || shortIntroDraft.length > SHORT_INTRO_MAX}
+                        >
+                          {aboutMeSaving ? 'Speichert...' : 'Speichern'}
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full sm:w-auto px-3 py-2.5 sm:py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs touch-manipulation"
+                          onClick={() => {
+                            setEditShortIntro(false);
+                            setShortIntroDraft(shortIntro);
+                          }}
+                        >
+                          Abbrechen
+                        </button>
+                      </div>
+                      <span
+                        className={`text-xs shrink-0 ${shortIntroDraft.length > SHORT_INTRO_MAX ? 'text-red-500' : 'text-gray-500'}`}
+                      >
+                        {shortIntroDraft.length} / {SHORT_INTRO_MAX} Zeichen
+                      </span>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-900 mb-2">
+                <User className="h-5 w-5" />
+                Über mich
+              </h3>
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 relative">
+                {!editAboutMe && (
+                  <button
+                    type="button"
+                    className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-gray-400 hover:text-primary-600"
+                    onClick={() => {
+                      setEditAboutMe(true);
+                      setAboutMeDraft(aboutMe);
+                    }}
+                    title="Bearbeiten"
+                  >
+                    <Edit className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <p className="text-xs text-gray-500 mb-3 pr-10">
+                  Ausführlicher Text im Bereich „Über mich“ auf deinem Profil (max. {ABOUT_ME_MAX} Zeichen).
+                </p>
+                {!editAboutMe ? (
+                  <div className="text-gray-700 min-h-[32px] whitespace-pre-wrap break-words">
+                    {aboutMe ? (
+                      <span>{aboutMe}</span>
+                    ) : (
+                      <span className="text-gray-400">Noch kein Text hinterlegt.</span>
+                    )}
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void handleSaveAboutMeSection();
+                    }}
+                  >
+                    <textarea
+                      value={aboutMeDraft}
+                      onChange={(e) => {
+                        if (e.target.value.length <= ABOUT_ME_MAX) {
+                          setAboutMeDraft(e.target.value);
+                        }
+                      }}
+                      placeholder="Erzähle mehr über dich, deine Tiere und was dir bei der Betreuung wichtig ist …"
+                      rows={6}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl resize-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      autoFocus
+                    />
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-2">
+                      <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <button
+                          type="submit"
+                          className="w-full sm:w-auto px-3 py-2.5 sm:py-1 bg-primary-600 text-white rounded hover:bg-primary-700 text-xs disabled:opacity-50 touch-manipulation"
+                          disabled={aboutMeSaving}
+                        >
+                          {aboutMeSaving ? 'Speichert...' : 'Speichern'}
+                        </button>
+                        <button
+                          type="button"
+                          className="w-full sm:w-auto px-3 py-2.5 sm:py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs touch-manipulation"
+                          onClick={() => {
+                            setEditAboutMe(false);
+                            setAboutMeDraft(aboutMe);
+                          }}
+                        >
+                          Abbrechen
+                        </button>
+                      </div>
+                      <span className="text-xs text-gray-500 shrink-0">
+                        {aboutMeDraft.length} / {ABOUT_ME_MAX} Zeichen
+                      </span>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              {aboutMeSuccess && (
+                <div className="mt-4 text-sm text-green-600 flex items-center gap-1">
+                  <Check className="h-4 w-4" />
+                  Erfolgreich gespeichert!
+                </div>
+              )}
+              {aboutMeError && (
+                <div className="mt-2 text-sm text-red-600">{aboutMeError}</div>
+              )}
             </div>
           </>
         )}
@@ -2151,6 +2482,14 @@ function OwnerDashboardPage() {
           </>
         )}
 
+        {activeTab === 'jobs' && user && (
+          <OwnerDashboardJobsTab
+            userId={user.id}
+            pets={pets.map((p) => ({ id: p.id, name: p.name }))}
+            isPremiumUser={isPremiumUser}
+          />
+        )}
+
         {activeTab === 'einstellungen' && (
           <>
             {/* Tierarzt-Informationen und Notfallkontakt */}
@@ -2290,7 +2629,7 @@ function OwnerDashboardPage() {
                     <div className="mb-6">
                       <h3 className="text-lg font-medium mb-3">Gewünschte Services</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {ALL_SERVICES.map((service) => (
+                        {OWNER_SERVICE_TAGS.map((service) => (
                           <label key={service} className="flex items-center space-x-3">
                             <div className="relative">
                               <input
@@ -2335,7 +2674,7 @@ function OwnerDashboardPage() {
                     <div className="mb-6">
                       <h3 className="text-lg font-medium mb-3">Gewünschte Services</h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {ALL_SERVICES.map((service) => (
+                        {OWNER_SERVICE_TAGS.map((service) => (
                           <label key={service} className="flex items-center space-x-3 cursor-pointer">
                             <input
                               type="checkbox"
@@ -2437,11 +2776,11 @@ function OwnerDashboardPage() {
                 <Shield className="h-5 w-5" />
                 Informationen mit Betreuern teilen
               </h2>
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-start">
-                    <Shield className="h-5 w-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
-                    <div className="text-sm">
+              <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+                <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Shield className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
+                    <div className="text-sm min-w-0">
                       <p className="font-medium text-blue-800">Datenschutz-Hinweis</p>
                       <p className="text-blue-700 mt-1">
                         Wähle aus, welche Informationen du mit deinen Betreuern teilen möchtest.
@@ -2453,12 +2792,46 @@ function OwnerDashboardPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-gray-100">
+                    <div className="min-w-0 flex-1 pr-2 sm:pr-4">
+                      <h4 className="font-medium text-gray-900">Profilbild</h4>
+                      <p className="text-sm text-gray-500">Dein Profilbild auf deinem öffentlichen Profil anzeigen</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer self-end sm:self-auto shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={shareSettings.profilePhoto}
+                        onChange={() => handleShareToggle('profilePhoto')}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-gray-100">
+                    <div className="min-w-0 flex-1 pr-2 sm:pr-4">
+                      <h4 className="font-medium text-gray-900">Kurzvorstellung &amp; Über mich</h4>
+                      <p className="text-sm text-gray-500">
+                        Kurzvorstellung (Hero) und ausführlichen „Über-mich“-Text auf deinem öffentlichen Profil anzeigen
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer self-end sm:self-auto shrink-0">
+                      <input
+                        type="checkbox"
+                        checked={shareSettings.aboutMe}
+                        onChange={() => handleShareToggle('aboutMe')}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                    </label>
+                  </div>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-gray-100">
+                    <div className="min-w-0 flex-1 pr-2 sm:pr-4">
                       <h4 className="font-medium text-gray-900">Telefonnummer</h4>
                       <p className="text-sm text-gray-500">Ermöglicht direkten Kontakt in Notfällen</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer self-end sm:self-auto shrink-0">
                       <input
                         type="checkbox"
                         checked={shareSettings.phoneNumber}
@@ -2469,12 +2842,12 @@ function OwnerDashboardPage() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-gray-100">
+                    <div className="min-w-0 flex-1 pr-2 sm:pr-4">
                       <h4 className="font-medium text-gray-900">E-Mail-Adresse</h4>
                       <p className="text-sm text-gray-500">Für schriftliche Kommunikation und Updates</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer self-end sm:self-auto shrink-0">
                       <input
                         type="checkbox"
                         checked={shareSettings.email}
@@ -2485,12 +2858,12 @@ function OwnerDashboardPage() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-gray-100">
+                    <div className="min-w-0 flex-1 pr-2 sm:pr-4">
                       <h4 className="font-medium text-gray-900">Adresse</h4>
                       <p className="text-sm text-gray-500">PLZ und Ort für lokale Betreuung</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer self-end sm:self-auto shrink-0">
                       <input
                         type="checkbox"
                         checked={shareSettings.address}
@@ -2501,12 +2874,12 @@ function OwnerDashboardPage() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-gray-100">
+                    <div className="min-w-0 flex-1 pr-2 sm:pr-4">
                       <h4 className="font-medium text-gray-900">Tierarzt-Informationen</h4>
                       <p className="text-sm text-gray-500">Wichtig für medizinische Notfälle</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer self-end sm:self-auto shrink-0">
                       <input
                         type="checkbox"
                         checked={shareSettings.vetInfo}
@@ -2517,12 +2890,12 @@ function OwnerDashboardPage() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-gray-100">
+                    <div className="min-w-0 flex-1 pr-2 sm:pr-4">
                       <h4 className="font-medium text-gray-900">Notfallkontakt</h4>
                       <p className="text-sm text-gray-500">Alternative Ansprechperson in Notfällen</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer self-end sm:self-auto shrink-0">
                       <input
                         type="checkbox"
                         checked={shareSettings.emergencyContact}
@@ -2533,12 +2906,12 @@ function OwnerDashboardPage() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3 border-b border-gray-100">
+                    <div className="min-w-0 flex-1 pr-2 sm:pr-4">
                       <h4 className="font-medium text-gray-900">Tier-Details</h4>
                       <p className="text-sm text-gray-500">Alter, Rasse und besondere Eigenschaften</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer self-end sm:self-auto shrink-0">
                       <input
                         type="checkbox"
                         checked={shareSettings.petDetails}
@@ -2549,12 +2922,12 @@ function OwnerDashboardPage() {
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between py-3">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 py-3">
+                    <div className="min-w-0 flex-1 pr-2 sm:pr-4">
                       <h4 className="font-medium text-gray-900">Betreuungsvorlieben</h4>
                       <p className="text-sm text-gray-500">Gewünschte Services und spezielle Wünsche</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className="relative inline-flex items-center cursor-pointer self-end sm:self-auto shrink-0">
                       <input
                         type="checkbox"
                         checked={shareSettings.carePreferences}
@@ -3104,6 +3477,9 @@ function OwnerDashboardPage() {
             </div>
           </>
         )}
+          </section>
+        </div>
+
       </div>
 
       {/* Delete Caretaker Confirmation Modal */}
@@ -3244,6 +3620,7 @@ function OwnerDashboardPage() {
           </div>
         </div>
       )}
+      <DashboardReleaseTeaser />
     </div>
   );
 }

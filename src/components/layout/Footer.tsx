@@ -61,6 +61,7 @@ function Footer() {
             <h3 className="text-lg font-semibold mb-4">Unternehmen</h3>
             <ul className="space-y-2">
               <li><FooterLink to="/ueber-uns">Über uns</FooterLink></li>
+              <li><FooterLink to="/was-ist-neu">Was ist neu</FooterLink></li>
               <li><FooterLink to="/kontakt">Kontakt</FooterLink></li>
               <li><FooterLink to="/impressum">Impressum</FooterLink></li>
               <li><FooterLink to="/datenschutz">Datenschutz</FooterLink></li>

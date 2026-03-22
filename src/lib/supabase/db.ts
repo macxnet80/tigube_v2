@@ -23,6 +23,10 @@ export type UserProfileUpdate = {
   profileCompleted?: boolean;
   userType?: 'owner' | 'caretaker';
   profilePhotoUrl?: string;
+  /** Tierhalter: langer Profiltext */
+  aboutMe?: string | null;
+  /** Tierhalter: Kurzvorstellung / Hero-Teaser */
+  shortIntro?: string | null;
 };
 
 export type PetData = {
@@ -58,6 +62,8 @@ export type ShareSettings = {
   emergencyContact: boolean;
   petDetails: boolean;
   carePreferences: boolean;
+  aboutMe: boolean;       // NEU
+  profilePhoto: boolean;  // NEU
 };
 
 // Benutzer-Funktionen
@@ -116,6 +122,8 @@ export const userService = {
     if (profileData.profileCompleted !== undefined) updateData.profile_completed = profileData.profileCompleted;
     if (profileData.userType !== undefined) updateData.user_type = profileData.userType;
     if (profileData.profilePhotoUrl !== undefined) updateData.profile_photo_url = profileData.profilePhotoUrl;
+    if (profileData.aboutMe !== undefined) updateData.about_me = profileData.aboutMe;
+    if (profileData.shortIntro !== undefined) updateData.short_intro = profileData.shortIntro;
 
     console.log('📝 updateUserProfile: Update-Daten:', updateData);
 
@@ -486,7 +494,9 @@ export const ownerPreferencesService = {
       vetInfo: false,
       emergencyContact: false,
       petDetails: false,
-      carePreferences: false
+      carePreferences: false,
+      aboutMe: true,        // Default: sichtbar
+      profilePhoto: true    // Default: sichtbar
     };
 
     if (!data?.share_settings) {
@@ -513,7 +523,9 @@ export const ownerPreferencesService = {
       vetInfo: toBool(rawSettings.vetInfo),
       emergencyContact: toBool(rawSettings.emergencyContact),
       petDetails: toBool(rawSettings.petDetails),
-      carePreferences: toBool(rawSettings.carePreferences)
+      carePreferences: toBool(rawSettings.carePreferences),
+      aboutMe: rawSettings.aboutMe !== undefined ? toBool(rawSettings.aboutMe) : true,
+      profilePhoto: rawSettings.profilePhoto !== undefined ? toBool(rawSettings.profilePhoto) : true
     };
 
     return {

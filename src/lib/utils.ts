@@ -33,6 +33,22 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+/** Betreuer-ähnliche Rollen (inkl. Dienstleister-Typen), z. B. für Job-Bewerbungen */
+export function isCaretakerLikeUserType(userType: string | null | undefined): boolean {
+  if (!userType) return false;
+  return [
+    'caretaker',
+    'dienstleister',
+    'hundetrainer',
+    'tierarzt',
+    'tierfriseur',
+    'physiotherapeut',
+    'ernaehrungsberater',
+    'tierfotograf',
+    'sonstige'
+  ].includes(userType);
+}
+
 export function getInitials(name: string): string {
   if (!name) return '';
   return name

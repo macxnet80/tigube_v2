@@ -53,22 +53,29 @@ export type OwnerCaretakerConnection = Database['public']['Tables']['owner_caret
 export type OwnerCaretakerConnectionInsert = Database['public']['Tables']['owner_caretaker_connections']['Insert']
 export type OwnerCaretakerConnectionUpdate = Database['public']['Tables']['owner_caretaker_connections']['Update']
 
-// Public owner profile (shown to caretakers with access)
+/** Ein Job auf dem öffentlichen Tierhalter-Profil (nur offene Jobs) */
+export interface PublicOwnerJob {
+  id: string
+  title: string
+  description: string
+  date_from: string | null
+  date_to: string | null
+  location_text: string | null
+  service_tags: string[] | null
+  budget_hint: string | null
+  pets: { id: string; name: string }[]
+}
+
+// Öffentliches Tierhalter-Profil (/owner/:id): nur Profilbild, Über mich, Tiere, offene Jobs.
+// Keine Kontaktdaten — Kommunikation läuft über den Chat.
 export interface PublicOwnerProfile {
   id: string
   first_name: string
   last_name: string
   profile_photo_url?: string | null
-  phone_number?: string | null
-  email?: string | null
-  plz?: string | null
-  city?: string | null
-  services?: string[] | null
-  other_services?: string | null
-  vet_info?: { name: string; address: string; phone: string } | string | null
-  emergency_contact_name?: string | null
-  emergency_contact_phone?: string | null
-  care_instructions?: string | null
+  /** Kurzer Teaser im Profil-Header (öffentlich) */
+  short_intro?: string | null
+  about_me?: string | null
   pets?: Array<{
     id: string
     name: string
@@ -80,12 +87,9 @@ export interface PublicOwnerProfile {
     neutered?: boolean | null
   }>
   share_settings?: {
-    phoneNumber: boolean
-    email: boolean
-    address: boolean
-    vetInfo: boolean
-    emergencyContact: boolean
+    aboutMe: boolean
+    profilePhoto: boolean
     petDetails: boolean
-    carePreferences: boolean
   }
+  jobs?: PublicOwnerJob[]
 }
