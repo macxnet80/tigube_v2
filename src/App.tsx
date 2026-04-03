@@ -43,6 +43,9 @@ const CreateListingPage = lazy(() => import('./pages/CreateListingPage'));
 const MyListingsPage = lazy(() => import('./pages/MyListingsPage'));
 const EditListingPage = lazy(() => import('./pages/EditListingPage'));
 const MarketplaceTermsPage = lazy(() => import('./pages/MarketplaceTermsPage'));
+const FuerTierhalterPage = lazy(() => import('./pages/FuerTierhalterPage'));
+const FuerBetreuungspersonenPage = lazy(() => import('./pages/FuerBetreuungspersonenPage'));
+const FaqPage = lazy(() => import('./pages/FaqPage'));
 
 // Debug components (only in development)
 
@@ -84,7 +87,10 @@ function App() {
             <Route path="/agb" element={<AgbPage />} />
             <Route path="/ueber-uns" element={<AboutPage />} />
             <Route path="/kontakt" element={<ContactPage />} />
-            <Route path="/hilfe" element={<HelpPage />} />
+            <Route path="/hilfe" element={<Navigate to="/faq" replace />} />
+            <Route path="/fuer-tierhalter" element={<FuerTierhalterPage />} />
+            <Route path="/fuer-betreuungspersonen" element={<FuerBetreuungspersonenPage />} />
+            <Route path="/faq" element={<FaqPage />} />
             <Route path="/preise" element={<PricingPage />} />
             <Route path="/mitgliedschaften" element={<PricingPage />} />
             <Route path="/pricing" element={<Navigate to="/mitgliedschaften" replace />} />
