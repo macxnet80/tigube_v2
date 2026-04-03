@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import Button from '../components/ui/Button';
 
@@ -123,9 +124,9 @@ function ContactPage() {
                   Bevor Sie uns kontaktieren, schauen Sie gerne in unsere FAQ-Sektion. 
                   Viele Antworten finden Sie dort bereits.
                 </p>
-                <a href="/hilfe" className="text-blue-600 hover:text-blue-800 font-medium text-sm mt-2 inline-block">
-                  Zur Hilfe & FAQ →
-                </a>
+                <Link to="/faq" className="text-blue-600 hover:text-blue-800 font-medium text-sm mt-2 inline-block">
+                  Zur FAQ →
+                </Link>
               </div>
             </div>
 

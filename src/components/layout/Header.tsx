@@ -336,6 +336,7 @@ function Header() {
                     <Link
                       to="/registrieren"
                       className="btn btn-primary w-full justify-center"
+                      onClick={() => setIsMenuOpen(false)}
                     >
                       Registrieren
                     </Link>
