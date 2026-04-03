@@ -359,7 +359,7 @@ export default function FuerBetreuungspersonenPage() {
       </section>
 
       {/* 8. Final CTA */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-gray-50">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
             Bereit, Tiere zu betreuen und neue Kunden zu gewinnen?
