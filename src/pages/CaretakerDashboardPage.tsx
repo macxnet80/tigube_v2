@@ -48,6 +48,20 @@ function CaretakerDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [profileLoadAttempts, setProfileLoadAttempts] = useState(0);
 
+  /** Verhindert doppeltes Öffnen, wenn `userProfile` nach Registrierung nachlädt (gleicher Tab) */
+  const onboardingOpenedFromRegistrationRef = useRef(false);
+
+  const ONBOARDING_DONE_KEY = 'tigube_caretaker_onboarding_done';
+
+  const dismissCaretakerOnboarding = () => {
+    try {
+      localStorage.setItem(ONBOARDING_DONE_KEY, '1');
+    } catch {
+      /* ignore */
+    }
+    setShowOnboarding(false);
+  };
+
   // Onboarding-Modal State
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingUserName, setOnboardingUserName] = useState<string>('');
@@ -127,35 +141,56 @@ function CaretakerDashboardPage() {
   const [onboardingCategoryName, setOnboardingCategoryName] = useState<string | undefined>();
   const [onboardingSpecificUserType, setOnboardingSpecificUserType] = useState<string | undefined>();
 
-  // Onboarding nach Dashboard-Load starten (nur einmal, via sessionStorage)
+  // Onboarding: nach Registrierung (sessionStorage) oder erneute Anmeldung als Betreuer (caretaker) mit offenem Profil
   useEffect(() => {
-    if (!authLoading && user) {
-      try {
-        const raw = sessionStorage.getItem('onboardingData');
-        if (raw) {
-          const parsed = JSON.parse(raw) as {
-            userType?: 'owner' | 'caretaker' | 'dienstleister';
-            userName?: string;
-            categoryName?: string;
-            specificUserType?: string;
-          };
+    if (authLoading || !user) return;
 
-          // Akzeptiere sowohl 'caretaker' als auch 'dienstleister' für das Onboarding
-          if (parsed.userType === 'caretaker' || parsed.userType === 'dienstleister') {
-            setOnboardingUserName(parsed.userName || userProfile?.first_name || '');
-            setOnboardingCategoryName(parsed.categoryName);
-            setOnboardingSpecificUserType(parsed.specificUserType);
-            setShowOnboarding(true);
-            // Setze Flag, dass User gerade registriert wurde
-            sessionStorage.setItem('wasJustRegistered', 'true');
+    try {
+      const raw = sessionStorage.getItem('onboardingData');
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          userType?: string;
+          userName?: string;
+          categoryName?: string;
+          specificUserType?: string;
+        };
 
-          }
-          sessionStorage.removeItem('onboardingData');
+        const showFromRegistration =
+          parsed.userType === 'caretaker' ||
+          parsed.userType === 'dienstleister' ||
+          parsed.userType === 'betreuer';
+
+        if (showFromRegistration) {
+          setOnboardingUserName(parsed.userName || userProfile?.first_name || '');
+          setOnboardingCategoryName(parsed.categoryName);
+          setOnboardingSpecificUserType(parsed.specificUserType);
+          setShowOnboarding(true);
+          sessionStorage.setItem('wasJustRegistered', 'true');
+          onboardingOpenedFromRegistrationRef.current = true;
         }
-      } catch (e) {
-
+        sessionStorage.removeItem('onboardingData');
+        return;
       }
+    } catch (e) {
+      console.warn('⚠️ Konnte onboardingData nicht lesen:', e);
     }
+
+    if (onboardingOpenedFromRegistrationRef.current) return;
+
+    if (!userProfile) return;
+    if (userProfile.user_type !== 'caretaker') return;
+    if (userProfile.profile_completed === true) return;
+
+    try {
+      if (localStorage.getItem(ONBOARDING_DONE_KEY) === '1') return;
+    } catch {
+      /* ignore */
+    }
+
+    setOnboardingUserName(userProfile.first_name || '');
+    setOnboardingCategoryName('Betreuer');
+    setOnboardingSpecificUserType('caretaker');
+    setShowOnboarding(true);
   }, [authLoading, user, userProfile]);
 
   // Lade Kontaktdaten wenn userProfile verfügbar ist
@@ -2333,14 +2368,8 @@ function CaretakerDashboardPage() {
           userName={onboardingUserName}
           categoryName={onboardingCategoryName}
           specificUserType={onboardingSpecificUserType}
-          onComplete={() => {
-
-            setShowOnboarding(false);
-          }}
-          onSkip={() => {
-
-            setShowOnboarding(false);
-          }}
+          onComplete={dismissCaretakerOnboarding}
+          onSkip={dismissCaretakerOnboarding}
         />
       </div>
     );
@@ -2622,6 +2651,39 @@ function CaretakerDashboardPage() {
                             )}
                           </button>
                         )}
+
+                        <div
+                          className="w-full max-w-md lg:max-w-sm rounded-lg border border-gray-100 bg-gray-50/90 p-3 text-left text-xs sm:text-sm text-gray-600 leading-relaxed"
+                          role="region"
+                          aria-label="Hinweis zur Profil-Sichtbarkeit"
+                        >
+                          <div className="flex gap-2">
+                            <Info className="h-4 w-4 shrink-0 text-primary-600 mt-0.5" aria-hidden />
+                            <div className="space-y-2">
+                              <p className="font-medium text-gray-800">Profil ist ohne Freigabe nicht öffentlich</p>
+                              <p>
+                                Ohne erfolgreiche Freigabe erscheint Ihr Profil nicht in der Betreuer-Suche und ist für andere Nutzer nicht sichtbar.
+                              </p>
+                              {profile?.approval_status === 'pending' ? (
+                                <p>
+                                  Ihre Anfrage wird geprüft. Bis zur Entscheidung bleibt das Profil unsichtbar. Sie erhalten eine Rückmeldung nach der Prüfung.
+                                </p>
+                              ) : (
+                                <>
+                                  <p>
+                                    Fordern Sie die Freigabe aktiv über den Button oben an – tigube prüft jedes Profil manuell, bevor es live geht.
+                                  </p>
+                                  <p className="font-medium text-gray-700">Voraussetzungen für die Einreichung:</p>
+                                  <ul className="list-disc pl-4 space-y-0.5">
+                                    <li>Profilbild hinterlegt</li>
+                                    <li>„Über mich“ mit mindestens 20 Zeichen (Kurz- und Langtext zusammen)</li>
+                                    <li>Mindestens eine Leistung außer alleinigen Anfahrkosten</li>
+                                  </ul>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -4751,11 +4813,8 @@ function CaretakerDashboardPage() {
         userName={onboardingUserName}
         categoryName={onboardingCategoryName}
         specificUserType={onboardingSpecificUserType}
-        onComplete={() => setShowOnboarding(false)}
-        onSkip={() => {
-
-          setShowOnboarding(false);
-        }}
+        onComplete={dismissCaretakerOnboarding}
+        onSkip={dismissCaretakerOnboarding}
       />
 
       {/* Profilbild Editor Modal */}

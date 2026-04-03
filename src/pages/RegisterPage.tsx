@@ -6,11 +6,33 @@ import { auth, supabase } from '../lib/supabase/client';
 import { userService } from '../lib/supabase/db';
 import { useAuth } from '../lib/auth/AuthContext';
 
+type RegistrationUserType = 'tierhalter' | 'betreuer' | 'dienstleister';
+
+function mapSearchParamToUserType(type: string | null): RegistrationUserType {
+  if (!type) return 'tierhalter';
+  const t = type.toLowerCase();
+  if (t === 'caregiver' || t === 'caretaker') return 'betreuer';
+  if (t === 'dienstleister') return 'dienstleister';
+  return 'tierhalter';
+}
+
+/** DB-Wert für users.user_type bei Tierhalter (Kompatibilität mit bestehender App) */
+const BETREUER_KATEGORIE_ID_FALLBACK = 1;
+
+function capitalizeFirstChar(value: string): string {
+  if (!value) return '';
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function isSonstigeCategory(category: { name: string } | undefined): boolean {
+  return category?.name.trim().toLowerCase() === 'sonstige';
+}
+
 function RegisterPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { updateProfileState, isAuthenticated, userProfile, loading: authLoading } = useAuth();
-  const initialType = searchParams.get('type') || 'owner';
+  const initialType = searchParams.get('type');
 
   // Redirect if already authenticated and have profile
   React.useEffect(() => {
@@ -33,18 +55,20 @@ function RegisterPage() {
     }
   }, [isAuthenticated, userProfile, authLoading, navigate]);
 
-  // Fix: Accept both 'caregiver' and 'caretaker' as valid caretaker types
-  const [userType, setUserType] = useState<'owner' | 'dienstleister'>(
-    initialType === 'caregiver' || initialType === 'caretaker' || initialType === 'dienstleister' ? 'dienstleister' : 'owner'
-  );
+  const [userType, setUserType] = useState<RegistrationUserType>(() => mapSearchParamToUserType(initialType));
 
-  // Dienstleister-Kategorie State
-  const [selectedCategory, setSelectedCategory] = useState<number>(1); // Default: Betreuer
+  // Dienstleister-Kategorie State (nur für "weitere Dienstleister"; ohne Betreuer im Dropdown)
+  const [selectedCategory, setSelectedCategory] = useState<number>(0);
   const [categories, setCategories] = useState<Array<{ id: number, name: string, beschreibung: string, icon: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Kategorien laden
+  const categoriesWithoutBetreuer = React.useMemo(
+    () => categories.filter((cat) => cat.name.toLowerCase() !== 'betreuer'),
+    [categories]
+  );
+
+  // Kategorien laden (nur für Dropdown "weitere Dienstleister")
   React.useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -66,6 +90,15 @@ function RegisterPage() {
     }
   }, [userType]);
 
+  // Default-Auswahl: erste Kategorie ohne Betreuer
+  React.useEffect(() => {
+    if (userType !== 'dienstleister' || categoriesWithoutBetreuer.length === 0) return;
+    const firstId = categoriesWithoutBetreuer[0].id;
+    if (selectedCategory === 0 || !categoriesWithoutBetreuer.some((c) => c.id === selectedCategory)) {
+      setSelectedCategory(firstId);
+    }
+  }, [userType, categoriesWithoutBetreuer, selectedCategory]);
+
   // Onboarding wird nach Dashboard-Load angezeigt, nicht mehr hier
 
   // Formular-Daten für Schritt 1 (Grundlegende Kontoinformationen)
@@ -78,6 +111,9 @@ function RegisterPage() {
   });
 
   const [showPassword, setShowPassword] = useState(false);
+
+  /** Freitext bei Kategorie „Sonstige“ → caretaker_profiles.freie_dienstleistung */
+  const [freieDienstleistung, setFreieDienstleistung] = useState('');
 
   // Funktion zum Abschließen der Registrierung (vereinfacht)
   const completeRegistration = async () => {
@@ -97,6 +133,24 @@ function RegisterPage() {
     if (!formStep1.termsAccepted) {
       setError('Bitte akzeptiere die Nutzungsbedingungen und Datenschutzbestimmungen.');
       return;
+    }
+
+    let dienstleisterCategoryId = selectedCategory;
+    if (userType === 'dienstleister') {
+      if (categoriesWithoutBetreuer.length === 0) {
+        setError('Die Dienstleistungskategorien werden noch geladen oder sind nicht verfügbar. Bitte kurz warten und erneut versuchen.');
+        return;
+      }
+      dienstleisterCategoryId =
+        selectedCategory && categoriesWithoutBetreuer.some((c) => c.id === selectedCategory)
+          ? selectedCategory
+          : categoriesWithoutBetreuer[0].id;
+
+      const catMeta = categories.find((c) => c.id === dienstleisterCategoryId);
+      if (isSonstigeCategory(catMeta) && !freieDienstleistung.trim()) {
+        setError('Bitte beschreibe kurz deine Dienstleistung bei der Kategorie „Sonstige“.');
+        return;
+      }
     }
 
     try {
@@ -119,6 +173,9 @@ function RegisterPage() {
       if (error) throw error;
 
       if (data.user) {
+        const dbUserTypeForInsert: 'owner' | 'caretaker' | 'dienstleister' =
+          userType === 'tierhalter' ? 'owner' : userType === 'betreuer' ? 'caretaker' : 'dienstleister';
+
         // Benutzer in users-Tabelle anlegen
         const { error: insertError } = await supabase
           .from('users')
@@ -127,7 +184,7 @@ function RegisterPage() {
             email: formStep1.email,
             first_name: formStep1.firstName,
             last_name: formStep1.lastName,
-            user_type: userType,
+            user_type: dbUserTypeForInsert,
             profile_completed: false // Profile ist noch nicht vollständig
           });
 
@@ -136,18 +193,41 @@ function RegisterPage() {
           return;
         }
 
-        // Für Dienstleister: Spezifischen user_type und Caretaker-Profil erstellen
-        if (userType === 'dienstleister') {
-          const selectedCat = categories.find(cat => cat.id === selectedCategory);
+        const mapCategoryToSpecificUserType = (name: string | undefined) => {
+          const n = name?.toLowerCase() ?? '';
+          return n === 'betreuer' ? 'caretaker' :
+            n === 'tierarzt' ? 'tierarzt' :
+              n === 'hundetrainer' ? 'hundetrainer' :
+                n === 'tierfriseur' ? 'tierfriseur' :
+                  n === 'physiotherapeut' ? 'physiotherapeut' :
+                    n === 'ernährungsberater' ? 'ernaehrungsberater' :
+                      n === 'tierfotograf' ? 'tierfotograf' : 'sonstige';
+        };
 
-          // Bestimme den spezifischen user_type basierend auf der Kategorie
-          const specificUserType = selectedCat?.name.toLowerCase() === 'betreuer' ? 'caretaker' :
-            selectedCat?.name.toLowerCase() === 'tierarzt' ? 'tierarzt' :
-              selectedCat?.name.toLowerCase() === 'hundetrainer' ? 'hundetrainer' :
-                selectedCat?.name.toLowerCase() === 'tierfriseur' ? 'tierfriseur' :
-                  selectedCat?.name.toLowerCase() === 'physiotherapeut' ? 'physiotherapeut' :
-                    selectedCat?.name.toLowerCase() === 'ernährungsberater' ? 'ernaehrungsberater' :
-                      selectedCat?.name.toLowerCase() === 'tierfotograf' ? 'tierfotograf' : 'sonstige';
+        // Betreuer: Caretaker-Profil mit Betreuer-Kategorie (ohne Dropdown)
+        if (userType === 'betreuer') {
+          const { error: profileError } = await supabase
+            .from('caretaker_profiles')
+            .insert({
+              id: data.user.id,
+              kategorie_id: BETREUER_KATEGORIE_ID_FALLBACK,
+              dienstleister_typ: 'caretaker',
+              bio: '',
+              approval_status: 'not_requested'
+            });
+
+          if (profileError) {
+            console.error('Fehler beim Erstellen des Betreuer-Profils:', profileError);
+          }
+        }
+
+        // Weitere Dienstleister: Spezifischen user_type und Caretaker-Profil erstellen
+        if (userType === 'dienstleister') {
+          const selectedCat = categories.find((cat) => cat.id === dienstleisterCategoryId);
+
+          const specificUserType = mapCategoryToSpecificUserType(selectedCat?.name);
+          const freieText =
+            isSonstigeCategory(selectedCat) ? capitalizeFirstChar(freieDienstleistung.trim()) : null;
 
           // Aktualisiere den user_type in der users-Tabelle
           const { error: updateError } = await supabase
@@ -164,9 +244,10 @@ function RegisterPage() {
             .from('caretaker_profiles')
             .insert({
               id: data.user.id,
-              kategorie_id: selectedCategory,
+              kategorie_id: dienstleisterCategoryId,
               dienstleister_typ: specificUserType,
               bio: '',
+              freie_dienstleistung: freieText,
               approval_status: 'not_requested'
             });
 
@@ -226,18 +307,28 @@ function RegisterPage() {
         try {
           const onboardingData: any = { userType, userName: formStep1.firstName };
 
-          // Für Dienstleister: Kategorie-Informationen hinzufügen
+          if (userType === 'betreuer') {
+            onboardingData.categoryId = BETREUER_KATEGORIE_ID_FALLBACK;
+            onboardingData.categoryName = 'Betreuer';
+            onboardingData.specificUserType = 'caretaker';
+          }
+
+          // Für weitere Dienstleister: Kategorie-Informationen hinzufügen
           if (userType === 'dienstleister') {
-            const selectedCat = categories.find(cat => cat.id === selectedCategory);
-            onboardingData.categoryId = selectedCategory;
-            onboardingData.categoryName = selectedCat?.name || 'Betreuer';
-            onboardingData.specificUserType = selectedCat?.name.toLowerCase() === 'betreuer' ? 'caretaker' :
-              selectedCat?.name.toLowerCase() === 'tierarzt' ? 'tierarzt' :
-                selectedCat?.name.toLowerCase() === 'hundetrainer' ? 'hundetrainer' :
-                  selectedCat?.name.toLowerCase() === 'tierfriseur' ? 'tierfriseur' :
-                    selectedCat?.name.toLowerCase() === 'physiotherapeut' ? 'physiotherapeut' :
-                      selectedCat?.name.toLowerCase() === 'ernährungsberater' ? 'ernaehrungsberater' :
-                        selectedCat?.name.toLowerCase() === 'tierfotograf' ? 'tierfotograf' : 'sonstige';
+            const selectedCat = categories.find((cat) => cat.id === dienstleisterCategoryId);
+            onboardingData.categoryId = dienstleisterCategoryId;
+            onboardingData.categoryName = selectedCat?.name || 'Dienstleister';
+            const n = selectedCat?.name.toLowerCase() ?? '';
+            onboardingData.specificUserType = n === 'betreuer' ? 'caretaker' :
+              n === 'tierarzt' ? 'tierarzt' :
+                n === 'hundetrainer' ? 'hundetrainer' :
+                  n === 'tierfriseur' ? 'tierfriseur' :
+                    n === 'physiotherapeut' ? 'physiotherapeut' :
+                      n === 'ernährungsberater' ? 'ernaehrungsberater' :
+                        n === 'tierfotograf' ? 'tierfotograf' : 'sonstige';
+            if (isSonstigeCategory(selectedCat)) {
+              onboardingData.freieDienstleistung = capitalizeFirstChar(freieDienstleistung.trim());
+            }
           }
 
           sessionStorage.setItem('onboardingData', JSON.stringify(onboardingData));
@@ -251,7 +342,7 @@ function RegisterPage() {
           (window as any).Refgrow(0, 'signup', formStep1.email);
         }
 
-        const dashboardPath = userType === 'owner' ? '/dashboard-owner' : '/dashboard-caretaker';
+        const dashboardPath = userType === 'tierhalter' ? '/dashboard-owner' : '/dashboard-caretaker';
         console.log('✅ Registration completed. Redirecting to dashboard for onboarding:', dashboardPath);
         window.location.href = dashboardPath;
       }
@@ -274,12 +365,17 @@ function RegisterPage() {
             <img src="/Image/Logos/tigube_logo.svg" alt="tigube Logo" className="h-10 w-auto mr-2" />
           </Link>
           <h1 className="text-3xl font-bold mb-4">
-            {userType === 'owner' ? 'Als Tierhalter registrieren' : 'Als Dienstleister registrieren'}
+            {userType === 'tierhalter' && 'Als Tierhalter registrieren'}
+            {userType === 'betreuer' && 'Als Betreuer registrieren'}
+            {userType === 'dienstleister' && 'Als Dienstleister registrieren'}
           </h1>
           <p className="text-gray-600 max-w-lg mx-auto">
-            {userType === 'owner'
-              ? 'Erstelle ein Konto, um vertrauenswürdige Betreuer für deine Tiere zu finden.'
-              : 'Erstelle ein Konto, um deine Dienstleistungen anzubieten und Tierhalter zu erreichen.'}
+            {userType === 'tierhalter' &&
+              'Erstelle ein Konto, um vertrauenswürdige Betreuer für deine Tiere zu finden.'}
+            {userType === 'betreuer' &&
+              'Erstelle ein Konto, um deine Betreuungsdienste anzubieten und Tierhalter zu erreichen.'}
+            {userType === 'dienstleister' &&
+              'Erstelle ein Konto, um deine Dienstleistungen anzubieten und Tierhalter zu erreichen.'}
           </p>
         </div>
 
@@ -288,29 +384,41 @@ function RegisterPage() {
           <div className="flex">
             <button
               type="button"
-              className={`flex-1 py-3 px-4 rounded-lg text-center transition-colors ${userType === 'owner'
+              className={`flex-1 py-3 px-4 rounded-lg text-center transition-colors ${userType === 'tierhalter'
                 ? 'bg-primary-500 text-white'
                 : 'bg-transparent text-gray-600 hover:bg-gray-100'
                 }`}
-              onClick={() => setUserType('owner')}
+              onClick={() => setUserType('tierhalter')}
             >
               Tierhalter
             </button>
             <button
               type="button"
-              className={`flex-1 py-3 px-4 rounded-lg text-center transition-colors ${userType === 'dienstleister'
+              className={`flex-1 py-3 px-4 rounded-lg text-center transition-colors ${userType === 'betreuer'
                 ? 'bg-primary-500 text-white'
                 : 'bg-transparent text-gray-600 hover:bg-gray-100'
                 }`}
-              onClick={() => setUserType('dienstleister')}
+              onClick={() => setUserType('betreuer')}
             >
-              Dienstleister
+              Betreuer
+            </button>
+          </div>
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setUserType('dienstleister')}
+              className={`text-sm transition-colors ${userType === 'dienstleister'
+                ? 'text-primary-700 font-semibold underline'
+                : 'text-primary-600 hover:text-primary-700 font-medium'
+                }`}
+            >
+              weitere Dienstleister
             </button>
           </div>
         </div>
 
-        {/* Dienstleister-Kategorie Auswahl */}
-        {userType === 'dienstleister' && categories.length > 0 && (
+        {/* Dienstleister-Kategorie Auswahl (ohne Betreuer) */}
+        {userType === 'dienstleister' && categoriesWithoutBetreuer.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
             <h2 className="text-xl font-semibold mb-4">Welche Dienstleistung bietest du an?</h2>
             <p className="text-gray-600 mb-6">Wähle die Kategorie, die am besten zu deinen Dienstleistungen passt.</p>
@@ -320,16 +428,43 @@ function RegisterPage() {
                 Dienstleistungskategorie
               </label>
               <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(parseInt(e.target.value))}
+                value={selectedCategory || categoriesWithoutBetreuer[0]?.id}
+                onChange={(e) => {
+                  const id = parseInt(e.target.value, 10);
+                  setSelectedCategory(id);
+                  const cat = categoriesWithoutBetreuer.find((c) => c.id === id);
+                  if (!isSonstigeCategory(cat)) {
+                    setFreieDienstleistung('');
+                  }
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
-                {categories.map((category) => (
+                {categoriesWithoutBetreuer.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name} - {category.beschreibung}
                   </option>
                 ))}
               </select>
+
+              {isSonstigeCategory(
+                categoriesWithoutBetreuer.find((c) => c.id === (selectedCategory || categoriesWithoutBetreuer[0]?.id))
+              ) && (
+                <div className="mt-4">
+                  <label htmlFor="freieDienstleistung" className="block text-sm font-medium text-gray-700 mb-2">
+                    Beschreibung deiner Dienstleistung
+                  </label>
+                  <input
+                    id="freieDienstleistung"
+                    type="text"
+                    className="input w-full"
+                    placeholder="z. B. Mobile Tierphysiotherapie"
+                    value={freieDienstleistung}
+                    onChange={(e) => setFreieDienstleistung(capitalizeFirstChar(e.target.value))}
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Der erste Buchstabe wird automatisch groß geschrieben.</p>
+                </div>
+              )}
             </div>
           </div>
         )}

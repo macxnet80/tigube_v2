@@ -7,6 +7,7 @@ import { useNotifications } from '../../lib/notifications/NotificationContext';
 import { useSubscription } from '../../lib/auth/useSubscription';
 
 import NotificationBadge from '../ui/NotificationBadge';
+import { SHOW_MARKTPLATZ_IN_NAVIGATION } from '../../lib/constants/featureFlags';
 import {
   isJobsLinkNewBadgeActive,
   isMarktplatzLinkNewBadgeActive,
@@ -24,7 +25,8 @@ function Header() {
 
   const isActive = (path: string) => location.pathname === path;
   const jobsNewBadge = isJobsLinkNewBadgeActive();
-  const marktplatzNewBadge = isMarktplatzLinkNewBadgeActive();
+  const marktplatzNewBadge =
+    SHOW_MARKTPLATZ_IN_NAVIGATION && isMarktplatzLinkNewBadgeActive();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -122,23 +124,25 @@ function Header() {
                     </div>
                   )}
                 </div>
-                <NavLink
-                  to="/marktplatz"
-                  isActive={location.pathname.startsWith('/marktplatz')}
-                  aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    Marktplatz
-                    {marktplatzNewBadge ? (
-                      <span
-                        className="rounded bg-primary-600 px-1 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
-                        aria-hidden
-                      >
-                        NEW
-                      </span>
-                    ) : null}
-                  </span>
-                </NavLink>
+                {SHOW_MARKTPLATZ_IN_NAVIGATION && (
+                  <NavLink
+                    to="/marktplatz"
+                    isActive={location.pathname.startsWith('/marktplatz')}
+                    aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      Marktplatz
+                      {marktplatzNewBadge ? (
+                        <span
+                          className="rounded bg-primary-600 px-1 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                          aria-hidden
+                        >
+                          NEW
+                        </span>
+                      ) : null}
+                    </span>
+                  </NavLink>
+                )}
                 <NavLink to="/blog" isActive={isActive('/blog')}>
                   tigube-Welt
                 </NavLink>
@@ -258,24 +262,26 @@ function Header() {
                       </span>
                     )}
                   </div>
-                  <MobileNavLink
-                    to="/marktplatz"
-                    isActive={location.pathname.startsWith('/marktplatz')}
-                    onClick={() => setIsMenuOpen(false)}
-                    aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      Marktplatz
-                      {marktplatzNewBadge ? (
-                        <span
-                          className="rounded bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
-                          aria-hidden
-                        >
-                          NEW
-                        </span>
-                      ) : null}
-                    </span>
-                  </MobileNavLink>
+                  {SHOW_MARKTPLATZ_IN_NAVIGATION && (
+                    <MobileNavLink
+                      to="/marktplatz"
+                      isActive={location.pathname.startsWith('/marktplatz')}
+                      onClick={() => setIsMenuOpen(false)}
+                      aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        Marktplatz
+                        {marktplatzNewBadge ? (
+                          <span
+                            className="rounded bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
+                            aria-hidden
+                          >
+                            NEW
+                          </span>
+                        ) : null}
+                      </span>
+                    </MobileNavLink>
+                  )}
                   <MobileNavLink to="/blog" isActive={isActive('/blog')} onClick={() => setIsMenuOpen(false)}>
                     tigube-Welt
                   </MobileNavLink>

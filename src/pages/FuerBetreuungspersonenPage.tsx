@@ -267,14 +267,18 @@ export default function FuerBetreuungspersonenPage() {
             {serviceTypes.map((service) => (
               <div
                 key={service.title}
-                className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50"
+                className="flex min-w-0 items-start gap-3 sm:gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4"
               >
-                <div className="flex-shrink-0 rounded-full bg-primary-50 p-3">
+                <div className="flex-shrink-0 rounded-full bg-primary-50 p-2.5 sm:p-3">
                   {service.icon}
                 </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">{service.title}</h3>
-                  <p className="text-sm text-gray-500">{service.description}</p>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-semibold leading-snug text-gray-900 mb-1 break-words hyphens-auto">
+                    {service.title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-gray-500 break-words hyphens-auto">
+                    {service.description}
+                  </p>
                 </div>
               </div>
             ))}

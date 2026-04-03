@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Clock, Heart, Users, PawPrint, CheckCircle, X, ChevronDown, UserCheck } from 'lucide-react';
+import { Clock, Heart, Users, PawPrint, CheckCircle, X, ChevronDown, UserCheck, Shield } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../lib/auth/AuthContext';
 
@@ -79,51 +79,84 @@ export default function HomePage() {
       </div>
 
       {/* Hero */}
-      <section className="bg-gradient-to-b from-primary-50 to-white py-20">
-        <div className="container-custom">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Tierbetreuung, die verbindet.
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              tigube bringt Tierhalter:innen und Betreuungspersonen zusammen –
-              ehrlich, verlässlich und auf Augenhöhe.
-            </p>
-          </div>
+      <section className="relative bg-white overflow-hidden">
+        <div className="container-custom py-16 lg:py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
 
-          {/* Zwei Einstiegskarten */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-            {/* Karte Tierhalter */}
-            <Link to="/fuer-tierhalter" className="group">
-              <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-8 h-full flex flex-col items-center text-center hover:shadow-lg transition-shadow hover:border-primary-200">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary-200 transition-colors">
-                  <Heart className="w-8 h-8 text-primary-600" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Ich bin Tierhalter:in</h2>
-                <p className="text-gray-600 mb-6 flex-grow">
-                  Finde zuverlässige Betreuung für dein Tier – für Alltag, Urlaub oder den Notfall.
-                </p>
-                <span className="inline-flex items-center text-primary-600 font-semibold group-hover:text-primary-700">
-                  Mehr erfahren →
-                </span>
-              </div>
-            </Link>
+            {/* Left — Text */}
+            <div className="max-w-xl">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-extrabold text-gray-900 leading-[1.08] tracking-tight mb-6">
+                Tierbetreuung,{' '}
+                <br className="hidden sm:block" />
+                die{' '}
+                <span className="text-primary-600">verbindet.</span>
+              </h1>
 
-            {/* Karte Betreuungsperson */}
-            <Link to="/fuer-betreuungspersonen" className="group">
-              <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-8 h-full flex flex-col items-center text-center hover:shadow-lg transition-shadow hover:border-primary-200">
-                <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary-200 transition-colors">
-                  <Users className="w-8 h-8 text-primary-600" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-900 mb-2">Ich möchte betreuen</h2>
-                <p className="text-gray-600 mb-6 flex-grow">
-                  Werde sichtbar, gewinne neue Kunden und betreue Tiere, die du liebst.
-                </p>
-                <span className="inline-flex items-center text-primary-600 font-semibold group-hover:text-primary-700">
-                  Mehr erfahren →
-                </span>
+              <p className="text-lg md:text-xl text-gray-500 leading-relaxed mb-10 max-w-lg">
+                tigube bringt Tierhalter:innen und Betreuungspersonen zusammen –
+                ehrlich, verlässlich und auf Augenhöhe.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4">
+                <Link to="/fuer-tierhalter">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="!rounded-full px-8 py-3.5 text-base font-semibold shadow-lg shadow-primary-600/20 hover:shadow-xl hover:shadow-primary-600/30 transition-all"
+                  >
+                    Ich bin Tierhalter:in
+                  </Button>
+                </Link>
+                <Link to="/fuer-betreuungspersonen">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="!rounded-full px-8 py-3.5 text-base font-semibold"
+                  >
+                    Ich möchte betreuen
+                  </Button>
+                </Link>
               </div>
-            </Link>
+            </div>
+
+            {/* Right — Image Card */}
+            <div className="relative hidden md:block">
+              {/* Green organic shape */}
+              <div className="absolute -top-6 right-0 -bottom-6 left-12 bg-primary-50 rounded-[2rem] rotate-2 -z-10" />
+
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                <img
+                  src="https://images.pexels.com/photos/1805164/pexels-photo-1805164.jpeg?auto=compress&cs=tinysrgb&w=800"
+                  alt="Glücklicher Hund bei der Betreuung"
+                  className="w-full h-[480px] lg:h-[540px] object-cover"
+                  loading="eager"
+                />
+
+                {/* Badge: Betreuer in der Nähe */}
+                <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-full pl-3 pr-4 py-2 shadow-lg flex items-center gap-2.5">
+                  <div className="flex -space-x-1.5">
+                    <span className="w-7 h-7 rounded-full bg-primary-200 border-2 border-white flex items-center justify-center">
+                      <PawPrint className="w-3.5 h-3.5 text-primary-700" />
+                    </span>
+                    <span className="w-7 h-7 rounded-full bg-amber-200 border-2 border-white flex items-center justify-center">
+                      <Heart className="w-3.5 h-3.5 text-amber-700" />
+                    </span>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700">+15 Betreuer in der Nähe</span>
+                </div>
+
+                {/* Badge: Premium Betreuung */}
+                <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl px-5 py-3.5 shadow-lg flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-5 h-5 text-primary-600" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm">Premium Betreuung</p>
+                    <p className="text-gray-500 text-xs">Sicher · Liebevoll · Transparent</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
