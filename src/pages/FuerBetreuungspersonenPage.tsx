@@ -63,32 +63,32 @@ interface ServiceType {
 
 const serviceTypes: ServiceType[] = [
   {
-    icon: <Footprints className="w-7 h-7 text-primary-600" />,
+    icon: <Footprints className="w-6 h-6 sm:w-7 sm:h-7 text-primary-600 shrink-0" />,
     title: 'Gassi-Service',
     description: 'Tägliche Spaziergänge',
   },
   {
-    icon: <Home className="w-7 h-7 text-primary-600" />,
+    icon: <Home className="w-6 h-6 sm:w-7 sm:h-7 text-primary-600 shrink-0" />,
     title: 'Haussitting',
     description: 'Du betreust das Tier bei Besitzer:innen zuhause',
   },
   {
-    icon: <Moon className="w-7 h-7 text-primary-600" />,
+    icon: <Moon className="w-6 h-6 sm:w-7 sm:h-7 text-primary-600 shrink-0" />,
     title: 'Übernachtungsbetreuung',
     description: 'Das Tier schläft bei dir',
   },
   {
-    icon: <Clock className="w-7 h-7 text-primary-600" />,
+    icon: <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-primary-600 shrink-0" />,
     title: 'Kurzbesuche',
     description: 'Zwischendurch vorbeischauen',
   },
   {
-    icon: <Sun className="w-7 h-7 text-primary-600" />,
+    icon: <Sun className="w-6 h-6 sm:w-7 sm:h-7 text-primary-600 shrink-0" />,
     title: 'Hundetagesbetreuung',
     description: 'Ganztages-Betreuung bei dir',
   },
   {
-    icon: <Rabbit className="w-7 h-7 text-primary-600" />,
+    icon: <Rabbit className="w-6 h-6 sm:w-7 sm:h-7 text-primary-600 shrink-0" />,
     title: 'Kleintierbetreuung',
     description: 'Kaninchen, Katzen, Meerschweinchen etc.',
   },
@@ -103,22 +103,22 @@ interface FeaturePoint {
 
 const featurePoints: FeaturePoint[] = [
   {
-    icon: <Search className="w-8 h-8 text-primary-600" />,
+    icon: <Search className="w-7 h-7 sm:w-8 sm:h-8 text-primary-600 shrink-0" />,
     title: 'Neue Kunden finden',
     description: 'Tierhalter:innen in deiner Region finden dich direkt über tigube.',
   },
   {
-    icon: <ClipboardList className="w-8 h-8 text-primary-600" />,
+    icon: <ClipboardList className="w-7 h-7 sm:w-8 sm:h-8 text-primary-600 shrink-0" />,
     title: 'Dein eigenes Profil',
     description: 'Präsentiere dich mit Fotos, Beschreibung, Tierarten und Services.',
   },
   {
-    icon: <MessageSquare className="w-8 h-8 text-primary-600" />,
+    icon: <MessageSquare className="w-7 h-7 sm:w-8 sm:h-8 text-primary-600 shrink-0" />,
     title: 'Direkte Anfragen',
     description: 'Interessierte Tierhalter:innen kontaktieren dich über die Plattform.',
   },
   {
-    icon: <ShieldCheck className="w-8 h-8 text-primary-600" />,
+    icon: <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8 text-primary-600 shrink-0" />,
     title: 'Vertrauen durch Verifizierung',
     description: 'tigube prüft Profile – das stärkt das Vertrauen bei Tierhalter:innen.',
   },
@@ -200,30 +200,30 @@ export default function FuerBetreuungspersonenPage() {
     <div className="flex flex-col min-h-screen">
 
       {/* 1. Hero Section */}
-      <section className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-20">
+      <section className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-12 sm:py-16 md:py-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold leading-tight mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-4 sm:mb-6">
             Betreue Tiere. Gewinne Kunden.
           </h1>
-          <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto mb-10">
+          <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 sm:mb-10 px-0 sm:px-2">
             tigube gibt dir die Sichtbarkeit, die du verdient hast – egal ob Privatperson oder
             Profi.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/registrieren?type=caretaker">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
+            <Link to="/registrieren?type=caretaker" className="flex-1 sm:flex-initial min-w-0">
               <Button
                 variant="primary"
                 size="lg"
-                className="bg-white text-primary-700 hover:bg-gray-100 font-semibold w-full sm:w-auto"
+                className="bg-white text-primary-700 hover:bg-gray-100 font-semibold w-full sm:w-auto min-h-[48px]"
               >
                 Jetzt als Betreuungsperson registrieren
               </Button>
             </Link>
-            <a href="#so-funktionierts">
+            <a href="#so-funktionierts" className="flex-1 sm:flex-initial min-w-0">
               <Button
                 variant="outline"
                 size="lg"
-                className="bg-primary-800 border-primary-800 text-white hover:bg-primary-900 w-full sm:w-auto"
+                className="bg-primary-800 border-primary-800 text-white hover:bg-primary-900 w-full sm:w-auto min-h-[48px]"
               >
                 Wie funktioniert das?
               </Button>
@@ -233,18 +233,18 @@ export default function FuerBetreuungspersonenPage() {
       </section>
 
       {/* 2. Target Audience Section */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-10 sm:py-14 lg:py-16 bg-gray-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
               Für wen ist tigube als Betreuungsperson geeignet?
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {audienceCards.map((card) => (
               <div
                 key={card.title}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                className="bg-white rounded-xl shadow-sm p-5 sm:p-6 border border-gray-100"
               >
                 <div className="mb-4">{card.icon}</div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{card.title}</h3>
@@ -256,18 +256,18 @@ export default function FuerBetreuungspersonenPage() {
       </section>
 
       {/* 3. Services Section */}
-      <section className="py-16 bg-white">
+      <section className="py-10 sm:py-14 lg:py-16 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
               Welche Betreuungsarten kannst du anbieten?
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {serviceTypes.map((service) => (
               <div
                 key={service.title}
-                className="flex min-w-0 items-start gap-3 sm:gap-4 rounded-xl border border-gray-100 bg-gray-50 p-4"
+                className="flex min-w-0 items-start gap-3 sm:gap-4 rounded-xl border border-gray-100 bg-gray-50 p-3.5 sm:p-4"
               >
                 <div className="flex-shrink-0 rounded-full bg-primary-50 p-2.5 sm:p-3">
                   {service.icon}
@@ -287,22 +287,22 @@ export default function FuerBetreuungspersonenPage() {
       </section>
 
       {/* 4. Benefits Section */}
-      <section className="py-16 bg-primary-50">
+      <section className="py-10 sm:py-14 lg:py-16 bg-primary-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
               Deine Vorteile auf tigube
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6">
             {featurePoints.map((feature) => (
-              <div key={feature.title} className="flex items-start gap-4">
-                <div className="flex-shrink-0 rounded-full bg-white p-3 shadow-sm">
+              <div key={feature.title} className="flex items-start gap-3 sm:gap-4">
+                <div className="flex-shrink-0 rounded-full bg-white p-2.5 sm:p-3 shadow-sm">
                   {feature.icon}
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{feature.title}</h3>
-                  <p className="text-gray-600">{feature.description}</p>
+                <div className="min-w-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">{feature.title}</h3>
+                  <p className="text-sm sm:text-base text-gray-600 leading-relaxed">{feature.description}</p>
                 </div>
               </div>
             ))}
@@ -311,10 +311,10 @@ export default function FuerBetreuungspersonenPage() {
       </section>
 
       {/* 5. Registration Steps */}
-      <section id="so-funktionierts" className="py-16 bg-white">
+      <section id="so-funktionierts" className="py-10 sm:py-14 lg:py-16 bg-white scroll-mt-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="text-center mb-10 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
               So läuft die Registrierung ab
             </h2>
           </div>
@@ -334,15 +334,15 @@ export default function FuerBetreuungspersonenPage() {
 
       {/* 6. Promo Banner */}
       <section className="bg-gradient-to-r from-amber-500 to-amber-600 text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <p className="text-base sm:text-lg font-medium text-center sm:text-left">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6">
+          <p className="text-sm sm:text-base md:text-lg font-medium text-center sm:text-left text-balance leading-snug">
             ⏰ Früh dabei sein zahlt sich aus – 3 Monate Premium gratis bis 30. April 2026
           </p>
-          <Link to="/registrieren?type=caretaker" className="flex-shrink-0">
+          <Link to="/registrieren?type=caretaker" className="flex-shrink-0 w-full sm:w-auto">
             <Button
               variant="primary"
               size="lg"
-              className="bg-white text-amber-600 hover:bg-amber-50 font-semibold whitespace-nowrap"
+              className="w-full sm:w-auto bg-white text-amber-600 hover:bg-amber-50 font-semibold min-h-[48px] sm:whitespace-nowrap"
             >
               Jetzt registrieren
             </Button>
@@ -351,10 +351,10 @@ export default function FuerBetreuungspersonenPage() {
       </section>
 
       {/* 7. FAQ */}
-      <section className="py-16 bg-white">
+      <section className="py-10 sm:py-14 lg:py-16 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 px-1">
               Häufige Fragen von Betreuungspersonen
             </h2>
           </div>
@@ -363,13 +363,13 @@ export default function FuerBetreuungspersonenPage() {
       </section>
 
       {/* 8. Final CTA */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-10 sm:py-14 lg:py-16 bg-gray-50">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-6">
             Bereit, Tiere zu betreuen und neue Kunden zu gewinnen?
           </h2>
-          <Link to="/registrieren?type=caretaker">
-            <Button variant="primary" size="lg">
+          <Link to="/registrieren?type=caretaker" className="block w-full max-w-sm mx-auto sm:max-w-none sm:inline-block">
+            <Button variant="primary" size="lg" className="w-full sm:w-auto min-h-[48px]">
               Jetzt kostenlos registrieren
             </Button>
           </Link>

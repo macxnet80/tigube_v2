@@ -49,15 +49,19 @@ function Accordion({ items, allowMultiple = false, className }: AccordionProps) 
         >
           <button
             type="button"
-            className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+            className="w-full min-h-[3rem] sm:min-h-[2.75rem] px-3 sm:px-4 py-3.5 sm:py-3 text-left flex items-start sm:items-center justify-between gap-2 hover:bg-gray-50 transition-colors active:bg-gray-100"
             onClick={() => toggleItem(item.id)}
             aria-expanded={isOpen(item.id)}
           >
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0 pt-0.5 sm:pt-0">
               {typeof item.title === 'string' ? (
-                <span className="font-medium text-gray-900">{item.title}</span>
+                <span className="font-medium text-gray-900 text-[15px] sm:text-base leading-snug">
+                  {item.title}
+                </span>
               ) : (
-                <div className="font-medium text-gray-900 flex-1 min-w-0">{item.title}</div>
+                <div className="font-medium text-gray-900 flex-1 min-w-0 text-[15px] sm:text-base leading-snug">
+                  {item.title}
+                </div>
               )}
               {item.badge && (
                 <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-primary-100 text-primary-800 rounded-full flex-shrink-0">
@@ -67,7 +71,7 @@ function Accordion({ items, allowMultiple = false, className }: AccordionProps) 
             </div>
             <ChevronDown
               className={clsx(
-                'h-5 w-5 text-gray-500 transition-transform duration-200 flex-shrink-0 ml-2',
+                'h-5 w-5 text-gray-500 transition-transform duration-200 flex-shrink-0 ml-1 sm:ml-2 mt-0.5 sm:mt-0',
                 isOpen(item.id) && 'rotate-180'
               )}
             />
@@ -79,8 +83,8 @@ function Accordion({ items, allowMultiple = false, className }: AccordionProps) 
               isOpen(item.id) ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
             )}
           >
-            <div className="px-4 pb-4 border-t border-gray-100 bg-gray-50">
-              <div className="pt-4">
+            <div className="px-3 sm:px-4 pb-4 border-t border-gray-100 bg-gray-50">
+              <div className="pt-3 sm:pt-4 text-base leading-relaxed">
                 {item.content}
               </div>
             </div>

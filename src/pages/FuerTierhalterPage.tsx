@@ -48,22 +48,22 @@ interface AnimalType {
 
 const animalTypes: AnimalType[] = [
   {
-    icon: <Dog className="w-10 h-10 text-primary-600" />,
+    icon: <Dog className="w-8 h-8 sm:w-10 sm:h-10 text-primary-600 shrink-0" />,
     label: 'Hunde',
     services: 'Gassi, Tagesbetreuung, Übernachtung',
   },
   {
-    icon: <Cat className="w-10 h-10 text-primary-600" />,
+    icon: <Cat className="w-8 h-8 sm:w-10 sm:h-10 text-primary-600 shrink-0" />,
     label: 'Katzen',
     services: 'Hausbesuche, Übernachtungsbetreuung',
   },
   {
-    icon: <Rabbit className="w-10 h-10 text-primary-600" />,
+    icon: <Rabbit className="w-8 h-8 sm:w-10 sm:h-10 text-primary-600 shrink-0" />,
     label: 'Kleintiere',
     services: 'Kaninchen, Meerschweinchen, Hamster',
   },
   {
-    icon: <Bird className="w-10 h-10 text-primary-600" />,
+    icon: <Bird className="w-8 h-8 sm:w-10 sm:h-10 text-primary-600 shrink-0" />,
     label: 'Vögel & weitere',
     services: 'Weitere Tierarten in Planung',
   },
@@ -146,30 +146,30 @@ export default function FuerTierhalterPage() {
     <div className="flex flex-col min-h-screen">
 
       {/* 1. Hero Section */}
-      <section className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-20">
+      <section className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-12 sm:py-16 md:py-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold leading-tight mb-6">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight mb-4 sm:mb-6">
             Tierbetreuung, der du vertraust
           </h1>
-          <p className="text-lg sm:text-xl text-white/90 max-w-2xl mx-auto mb-10">
+          <p className="text-base sm:text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 sm:mb-10 px-0 sm:px-2">
             tigube verbindet dich mit erfahrenen Betreuungspersonen in deiner Nähe –
             für Alltag, Urlaub oder den Notfall.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/registrieren">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center max-w-md sm:max-w-none mx-auto">
+            <Link to="/registrieren" className="flex-1 sm:flex-initial min-w-0">
               <Button
                 variant="primary"
                 size="lg"
-                className="bg-white text-primary-700 hover:bg-gray-100 font-semibold w-full sm:w-auto"
+                className="bg-white text-primary-700 hover:bg-gray-100 font-semibold w-full sm:w-auto min-h-[48px]"
               >
                 Jetzt kostenlos registrieren
               </Button>
             </Link>
-            <a href="#so-funktionierts">
+            <a href="#so-funktionierts" className="flex-1 sm:flex-initial min-w-0">
               <Button
                 variant="outline"
                 size="lg"
-                className="bg-primary-800 border-primary-800 text-white hover:bg-primary-900 w-full sm:w-auto"
+                className="bg-primary-800 border-primary-800 text-white hover:bg-primary-900 w-full sm:w-auto min-h-[48px]"
               >
                 Wie funktioniert das?
               </Button>
@@ -179,18 +179,18 @@ export default function FuerTierhalterPage() {
       </section>
 
       {/* 2. Situationen-Sektion */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-10 sm:py-14 lg:py-16 bg-gray-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
               Für welche Situationen ist tigube sinnvoll?
             </h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {situationCards.map((card) => (
               <div
                 key={card.title}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                className="bg-white rounded-xl shadow-sm p-5 sm:p-6 border border-gray-100"
               >
                 <div className="mb-4">{card.icon}</div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{card.title}</h3>
@@ -202,21 +202,21 @@ export default function FuerTierhalterPage() {
       </section>
 
       {/* 3. Welche Tiere werden betreut? */}
-      <section className="py-16 bg-white">
+      <section className="py-10 sm:py-14 lg:py-16 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
               Für welche Tiere?
             </h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6">
             {animalTypes.map((animal) => (
-              <div key={animal.label} className="flex flex-col items-center text-center p-4">
-                <div className="rounded-full bg-primary-50 p-4 mb-4 inline-flex">
+              <div key={animal.label} className="flex flex-col items-center text-center p-2 sm:p-4 min-w-0">
+                <div className="rounded-full bg-primary-50 p-3 sm:p-4 mb-3 sm:mb-4 inline-flex">
                   {animal.icon}
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">{animal.label}</h3>
-                <p className="text-sm text-gray-500">{animal.services}</p>
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-1">{animal.label}</h3>
+                <p className="text-xs sm:text-sm text-gray-500 leading-snug">{animal.services}</p>
               </div>
             ))}
           </div>
@@ -224,10 +224,10 @@ export default function FuerTierhalterPage() {
       </section>
 
       {/* 4. So funktioniert es */}
-      <section id="so-funktionierts" className="py-16 bg-primary-50">
+      <section id="so-funktionierts" className="py-10 sm:py-14 lg:py-16 bg-primary-50 scroll-mt-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="text-center mb-10 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900">
               So funktioniert es
             </h2>
           </div>
@@ -247,15 +247,15 @@ export default function FuerTierhalterPage() {
 
       {/* 5. Promo-Banner */}
       <section className="bg-gradient-to-r from-amber-500 to-amber-600 text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <p className="text-base sm:text-lg font-medium text-center sm:text-left">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-6">
+          <p className="text-sm sm:text-base md:text-lg font-medium text-center sm:text-left text-balance leading-snug">
             ⏰ Jetzt registrieren und 3 Monate Premium kostenlos sichern – Angebot gilt bis 30. April 2026
           </p>
-          <Link to="/registrieren" className="flex-shrink-0">
+          <Link to="/registrieren" className="flex-shrink-0 w-full sm:w-auto">
             <Button
               variant="primary"
               size="lg"
-              className="bg-white text-amber-600 hover:bg-amber-50 font-semibold whitespace-nowrap"
+              className="w-full sm:w-auto bg-white text-amber-600 hover:bg-amber-50 font-semibold min-h-[48px] sm:whitespace-nowrap"
             >
               Jetzt kostenlos starten
             </Button>
@@ -264,10 +264,10 @@ export default function FuerTierhalterPage() {
       </section>
 
       {/* 6. FAQ */}
-      <section className="py-16 bg-white">
+      <section className="py-10 sm:py-14 lg:py-16 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          <div className="text-center mb-8 sm:mb-10">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 px-1">
               Häufige Fragen von Tierhalter:innen
             </h2>
           </div>
@@ -276,13 +276,13 @@ export default function FuerTierhalterPage() {
       </section>
 
       {/* 7. Abschluss-CTA */}
-      <section className="py-16 bg-gray-50">
+      <section className="py-10 sm:py-14 lg:py-16 bg-gray-50">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-6">
             Bereit, die passende Betreuung zu finden?
           </h2>
-          <Link to="/registrieren">
-            <Button variant="primary" size="lg">
+          <Link to="/registrieren" className="block w-full max-w-sm mx-auto sm:max-w-none sm:inline-block">
+            <Button variant="primary" size="lg" className="w-full sm:w-auto min-h-[48px]">
               Kostenlos registrieren
             </Button>
           </Link>

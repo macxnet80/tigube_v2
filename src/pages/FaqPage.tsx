@@ -191,13 +191,13 @@ function FaqPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-16">
+      <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white py-12 sm:py-16 md:py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight">
               Häufige Fragen
             </h1>
-            <p className="text-xl md:text-2xl max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl max-w-3xl mx-auto leading-relaxed px-1 text-white/90">
               Alles, was du über tigube wissen möchtest – für Tierhalter:innen, Betreuungspersonen und Partner.
             </p>
           </div>
@@ -205,59 +205,59 @@ function FaqPage() {
       </div>
 
       {/* FAQ Content */}
-      <div className="py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+      <div className="py-10 sm:py-14 lg:py-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-10">
 
           {/* Block 1 — Allgemein */}
-          <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
-            <h2 className="text-primary-700 font-semibold text-xl mb-4">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 md:p-8">
+            <h2 className="text-primary-700 font-semibold text-lg sm:text-xl mb-3 sm:mb-4">
               Allgemein
             </h2>
             <Accordion items={generalItems} allowMultiple />
           </div>
 
           {/* Block 2 — Für Tierhalter:innen */}
-          <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
-            <h2 className="text-primary-700 font-semibold text-xl mb-4">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 md:p-8">
+            <h2 className="text-primary-700 font-semibold text-lg sm:text-xl mb-3 sm:mb-4">
               Für Tierhalter:innen
             </h2>
             <Accordion items={ownerItems} allowMultiple />
           </div>
 
           {/* Block 3 — Für Betreuungspersonen */}
-          <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
-            <h2 className="text-primary-700 font-semibold text-xl mb-4">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 md:p-8">
+            <h2 className="text-primary-700 font-semibold text-lg sm:text-xl mb-3 sm:mb-4">
               Für Betreuungspersonen
             </h2>
             <Accordion items={caretakerItems} allowMultiple />
           </div>
 
           {/* Block 4 — Dienstleister & Partner */}
-          <div className="bg-white rounded-xl shadow-sm p-6 md:p-8">
-            <h2 className="text-primary-700 font-semibold text-xl mb-4">
+          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 md:p-8">
+            <h2 className="text-primary-700 font-semibold text-lg sm:text-xl mb-3 sm:mb-4">
               Dienstleister &amp; Partner
             </h2>
             <Accordion items={partnerItems} allowMultiple />
           </div>
 
           {/* CTA Section */}
-          <div className="bg-primary-50 rounded-xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          <div className="bg-primary-50 rounded-xl p-6 sm:p-8 text-center">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-5 sm:mb-6">
               Bereit loszulegen?
             </h2>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/registrieren">
-                <Button variant="primary" size="lg">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-stretch sm:items-center max-w-md sm:max-w-none mx-auto">
+              <Link to="/registrieren" className="w-full sm:w-auto">
+                <Button variant="primary" size="lg" className="w-full sm:w-auto min-h-[48px]">
                   Als Tierhalter:in registrieren
                 </Button>
               </Link>
-              <Link to="/registrieren?type=caretaker">
-                <Button variant="outline" size="lg">
+              <Link to="/registrieren?type=caretaker" className="w-full sm:w-auto">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto min-h-[48px]">
                   Als Betreuungsperson registrieren
                 </Button>
               </Link>
             </div>
-            <p className="mt-6 text-sm text-gray-600">
+            <p className="mt-5 sm:mt-6 text-sm text-gray-600 px-1">
               Noch offene Fragen? Schreib uns unter{' '}
               <a
                 href="mailto:hallo@tigube.de"
