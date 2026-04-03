@@ -168,60 +168,17 @@ function Header() {
               </>
             ) : (
               <>
-                <NavLink to="/" isActive={isActive('/')}>
-                  Startseite
+                <NavLink to="/fuer-tierhalter" isActive={isActive('/fuer-tierhalter')}>
+                  Für Tierhalter:innen
                 </NavLink>
-                <NavLink to="/suche" isActive={isActive('/suche')}>
-                  Betreuer finden
+                <NavLink to="/fuer-betreuungspersonen" isActive={isActive('/fuer-betreuungspersonen')}>
+                  Für Betreuungspersonen
                 </NavLink>
-                <NavLink
-                  to="/jobs"
-                  isActive={isActive('/jobs')}
-                  aria-label={jobsNewBadge ? 'Jobs, neu' : undefined}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    Jobs
-                    {jobsNewBadge ? (
-                      <span
-                        className="rounded bg-primary-600 px-1 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
-                        aria-hidden
-                      >
-                        NEW
-                      </span>
-                    ) : null}
-                  </span>
+                <NavLink to="/faq" isActive={isActive('/faq')}>
+                  FAQ
                 </NavLink>
-                <div className="relative inline-block group">
-                  <NavLink to="/dienstleister" isActive={isActive('/dienstleister')}>
-                    Wo finde ich...?
-                  </NavLink>
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1 bg-amber-500 text-white text-xs font-semibold rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 shadow-md z-50">
-                    🔒 Premium
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-amber-500" />
-                  </div>
-                </div>
-                <NavLink
-                  to="/marktplatz"
-                  isActive={location.pathname.startsWith('/marktplatz')}
-                  aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    Marktplatz
-                    {marktplatzNewBadge ? (
-                      <span
-                        className="rounded bg-primary-600 px-1 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
-                        aria-hidden
-                      >
-                        NEW
-                      </span>
-                    ) : null}
-                  </span>
-                </NavLink>
-                <NavLink to="/blog" isActive={isActive('/blog')}>
-                  tigube-Welt
-                </NavLink>
-                <NavLink to="/mitgliedschaften" isActive={isActive('/mitgliedschaften') || isActive('/preise')}>
-                  Preise
+                <NavLink to="/ueber-uns" isActive={isActive('/ueber-uns')}>
+                  Über uns
                 </NavLink>
                 <Link
                   to="/anmelden"
@@ -356,69 +313,17 @@ function Header() {
                 </>
               ) : (
                 <>
-                  <MobileNavLink to="/" isActive={isActive('/')} onClick={() => setIsMenuOpen(false)}>
-                    Startseite
+                  <MobileNavLink to="/fuer-tierhalter" isActive={isActive('/fuer-tierhalter')} onClick={() => setIsMenuOpen(false)}>
+                    Für Tierhalter:innen
                   </MobileNavLink>
-                  <MobileNavLink to="/suche" isActive={isActive('/suche')} onClick={() => setIsMenuOpen(false)}>
-                    Betreuer finden
+                  <MobileNavLink to="/fuer-betreuungspersonen" isActive={isActive('/fuer-betreuungspersonen')} onClick={() => setIsMenuOpen(false)}>
+                    Für Betreuungspersonen
                   </MobileNavLink>
-                  <MobileNavLink
-                    to="/jobs"
-                    isActive={isActive('/jobs')}
-                    onClick={() => setIsMenuOpen(false)}
-                    aria-label={jobsNewBadge ? 'Jobs, neu' : undefined}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      Jobs
-                      {jobsNewBadge ? (
-                        <span
-                          className="rounded bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
-                          aria-hidden
-                        >
-                          NEW
-                        </span>
-                      ) : null}
-                    </span>
+                  <MobileNavLink to="/faq" isActive={isActive('/faq')} onClick={() => setIsMenuOpen(false)}>
+                    FAQ
                   </MobileNavLink>
-                  <div className="relative group">
-                    <MobileNavLink to="/dienstleister" isActive={isActive('/dienstleister')} onClick={() => setIsMenuOpen(false)}>
-                      Wo finde ich...?
-                    </MobileNavLink>
-                    <span className="ml-2 inline-flex items-center px-2 py-0.5 bg-amber-500 text-white text-xs font-semibold rounded-full">
-                      🔒 Premium
-                    </span>
-                  </div>
-                  <MobileNavLink
-                    to="/marktplatz"
-                    isActive={location.pathname.startsWith('/marktplatz')}
-                    onClick={() => setIsMenuOpen(false)}
-                    aria-label={marktplatzNewBadge ? 'Marktplatz, neu' : undefined}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      Marktplatz
-                      {marktplatzNewBadge ? (
-                        <span
-                          className="rounded bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
-                          aria-hidden
-                        >
-                          NEW
-                        </span>
-                      ) : null}
-                    </span>
-                  </MobileNavLink>
-                  <MobileNavLink
-                    to="/blog"
-                    isActive={isActive('/blog')}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    tigube-Welt
-                  </MobileNavLink>
-                  <MobileNavLink
-                    to="/mitgliedschaften"
-                    isActive={isActive('/mitgliedschaften') || isActive('/preise')}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Preise
+                  <MobileNavLink to="/ueber-uns" isActive={isActive('/ueber-uns')} onClick={() => setIsMenuOpen(false)}>
+                    Über uns
                   </MobileNavLink>
                   <div className="pt-2 flex flex-col space-y-2">
                     <Link
