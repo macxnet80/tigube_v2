@@ -91,6 +91,15 @@ export default function HomePage() {
             </p>
           </div>
 
+          {/* Hero Image */}
+          <div className="flex justify-center mb-10">
+            <img
+              src="/Image/Boxer_Hund_Luna.jpg"
+              alt="Boxer Hund Luna – glücklich betreut mit tigube"
+              className="w-full max-w-2xl rounded-2xl shadow-lg object-cover h-64 md:h-80"
+            />
+          </div>
+
           {/* Zwei Einstiegskarten */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {/* Karte Tierhalter */}

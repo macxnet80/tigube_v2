@@ -169,7 +169,7 @@ export default function FuerTierhalterPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-white text-white hover:bg-white/10 w-full sm:w-auto"
+                className="bg-primary-800 border-primary-800 text-white hover:bg-primary-900 w-full sm:w-auto"
               >
                 Wie funktioniert das?
               </Button>
