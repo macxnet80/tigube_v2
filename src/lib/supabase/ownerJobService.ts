@@ -28,6 +28,8 @@ export interface ListOpenJobsFilters {
   dateFrom?: string;
 }
 
+export type OwnerJobNoticeRow = Database['public']['Tables']['owner_job_notices']['Row'];
+
 async function attachPetsToJobs(jobs: OwnerJobRow[]): Promise<OwnerJobWithPets[]> {
   if (jobs.length === 0) return [];
   const jobIds = jobs.map((j) => j.id);
@@ -239,3 +241,31 @@ export const ownerJobService = {
     return { data: withPets, error: null };
   },
 };
+
+export async function getUnreadOwnerJobNotices(userId: string): Promise<{
+  data: OwnerJobNoticeRow[];
+  error: string | null;
+}> {
+  const { data, error } = await supabase
+    .from('owner_job_notices')
+    .select('*')
+    .eq('user_id', userId)
+    .is('read_at', null)
+    .order('created_at', { ascending: false });
+
+  if (error) return { data: [], error: error.message };
+  return { data: data || [], error: null };
+}
+
+export async function markOwnerJobNoticeRead(
+  noticeId: string,
+  userId: string
+): Promise<{ error: string | null }> {
+  const { error } = await supabase
+    .from('owner_job_notices')
+    .update({ read_at: new Date().toISOString() })
+    .eq('id', noticeId)
+    .eq('user_id', userId);
+
+  return { error: error?.message ?? null };
+}

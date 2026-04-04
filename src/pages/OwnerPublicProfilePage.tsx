@@ -482,11 +482,11 @@ function OwnerPublicProfilePage() {
           )}
         </div>
 
-        {/* Offene Jobs */}
+        {/* Offene Gesuche */}
         <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-primary-600 shrink-0" />
-            Jobs
+            Gesuche
           </h2>
           {profile.jobs && profile.jobs.length > 0 ? (
             <div className="space-y-4">
@@ -518,14 +518,14 @@ function OwnerPublicProfilePage() {
             </div>
           ) : (
             <p className="text-gray-600 text-sm leading-relaxed">
-              Aktuell keine offenen Jobs von diesem Tierhalter.
+              Aktuell keine offenen Gesuche von diesem Tierhalter.
             </p>
           )}
           <Link
-            to="/jobs"
+            to="/gesuche"
             className="inline-block mt-4 text-sm text-primary-600 hover:underline font-medium"
           >
-            Alle Tierhalter-Jobs
+            Alle Tierhalter-Gesuche
           </Link>
         </div>
           </div>

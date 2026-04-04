@@ -3,7 +3,13 @@ import { Link } from 'react-router-dom';
 import { Briefcase, Plus, Pencil, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import Button from '../ui/Button';
 import LoadingSpinner from '../ui/LoadingSpinner';
-import { ownerJobService, type OwnerJobWithPets } from '../../lib/supabase/ownerJobService';
+import {
+  ownerJobService,
+  getUnreadOwnerJobNotices,
+  markOwnerJobNoticeRead,
+  type OwnerJobWithPets,
+  type OwnerJobNoticeRow,
+} from '../../lib/supabase/ownerJobService';
 import { OWNER_SERVICE_TAGS } from '../../lib/constants/ownerServices';
 
 interface OwnerDashboardJobsTabProps {
@@ -59,15 +65,29 @@ export default function OwnerDashboardJobsTab({ userId, pets, isPremiumUser }: O
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [notices, setNotices] = useState<OwnerJobNoticeRow[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const { data, error: e } = await ownerJobService.listJobsByOwner(userId);
-    if (e) setError(e);
-    setJobs(data);
+    const [jobsRes, noticesRes] = await Promise.all([
+      ownerJobService.listJobsByOwner(userId),
+      getUnreadOwnerJobNotices(userId),
+    ]);
+    if (jobsRes.error) setError(jobsRes.error);
+    setJobs(jobsRes.data);
+    if (!noticesRes.error) setNotices(noticesRes.data);
     setLoading(false);
   }, [userId]);
+
+  const dismissNotice = async (noticeId: string) => {
+    const { error: err } = await markOwnerJobNoticeRead(noticeId, userId);
+    if (err) {
+      setMsg(err);
+      return;
+    }
+    setNotices((prev) => prev.filter((n) => n.id !== noticeId));
+  };
 
   useEffect(() => {
     if (!isPremiumUser) {
@@ -163,7 +183,7 @@ export default function OwnerDashboardJobsTab({ userId, pets, isPremiumUser }: O
   };
 
   const removeJob = async (id: string) => {
-    if (!window.confirm('Diesen Job wirklich löschen?')) return;
+    if (!window.confirm('Dieses Gesuch wirklich löschen?')) return;
     const { error: err } = await ownerJobService.deleteJob(id, userId);
     if (err) setMsg(err);
     else await load();
@@ -173,9 +193,9 @@ export default function OwnerDashboardJobsTab({ userId, pets, isPremiumUser }: O
     return (
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
         <Briefcase className="h-10 w-10 text-amber-600 mx-auto mb-3" />
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Jobs für Tierhalter</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Gesuche für Tierhalter</h2>
         <p className="text-gray-700 text-sm mb-4 max-w-md mx-auto">
-          Mit Premium kannst du Aufträge einstellen, die auf deinem Profil und in der Job-Übersicht erscheinen.
+          Mit Premium kannst du Gesuche einstellen, die auf deinem Profil und in der Gesuche-Übersicht erscheinen.
           Betreuer mit Premium können sich per Chat bewerben.
         </p>
         <Link
@@ -201,22 +221,46 @@ export default function OwnerDashboardJobsTab({ userId, pets, isPremiumUser }: O
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2 text-gray-900 min-w-0">
           <Briefcase className="h-5 w-5 text-primary-600 shrink-0" />
-          Meine Jobs
+          Meine Gesuche
         </h2>
         {mode === 'list' && (
           <Button type="button" variant="primary" size="sm" className="inline-flex items-center justify-center gap-2 w-full sm:w-auto shrink-0" onClick={openCreate}>
             <Plus className="h-4 w-4" />
-            Neuer Job
+            Neues Gesuch
           </Button>
         )}
       </div>
+
+      {notices.length > 0 && (
+        <div className="space-y-3" role="region" aria-label="Hinweise zu Gesuchen">
+          {notices.map((n) => (
+            <div
+              key={n.id}
+              className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+            >
+              <p className="font-semibold">
+                Gesuch von tigube entfernt{' '}
+                {n.job_title_snapshot ? `„${n.job_title_snapshot}“` : ''}
+              </p>
+              <p className="mt-2 whitespace-pre-wrap text-amber-900">{n.reason}</p>
+              <button
+                type="button"
+                className="mt-3 text-sm font-medium text-amber-950 underline hover:no-underline"
+                onClick={() => void dismissNotice(n.id)}
+              >
+                Hinweis gelesen / ausblenden
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && <div className="text-red-600 text-sm">{error}</div>}
       {msg && <div className="text-amber-800 text-sm bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">{msg}</div>}
 
       {(mode === 'create' || mode === 'edit') && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-4 min-w-0">
-          <h3 className="font-medium text-gray-900">{mode === 'create' ? 'Neuen Job anlegen' : 'Job bearbeiten'}</h3>
+          <h3 className="font-medium text-gray-900">{mode === 'create' ? 'Neues Gesuch anlegen' : 'Gesuch bearbeiten'}</h3>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
@@ -358,7 +402,7 @@ export default function OwnerDashboardJobsTab({ userId, pets, isPremiumUser }: O
       {mode === 'list' && (
         <>
           {jobs.length === 0 ? (
-            <p className="text-gray-600 text-sm">Noch keine Jobs. Stelle einen ein, damit Betreuer dich finden.</p>
+            <p className="text-gray-600 text-sm">Noch keine Gesuche. Lege eines an, damit Betreuer dich finden.</p>
           ) : (
             <ul className="space-y-4">
               {jobs.map((j) => (
@@ -422,7 +466,7 @@ export default function OwnerDashboardJobsTab({ userId, pets, isPremiumUser }: O
             </ul>
           )}
           <p className="text-xs text-gray-500">
-            Öffentlich sichtbar sind nur Jobs mit Status <strong>Offen</strong>.{' '}
+            Öffentlich sichtbar sind nur Gesuche mit Status <strong>Offen</strong>.{' '}
             <Link to={`/owner/${userId}`} className="text-primary-600 hover:underline">
               Profil ansehen
             </Link>

@@ -174,13 +174,14 @@ function App() {
               }
             />
             <Route
-              path="/jobs"
+              path="/gesuche"
               element={
                 <SafeProtectedRoute>
                   <OwnerJobsPage />
                 </SafeProtectedRoute>
               }
             />
+            <Route path="/jobs" element={<Navigate to="/gesuche" replace />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

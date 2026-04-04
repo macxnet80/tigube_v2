@@ -1683,7 +1683,7 @@ function OwnerDashboardPage() {
                       }`}
                   >
                     <Briefcase className="h-4 w-4 shrink-0 opacity-80" />
-                    Jobs
+                    Gesuche
                   </button>
                 </li>
                 <li className="shrink-0">

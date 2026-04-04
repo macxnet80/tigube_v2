@@ -1733,6 +1733,62 @@ export type Database = {
         ]
       }
 
+      owner_job_notices: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string | null
+          job_title_snapshot: string | null
+          notice_type: string
+          read_at: string | null
+          reason: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_title_snapshot?: string | null
+          notice_type: string
+          read_at?: string | null
+          reason: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string | null
+          job_title_snapshot?: string | null
+          notice_type?: string
+          read_at?: string | null
+          reason?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_job_notices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "caretaker_search_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_job_notices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "dienstleister_search_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_job_notices_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
       owner_job_pets: {
         Row: {
           job_id: string
@@ -3651,6 +3707,10 @@ export type Database = {
       }
       admin_delete_marketplace_listing: {
         Args: { p_listing_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_delete_owner_job: {
+        Args: { p_job_id: string; p_reason: string }
         Returns: undefined
       }
       log_admin_action: {

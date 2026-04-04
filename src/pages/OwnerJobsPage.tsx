@@ -51,7 +51,7 @@ export default function OwnerJobsPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      navigate(`/anmelden?redirect=${encodeURIComponent('/jobs')}`);
+      navigate(`/anmelden?redirect=${encodeURIComponent('/gesuche')}`);
       return;
     }
     void load();
@@ -92,10 +92,10 @@ export default function OwnerJobsPage() {
         <div className="mb-5 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2 flex-wrap min-w-0">
             <Briefcase className="h-6 w-6 sm:h-7 sm:w-7 text-primary-600 shrink-0" />
-            <span className="break-words min-w-0">Jobs von Tierhaltern</span>
+            <span className="break-words min-w-0">Gesuche von Tierhaltern</span>
           </h1>
           <p className="text-gray-600 text-sm mt-2 sm:mt-1 leading-relaxed">
-            Offene Aufträge Premium-Tierhalter. Als Premium-Betreuer kannst du dich per Chat bewerben.
+            Offene Gesuche von Premium-Tierhaltern. Als Premium-Betreuer kannst du dich per Chat bewerben.
           </p>
         </div>
 
@@ -152,7 +152,7 @@ export default function OwnerJobsPage() {
             <LoadingSpinner />
           </div>
         ) : jobs.length === 0 ? (
-          <p className="text-gray-600 text-center py-12">Keine offenen Jobs gefunden.</p>
+          <p className="text-gray-600 text-center py-12">Keine offenen Gesuche gefunden.</p>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {jobs.map((job) => {
@@ -163,7 +163,7 @@ export default function OwnerJobsPage() {
               else if (!isCaretakerLikeUserType(userProfile?.user_type))
                 hint = 'Nur für Betreuer und Dienstleister.';
               else if (!isPremiumUser || !hasFeature('apply_owner_jobs'))
-                hint = 'Mit Premium kannst du dich per Chat auf Jobs bewerben.';
+                hint = 'Mit Premium kannst du dich per Chat auf Gesuche bewerben.';
 
               return (
                 <OwnerJobCard

@@ -97,12 +97,12 @@ function Header() {
                   Betreuer finden
                 </NavLink>
                 <NavLink
-                  to="/jobs"
-                  isActive={isActive('/jobs')}
-                  aria-label={jobsNewBadge ? 'Jobs, neu' : undefined}
+                  to="/gesuche"
+                  isActive={isActive('/gesuche')}
+                  aria-label={jobsNewBadge ? 'Gesuche, neu' : undefined}
                 >
                   <span className="inline-flex items-center gap-1.5">
-                    Jobs
+                    Gesuche
                     {jobsNewBadge ? (
                       <span
                         className="rounded bg-primary-600 px-1 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
@@ -235,13 +235,13 @@ function Header() {
                     Betreuer finden
                   </MobileNavLink>
                   <MobileNavLink
-                    to="/jobs"
-                    isActive={isActive('/jobs')}
+                    to="/gesuche"
+                    isActive={isActive('/gesuche')}
                     onClick={() => setIsMenuOpen(false)}
-                    aria-label={jobsNewBadge ? 'Jobs, neu' : undefined}
+                    aria-label={jobsNewBadge ? 'Gesuche, neu' : undefined}
                   >
                     <span className="inline-flex items-center gap-2">
-                      Jobs
+                      Gesuche
                       {jobsNewBadge ? (
                         <span
                           className="rounded bg-primary-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white"
