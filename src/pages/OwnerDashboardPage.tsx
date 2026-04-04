@@ -1,6 +1,6 @@
 
 import Button from '../components/ui/Button';
-import { MapPin, Phone, PawPrint, Edit, Shield, Heart, Trash, Check, X, Plus, Upload, Settings, AlertTriangle, Trash2, Briefcase, User, MessageCircle, KeyRound, Eye, EyeOff, Mail, Star, Crown, Info, Share2, BookUser, HelpCircle } from 'lucide-react';
+import { MapPin, Phone, PawPrint, Edit, Shield, Heart, Trash, Check, X, Plus, Upload, Settings, AlertTriangle, Trash2, Briefcase, User, MessageCircle, KeyRound, Eye, EyeOff, Mail, Star, Crown, Info, Share2, BookUser, HelpCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import DienstleisterCategoryIcon, { getCategoryColor, getCategoryBgColor } from '../components/ui/DienstleisterCategoryIcon';
 import { cn } from '../lib/utils';
 import { Link } from 'react-router-dom';
@@ -26,6 +26,9 @@ import RefGrowDashboard from '../components/ui/RefGrowDashboard';
 import OwnerDashboardJobsTab from '../components/owner/OwnerDashboardJobsTab';
 import { OWNER_SERVICE_TAGS } from '../lib/constants/ownerServices';
 import DashboardReleaseTeaser from '../components/dashboard/DashboardReleaseTeaser';
+import { useToast } from '../hooks/useToast';
+import ToastContainer from '../components/ui/ToastContainer';
+import { requestOwnerApproval } from '../lib/services/ownerApprovalService';
 
 // Typ für Haustier-Formulare
 interface PetFormData {
@@ -103,6 +106,8 @@ function PetPhotoUploader({ photoUrl, onEditClick, uploading }: {
 function OwnerDashboardPage() {
   const { user, userProfile, loading: authLoading, updateProfileState, signOut, subscription } = useAuth();
   const { isPremiumUser } = useSubscription();
+  const { toasts, showSuccess, showError, removeToast } = useToast();
+  const [ownerApprovalLoading, setOwnerApprovalLoading] = useState(false);
   const navigate = useNavigate();
   const [profileLoadAttempts, setProfileLoadAttempts] = useState(0);
   // Onboarding-Modal State
@@ -1525,6 +1530,35 @@ function OwnerDashboardPage() {
     }
   };
 
+  const ownerApprovalStatus =
+    (userProfile?.owner_approval_status as string | undefined) ?? 'not_requested';
+
+  const handleRequestOwnerApproval = async () => {
+    if (!user || ownerApprovalLoading) return;
+    setOwnerApprovalLoading(true);
+    try {
+      const { error } = await requestOwnerApproval(user.id);
+      if (error) {
+        showError('Freigabe', error, 6000);
+        return;
+      }
+      updateProfileState({
+        ...(userProfile || {}),
+        owner_approval_status: 'pending',
+        owner_approval_requested_at: new Date().toISOString()
+      });
+      showSuccess(
+        'Profil eingereicht',
+        'Wir prüfen dein Profilbild und geben dein öffentliches Profil sowie Gesuche frei.',
+        6000
+      );
+    } catch (e) {
+      showError('Fehler', e instanceof Error ? e.message : 'Unbekannter Fehler', 6000);
+    } finally {
+      setOwnerApprovalLoading(false);
+    }
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen py-6 sm:py-10">
       <div className="container-custom px-4 sm:px-6 lg:px-8">
@@ -1561,8 +1595,8 @@ function OwnerDashboardPage() {
 
             <div className="flex-1 w-full">
               <div className="flex flex-col lg:flex-row gap-8">
-                {/* Erste Spalte: Name und Tiere */}
-                <div className="flex-1 text-center lg:text-left">
+                {/* Erste Spalte: Name und Tiere (relative für Freigabe-Bereich rechts oben wie Caretaker) */}
+                <div className="flex-1 text-center lg:text-left relative">
                   <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-2 mb-4">
                     <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">{fullName}</h1>
                     {/* Auge-Icon neben dem Namen mit Hovereffekt */}
@@ -1590,6 +1624,42 @@ function OwnerDashboardPage() {
                         </div>
                       </div>
                     )}
+                    {/* Freigabe-Icon (Tierhalter) */}
+                    <div className="group relative">
+                      <div
+                        className={`inline-flex items-center justify-center w-6 h-6 transition-colors ${
+                          ownerApprovalStatus === 'approved'
+                            ? 'text-green-500 hover:text-green-600'
+                            : ownerApprovalStatus === 'pending'
+                              ? 'text-yellow-500 hover:text-yellow-600'
+                              : ownerApprovalStatus === 'rejected'
+                                ? 'text-red-500 hover:text-red-600'
+                                : 'text-gray-400 hover:text-gray-500'
+                        }`}
+                      >
+                        {ownerApprovalStatus === 'approved' ? (
+                          <CheckCircle className="h-4 w-4" />
+                        ) : ownerApprovalStatus === 'pending' ? (
+                          <Clock className="h-4 w-4" />
+                        ) : ownerApprovalStatus === 'rejected' ? (
+                          <XCircle className="h-4 w-4" />
+                        ) : (
+                          <Shield className="h-4 w-4" />
+                        )}
+                      </div>
+                      <div className="absolute left-1/2 transform -translate-x-1/2 top-8 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+                        <div className="text-center">
+                          {ownerApprovalStatus === 'approved'
+                            ? 'Profil freigegeben'
+                            : ownerApprovalStatus === 'pending'
+                              ? 'Freigabe ausstehend'
+                              : ownerApprovalStatus === 'rejected'
+                                ? 'Freigabe abgelehnt'
+                                : 'Freigabe nicht angefordert'}
+                        </div>
+                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Pet-Badges */}
@@ -1601,6 +1671,109 @@ function OwnerDashboardPage() {
                     ))}
                   </div>
 
+                  {/* Rechts oben: Freigabe-Button + Hinweis (Layout wie CaretakerDashboardPage) */}
+                  {ownerApprovalStatus !== 'approved' && (
+                    <div className="mt-4 lg:absolute lg:top-0 lg:right-0 flex flex-col items-center lg:items-end gap-2 w-full lg:w-auto">
+                        {ownerApprovalStatus === 'pending' ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm font-medium rounded-lg cursor-not-allowed"
+                          >
+                            <Clock className="h-4 w-4" />
+                            Profil wird überprüft
+                          </button>
+                        ) : ownerApprovalStatus === 'rejected' ? (
+                          <button
+                            type="button"
+                            onClick={() => void handleRequestOwnerApproval()}
+                            disabled={ownerApprovalLoading}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {ownerApprovalLoading ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                                Wird gesendet...
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="h-4 w-4" />
+                                Erneut zur Freigabe geben
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void handleRequestOwnerApproval()}
+                            disabled={ownerApprovalLoading}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-primary-100 text-primary-700 text-sm font-medium rounded-lg hover:bg-primary-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {ownerApprovalLoading ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                                Wird gesendet...
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="h-4 w-4" />
+                                Profil zur Freigabe geben
+                              </>
+                            )}
+                          </button>
+                        )}
+
+                        <div
+                          className="w-full max-w-md lg:max-w-sm rounded-lg border border-gray-100 bg-gray-50/90 p-3 text-left text-xs sm:text-sm text-gray-600 leading-relaxed"
+                          role="region"
+                          aria-label="Hinweis zur Profil-Sichtbarkeit"
+                        >
+                          <div className="flex gap-2">
+                            <Info className="h-4 w-4 shrink-0 text-primary-600 mt-0.5" aria-hidden />
+                            <div className="space-y-2">
+                              <p className="font-medium text-gray-800">Profil ist ohne Freigabe nicht öffentlich</p>
+                              <p>
+                                Ohne erfolgreiche Freigabe erscheint dein öffentliches Profil nicht und deine Gesuche sind
+                                für andere nicht sichtbar.
+                              </p>
+                              {ownerApprovalStatus === 'pending' ? (
+                                <p>
+                                  Deine Anfrage wird geprüft. Bis zur Entscheidung bleiben Profil und Gesuche unsichtbar.
+                                  Du erhältst eine Rückmeldung nach der Prüfung.
+                                </p>
+                              ) : (
+                                <>
+                                  <p>
+                                    Fordere die Freigabe über den Button an – tigube prüft jedes Profilbild manuell, bevor
+                                    es live geht.
+                                  </p>
+                                  <p className="font-medium text-gray-700">Voraussetzungen für die Einreichung:</p>
+                                  <ul className="list-disc pl-4 space-y-0.5">
+                                    <li>Profilbild hinterlegt (echtes Portrait)</li>
+                                  </ul>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                  )}
+
+                  {ownerApprovalStatus === 'rejected' && userProfile?.owner_approval_notes && (
+                    <div className="mt-4 w-full">
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="font-medium text-red-900 text-sm mb-2">Ablehnungsgrund:</div>
+                            <div className="text-red-700 text-sm whitespace-pre-wrap">
+                              {userProfile.owner_approval_notes}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                 </div>
 
@@ -2487,6 +2660,8 @@ function OwnerDashboardPage() {
             userId={user.id}
             pets={pets.map((p) => ({ id: p.id, name: p.name }))}
             isPremiumUser={isPremiumUser}
+            ownerApprovalStatus={ownerApprovalStatus}
+            onGoToOverview={() => setActiveTab('uebersicht')}
           />
         )}
 
@@ -3620,6 +3795,7 @@ function OwnerDashboardPage() {
           </div>
         </div>
       )}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
       <DashboardReleaseTeaser />
     </div>
   );

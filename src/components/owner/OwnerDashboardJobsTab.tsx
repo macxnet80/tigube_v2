@@ -16,6 +16,9 @@ interface OwnerDashboardJobsTabProps {
   userId: string;
   pets: { id: string; name: string }[];
   isPremiumUser: boolean;
+  /** Tierhalter-Freigabe: nur bei 'approved' dürfen Gesuche erstellt werden */
+  ownerApprovalStatus: string;
+  onGoToOverview?: () => void;
 }
 
 type Draft = {
@@ -56,7 +59,13 @@ function jobToDraft(j: OwnerJobWithPets): Draft {
   };
 }
 
-export default function OwnerDashboardJobsTab({ userId, pets, isPremiumUser }: OwnerDashboardJobsTabProps) {
+export default function OwnerDashboardJobsTab({
+  userId,
+  pets,
+  isPremiumUser,
+  ownerApprovalStatus,
+  onGoToOverview
+}: OwnerDashboardJobsTabProps) {
   const [jobs, setJobs] = useState<OwnerJobWithPets[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,12 +99,12 @@ export default function OwnerDashboardJobsTab({ userId, pets, isPremiumUser }: O
   };
 
   useEffect(() => {
-    if (!isPremiumUser) {
+    if (!isPremiumUser || ownerApprovalStatus !== 'approved') {
       setLoading(false);
       return;
     }
     void load();
-  }, [isPremiumUser, load]);
+  }, [isPremiumUser, ownerApprovalStatus, load]);
 
   const openCreate = () => {
     setDraft(emptyDraft());
@@ -204,6 +213,30 @@ export default function OwnerDashboardJobsTab({ userId, pets, isPremiumUser }: O
         >
           Zu den Mitgliedschaften
         </Link>
+      </div>
+    );
+  }
+
+  if (ownerApprovalStatus !== 'approved') {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
+        <Briefcase className="h-10 w-10 text-amber-600 mx-auto mb-3" />
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">Freischaltung erforderlich</h2>
+        <p className="text-gray-700 text-sm mb-4 max-w-md mx-auto">
+          Damit du Gesuche einstellen und dein öffentliches Profil zeigen kannst, musst du dein Profil (Profilbild)
+          von tigube freigeben lassen. Bitte geh zur Übersicht und klicke auf „Profil zur Freigabe geben“.
+        </p>
+        {onGoToOverview ? (
+          <button
+            type="button"
+            onClick={onGoToOverview}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700"
+          >
+            Zur Übersicht
+          </button>
+        ) : (
+          <p className="text-sm text-gray-600">Wechsel im Seitenmenü zu „Übersicht“.</p>
+        )}
       </div>
     );
   }

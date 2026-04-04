@@ -3214,6 +3214,9 @@ export type Database = {
           updated_at: string | null
           user_type: string | null
           verification_status: string | null
+          owner_approval_status: string | null
+          owner_approval_requested_at: string | null
+          owner_approval_notes: string | null
         }
         Insert: {
           about_me?: string | null
@@ -3253,6 +3256,9 @@ export type Database = {
           updated_at?: string | null
           user_type?: string | null
           verification_status?: string | null
+          owner_approval_status?: string | null
+          owner_approval_requested_at?: string | null
+          owner_approval_notes?: string | null
         }
         Update: {
           about_me?: string | null
@@ -3292,6 +3298,9 @@ export type Database = {
           updated_at?: string | null
           user_type?: string | null
           verification_status?: string | null
+          owner_approval_status?: string | null
+          owner_approval_requested_at?: string | null
+          owner_approval_notes?: string | null
         }
         Relationships: [
           {

@@ -103,12 +103,21 @@ export const ownerPublicService = {
 
       const { data: userProfile, error: userError } = await supabase
         .from('users')
-        .select('id, first_name, last_name, profile_photo_url, short_intro, about_me')
+        .select('id, first_name, last_name, profile_photo_url, short_intro, about_me, owner_approval_status')
         .eq('id', ownerId)
         .single();
 
       if (userError || !userProfile) {
         return { data: null, error: userError?.message || 'Owner nicht gefunden' };
+      }
+
+      const approval = userProfile.owner_approval_status;
+      if (!isOwnProfile && approval !== 'approved') {
+        return {
+          data: null,
+          error:
+            'Dieses Profil ist derzeit nicht öffentlich. Der Tierhalter hat noch keine Freigabe erhalten.'
+        };
       }
 
       const { data: loadedShareSettings } = await ownerPreferencesService.getShareSettings(ownerId);

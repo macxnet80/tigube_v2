@@ -218,11 +218,12 @@ function OwnerPublicProfilePage() {
 
   // Error State
   if (error) {
+    const notPublic = error.includes('nicht öffentlich') || error.includes('keine Freigabe');
     return (
       <div className="container-custom py-16 text-center px-4">
         <AlertTriangle className="mx-auto h-16 w-16 text-red-400 mb-4" />
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Oops! Etwas ist schief gelaufen
+          {notPublic ? 'Profil nicht verfügbar' : 'Oops! Etwas ist schief gelaufen'}
         </h2>
         <p className="text-gray-600 mb-6">{error}</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">

@@ -74,6 +74,9 @@ export const ownerJobService = {
     return { data: withPets, error: null };
   },
 
+  /**
+   * Offene Gesuche (für eingeloggte Nutzer). RLS blendet Jobs von nicht freigegebenen Tierhaltern aus.
+   */
   async listOpenJobs(
     filters: ListOpenJobsFilters = {}
   ): Promise<{ data: OpenJobListItem[]; error: string | null }> {
