@@ -39,7 +39,7 @@ function MarketplaceTermsPage() {
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm">
 
           <p className="mb-8 text-sm text-gray-600 leading-relaxed">
-            Die tigube UG (haftungsbeschränkt) betreibt unter der Bezeichnung „tigube-Marktplatz" einen
+            Die tierisch gut betreut GmbH betreibt unter der Bezeichnung „tigube-Marktplatz" einen
             Online-Marktplatz für Haustier-Zubehör, Tierpflege-Produkte und verwandte Artikel
             (nachfolgend „Marktplatz"). Diese Nutzungsbedingungen regeln die Nutzung des Marktplatzes
             durch Nutzer, die Anzeigen aufgeben oder Angebote einsehen. Mit dem Einstellen einer Anzeige
@@ -230,7 +230,7 @@ function MarketplaceTermsPage() {
           </Section>
 
           <div className="mt-8 rounded-lg bg-gray-50 border border-gray-200 p-4 text-xs text-gray-500">
-            Stand: 22. März 2026 · tigube UG (haftungsbeschränkt) · Weitere Informationen unter{' '}
+            Stand: 22. März 2026 · tierisch gut betreut GmbH · Weitere Informationen unter{' '}
             <Link to="/impressum" className="text-primary-600 hover:underline">
               Impressum
             </Link>{' '}

@@ -20,7 +20,7 @@ function AgbPage() {
                 <p>
                   <strong>1.1.</strong> Die nachfolgenden Nutzungsbedingungen regeln die Nutzung der Online-Plattform
                   „tigube" (www.tigube.de) (im Folgenden „Plattform" genannt), die von der{' '}
-                  <strong>tierisch gut betreut UG (haftungsbeschränkt)</strong>, Iznangerstr. 32, 78345 Moos
+                  <strong>tierisch gut betreut GmbH</strong>, Iznangerstr. 32, 78345 Moos
                   (im Folgenden „tigube" oder „wir" genannt) betrieben wird.
                 </p>
                 <p>
@@ -513,7 +513,7 @@ function AgbPage() {
             <section className="bg-gray-50 p-6 rounded-lg">
               <h3 className="text-xl font-semibold text-gray-800 mb-4">Kontakt</h3>
               <div className="space-y-1 text-gray-700">
-                <p className="font-semibold">tierisch gut betreut UG (haftungsbeschränkt)</p>
+                <p className="font-semibold">tierisch gut betreut GmbH</p>
                 <p>Iznangerstr. 32, 78345 Moos</p>
                 <p>
                   E-Mail:{' '}

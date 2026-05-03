@@ -107,7 +107,7 @@ function ContactPage() {
                       Adresse
                     </h3>
                     <p className="text-gray-600">
-                      tierisch gut betreut UG<br />
+                      tierisch gut betreut GmbH<br />
                       Iznangerstr. 32<br />
                       78345 Moos
                     </p>
