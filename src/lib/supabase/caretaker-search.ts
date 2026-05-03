@@ -6,6 +6,10 @@ import {
   resolveTravelCostConfig,
 } from '../pricing/servicePricing';
 import type { TravelCostConfig } from '../types/service-categories';
+import {
+  fetchNearbyPlzList,
+  extractGermanPlzFromLocationInput,
+} from '../geocoding';
 
 export interface SearchFilters {
   petType?: string;
@@ -229,13 +233,38 @@ export async function searchCaretakers(filters?: SearchFilters): Promise<Caretak
 
 
   try {
+    let nearbyPlzs: string[] | null = null;
+
+    const radiusKm = filters?.radius ? parseFloat(filters.radius) : NaN;
+    const hasRadius =
+      Number.isFinite(radiusKm) && radiusKm > 0 && filters?.location?.trim();
+
+    if (hasRadius) {
+      const plzInInput = extractGermanPlzFromLocationInput(filters!.location!);
+      if (plzInInput) {
+        try {
+          const list = await fetchNearbyPlzList(
+            supabase,
+            filters!.location!,
+            radiusKm
+          );
+          nearbyPlzs = list.length > 0 ? list : null;
+        } catch (err) {
+          console.error('❌ search_nearby_plzs / geocache:', err);
+          nearbyPlzs = null;
+        }
+      }
+    }
+
     // Verwende die caretaker_search_view direkt
     let query = supabase
       .from('caretaker_search_view')
       .select('*');
 
-    // Optional: Standort-Filter
-    if (filters?.location) {
+    // Optional: Standort-Filter — Umkreis (PLZ) oder Textsuche
+    if (nearbyPlzs && nearbyPlzs.length > 0) {
+      query = query.in('plz', nearbyPlzs);
+    } else if (filters?.location) {
       const location = filters.location.toLowerCase();
 
       query = query.or(`city.ilike.%${location}%,plz.ilike.%${location}%`);

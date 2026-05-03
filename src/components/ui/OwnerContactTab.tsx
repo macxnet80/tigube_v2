@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Calendar, MapPin, Phone, User, Edit } from 'lucide-react';
 import { useAuth } from '../../lib/auth/AuthContext';
 import { userService } from '../../lib/supabase/db';
+import { supabase } from '../../lib/supabase/client';
+import { ensurePlzCoordinatesCached } from '../../lib/geocoding';
 
 interface OwnerContactState {
   street: string;
@@ -73,6 +75,9 @@ function OwnerContactTab() {
           dateOfBirth: updated[0].date_of_birth || '',
           gender: updated[0].gender || ''
         });
+        if (updated[0].plz?.trim() && updated[0].city?.trim()) {
+          void ensurePlzCoordinatesCached(supabase, updated[0].plz.trim(), updated[0].city.trim());
+        }
       }
       setEditing(false);
     } catch (e) {

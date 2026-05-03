@@ -26,7 +26,7 @@ import RefGrowDashboard from '../components/ui/RefGrowDashboard';
 import OwnerDashboardJobsTab from '../components/owner/OwnerDashboardJobsTab';
 import { OWNER_SERVICE_TAGS } from '../lib/constants/ownerServices';
 import DashboardReleaseTeaser from '../components/dashboard/DashboardReleaseTeaser';
-import { useToast } from '../hooks/useToast';
+import { ensurePlzCoordinatesCached } from '../lib/geocoding';
 import ToastContainer from '../components/ui/ToastContainer';
 import { requestOwnerApproval } from '../lib/services/ownerApprovalService';
 
@@ -1069,6 +1069,13 @@ function OwnerDashboardPage() {
       if (updateError) {
         console.error('Fehler beim Speichern der Kontaktdaten:', updateError);
       } else {
+        if (dataToUpdate.plz && dataToUpdate.city) {
+          void ensurePlzCoordinatesCached(
+            supabase,
+            String(dataToUpdate.plz),
+            String(dataToUpdate.city)
+          );
+        }
         // Profil nach dem Speichern neu laden (Race-Condition vermeiden)
         const { data: freshProfile, error: freshError } = await userService.getUserProfile(user.id);
         if (!freshError && freshProfile) {

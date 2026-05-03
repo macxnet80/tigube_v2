@@ -1,4 +1,8 @@
 import { supabase } from './client';
+import {
+  extractGermanPlzFromLocationInput,
+  fetchNearbyPlzList,
+} from '../geocoding';
 
 export interface DienstleisterResult {
   id: string;
@@ -39,6 +43,8 @@ export interface DienstleisterResult {
 
 export interface CrossSearchFilters {
   location?: string;
+  /** Umkreis in km (nur wirksam, wenn `location` eine PLZ enthält). */
+  radius?: string;
   petType?: string;
   service?: string;
   serviceCategory?: string;
@@ -176,8 +182,34 @@ export async function searchRelatedDienstleister(filters: CrossSearchFilters): P
       .order('premium_badge', { ascending: false })
       .order('rating', { ascending: false });
 
+    let nearbyPlzs: string[] | null = null;
+    const radiusKm = filters.radius ? parseFloat(filters.radius) : NaN;
+    const hasRadius =
+      Number.isFinite(radiusKm) &&
+      radiusKm > 0 &&
+      filters.location?.trim();
+
+    if (hasRadius) {
+      const plzInInput = extractGermanPlzFromLocationInput(filters.location!);
+      if (plzInInput) {
+        try {
+          const list = await fetchNearbyPlzList(
+            supabase,
+            filters.location!,
+            radiusKm
+          );
+          nearbyPlzs = list.length > 0 ? list : null;
+        } catch (err) {
+          console.error('Cross-Search search_nearby_plzs:', err);
+          nearbyPlzs = null;
+        }
+      }
+    }
+
     // Location filter
-    if (filters.location?.trim()) {
+    if (nearbyPlzs && nearbyPlzs.length > 0) {
+      query = query.in('plz', nearbyPlzs);
+    } else if (filters.location?.trim()) {
       query = query.or(`plz.ilike.%${filters.location}%,city.ilike.%${filters.location}%`);
     }
 

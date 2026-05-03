@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Calendar, MapPin, Phone, User, Edit } from 'lucide-react';
 import { useAuth } from '../../lib/auth/AuthContext';
 import { userService } from '../../lib/supabase/db';
+import { supabase } from '../../lib/supabase/client';
+import { ensurePlzCoordinatesCached } from '../../lib/geocoding';
 
 interface CaretakerContactState {
   street: string;
@@ -60,6 +62,9 @@ function CaretakerContactTab() {
         return;
       }
       if (updated) updateProfileState(Array.isArray(updated) ? updated[0] : updated);
+      if (state.plz.trim() && state.city.trim()) {
+        void ensurePlzCoordinatesCached(supabase, state.plz.trim(), state.city.trim());
+      }
       setEditing(false);
     } catch (e) {
       setError('Ein unerwarteter Fehler ist aufgetreten.');

@@ -3727,6 +3727,15 @@ export type Database = {
         Args: { p_job_id: string; p_reason: string }
         Returns: undefined
       }
+      cache_plz_coordinates: {
+        Args: {
+          p_plz: string
+          p_city: string
+          p_lat: number
+          p_lng: number
+        }
+        Returns: undefined
+      }
       log_admin_action: {
         Args: {
           action_name: string
@@ -3759,6 +3768,15 @@ export type Database = {
           review_count: number
           services: string[]
           short_about_me: string
+        }[]
+      }
+      search_nearby_plzs: {
+        Args: {
+          origin_plz: string
+          radius_km?: number
+        }
+        Returns: {
+          plz: string
         }[]
       }
       search_users: {

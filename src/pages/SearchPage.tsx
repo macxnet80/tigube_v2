@@ -25,6 +25,7 @@ import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import useCurrentUsage from '../hooks/useCurrentUsage';
 import { useAuth } from '../lib/auth/AuthContext';
 import { ownerCaretakerService } from '../lib/supabase/db';
+import { extractGermanPlzFromLocationInput } from '../lib/geocoding';
 
 // Using the type from the service
 type Caretaker = CaretakerDisplayData;
@@ -138,6 +139,7 @@ function SearchPage() {
       if (selectedService) filters.service = selectedService;
       if (selectedServiceCategory) filters.serviceCategory = selectedServiceCategory;
       if (selectedMinRating) filters.minRating = selectedMinRating;
+      if (selectedRadius) filters.radius = selectedRadius;
 
       // Nur Preis-Filter setzen wenn er nicht dem Default-Wert entspricht
       if (maxPrice < 100) {
@@ -165,8 +167,15 @@ function SearchPage() {
 
 
 
-      // Client-seitige Standort-Filterung (muss zuerst kommen)
-      if (location.trim() && data) {
+      // Client-seitige Standort-Filterung: bei PLZ+Umkreis übernimmt die DB die Entfernung —
+      // sonst Text-Match wie bisher.
+      const plzForGeo =
+        location.trim() && selectedRadius
+          ? extractGermanPlzFromLocationInput(location.trim())
+          : null;
+      const skipClientLocationFilter = Boolean(plzForGeo);
+
+      if (location.trim() && data && !skipClientLocationFilter) {
 
         const searchLocation = location.trim().toLowerCase();
         data = data.filter(caretaker => {
@@ -313,21 +322,6 @@ function SearchPage() {
         }
       }
 
-      // Client-seitige Umkreis-Filterung (vereinfacht)
-      if (selectedRadius && data) {
-        const radius = parseInt(selectedRadius);
-
-        // TODO: Implementiere echte Geolocation-basierte Filterung
-        // Für jetzt: Mock-Filterung basierend auf Radius
-        data = data.filter(() => {
-          // Vereinfachte Logik: Kleinere Radien = weniger Ergebnisse
-          const randomDistance = Math.random() * 100;
-          return randomDistance <= radius;
-        });
-
-      }
-
-
       setCaretakers(data || []);
 
       // Search completed
@@ -338,6 +332,7 @@ function SearchPage() {
         try {
           const crossSearchFilters: CrossSearchFilters = {
             location: filters.location,
+            radius: selectedRadius || undefined,
             petType: filters.petType,
             service: filters.service,
             serviceCategory: filters.serviceCategory,
