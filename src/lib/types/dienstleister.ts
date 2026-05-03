@@ -1,5 +1,7 @@
 // Dienstleister-spezifische TypeScript-Typen
 
+import type { TravelCostConfig } from './service-categories';
+
 export interface DienstleisterKategorie {
   id: number;
   name: string;
@@ -83,6 +85,7 @@ export interface DienstleisterProfil {
   // Berechnete Felder
   search_type: 'caretaker' | 'service_provider';
   search_vector?: any;
+  travel_cost_config?: TravelCostConfig | null;
 }
 
 export interface DienstleisterSucheFilter {

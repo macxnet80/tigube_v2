@@ -3,7 +3,8 @@ import { Star, MapPin, Briefcase, Clock, Verified, Heart } from 'lucide-react';
 import DienstleisterCategoryIcon, { getCategoryColor } from './DienstleisterCategoryIcon';
 import Button from './Button';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
+import { getCheapestPricedService, priceTypeSuffixGerman } from '../../lib/pricing/servicePricing';
 import { useAuth } from '../../lib/auth/AuthContext';
 import { ownerCaretakerService } from '../../lib/supabase/db';
 import type { DienstleisterProfil } from '../../lib/types/dienstleister';
@@ -68,8 +69,12 @@ export default function DienstleisterCard({ dienstleister }: DienstleisterCardPr
   };
 
   const getDisplayPrice = () => {
+    const cheapest = getCheapestPricedService(dienstleister.services_with_categories);
+    if (cheapest) {
+      return `ab ${formatCurrency(cheapest.price)}${priceTypeSuffixGerman(cheapest.priceType)}`;
+    }
     if (dienstleister.hourly_rate && dienstleister.hourly_rate > 0) {
-      return `ab €${dienstleister.hourly_rate}/Std.`;
+      return `ab ${formatCurrency(dienstleister.hourly_rate)}/h`;
     }
     return 'Preis auf Anfrage';
   };

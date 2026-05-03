@@ -1,6 +1,13 @@
 import { supabase } from './client';
 import type { Database } from './database.types';
 import { ServiceUtils } from './service-categories';
+import {
+  getCheapestPricedService,
+  isExcludedFromAbPrice,
+  minNumericPriceExcludingTravel,
+  parseServicesWithCategoriesJson,
+  resolveTravelCostConfig,
+} from '../pricing/servicePricing';
 
 // Typen für die Benutzerregistrierung und -aktualisierung
 export type UserRegistration = {
@@ -622,6 +629,8 @@ export const caretakerProfileService = {
     taxNumber?: string;
     vatId?: string;
     servicesWithCategories?: any[];
+    hourlyRate?: number | null;
+    travelCostConfig?: Record<string, unknown> | null;
     shortTermAvailable?: boolean;
     overnightAvailability?: Record<string, boolean>;
     oeffnungszeiten?: Record<string, any> | null;
@@ -643,6 +652,10 @@ export const caretakerProfileService = {
     if (profile.taxNumber !== undefined) updateData.tax_number = profile.taxNumber;
     if (profile.vatId !== undefined) updateData.vat_id = profile.vatId;
     if (profile.servicesWithCategories !== undefined) updateData.services_with_categories = profile.servicesWithCategories;
+    if (profile.hourlyRate !== undefined) updateData.hourly_rate = profile.hourlyRate;
+    if (profile.travelCostConfig !== undefined) {
+      updateData.travel_cost_config = profile.travelCostConfig === null ? null : profile.travelCostConfig;
+    }
     if (profile.shortTermAvailable !== undefined) updateData.short_term_available = profile.shortTermAvailable;
     if (profile.overnightAvailability !== undefined) updateData.overnight_availability = profile.overnightAvailability;
     if (profile.oeffnungszeiten !== undefined) {
@@ -683,6 +696,7 @@ export const caretakerProfileService = {
         hourly_rate,
         rating,
         review_count,
+        travel_cost_config,
         is_verified,
         approval_status,
         approval_notes,
@@ -777,24 +791,26 @@ export const caretakerSearchService = {
           ? `${row.users.city} ${row.users.plz}`
           : (row.users?.city || 'Unbekannt');
 
-        // Services und Preise aus der neuen services_with_categories Struktur extrahieren
+        // Services und Preise aus der neuen services_with_categories Struktur extrahieren (ohne Anfahrt)
         let services: string[] = [];
         let prices: Record<string, number> = {};
 
         if (row.services_with_categories && Array.isArray(row.services_with_categories)) {
-          services = row.services_with_categories.map((service: any) => service.name).filter(Boolean);
-          // Extrahiere Preise aus services_with_categories
+          services = row.services_with_categories
+            .map((service: any) => service.name)
+            .filter(Boolean)
+            .filter((name: string) => !isExcludedFromAbPrice(name));
           row.services_with_categories.forEach((service: any) => {
-            if (service.name && service.price) {
+            if (service.name && service.price && !isExcludedFromAbPrice(service.name)) {
               prices[service.name] = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
             }
           });
         }
 
-        // Bestpreis aus den extrahierten Preisen ermitteln, fallback hourly_rate
-        const numericPrices = Object.values(prices || {})
-          .filter((p: any) => p !== '' && p !== null && p !== undefined && !isNaN(p) && p > 0);
-        const bestPrice = numericPrices.length > 0 ? Math.min(...numericPrices as number[]) : Number(row.hourly_rate) || 0;
+        const cheapestDl = getCheapestPricedService(row.services_with_categories);
+        const bestPrice =
+          cheapestDl?.price ??
+          (minNumericPriceExcludingTravel(prices) || Number(row.hourly_rate) || 0);
 
         return {
           id: row.id,
@@ -806,6 +822,7 @@ export const caretakerSearchService = {
           reviewCount: row.review_count || 0,
           hourlyRate: bestPrice,
           services,
+          servicesWithCategories: Array.isArray(row.services_with_categories) ? row.services_with_categories : [],
           bio: row.short_about_me || 'Keine Beschreibung verfügbar.',
           responseTime: 'unter 1 Stunde',
           verified: row.is_verified || false,
@@ -949,45 +966,45 @@ export const caretakerSearchService = {
         };
       }
 
-      // Services und Preise aus services_with_categories extrahieren
+      // travel_cost_config: Bei View-Ladung aus Tabelle abgleichen (View kann Spalte fehlen, null liefern oder veraltet sein)
+      if (loadedFromView) {
+        const { data: tcPatch } = await supabase
+          .from('caretaker_profiles')
+          .select('travel_cost_config')
+          .eq('id', id)
+          .maybeSingle();
+        const fromTable = tcPatch?.travel_cost_config;
+        if (resolveTravelCostConfig(fromTable, []) !== null) {
+          result = { ...result, travel_cost_config: fromTable };
+        }
+      }
+
+      // Services und Preise aus services_with_categories extrahieren (ohne Anfahrt als „Normal“-Leistung)
       let services: string[] = [];
       let prices: Record<string, number | string> = {};
+      const swcForCheapest = parseServicesWithCategoriesJson(result.services_with_categories);
 
-      if (result.services_with_categories && Array.isArray(result.services_with_categories)) {
-        services = result.services_with_categories.map((service: any) => service.name).filter(Boolean);
-        // Extrahiere Preise aus services_with_categories
-        result.services_with_categories.forEach((service: any) => {
-          if (service.name && service.price) {
+      if (swcForCheapest.length > 0) {
+        services = swcForCheapest
+          .map((service: any) => service.name)
+          .filter(Boolean)
+          .filter((name: string) => !isExcludedFromAbPrice(name));
+        swcForCheapest.forEach((service: any) => {
+          if (service.name && service.price && !isExcludedFromAbPrice(service.name)) {
             prices[service.name] = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
           }
         });
       }
 
-      // Bestpreis ermitteln - verwende Preis-Object falls verfügbar, sonst hourly_rate
-      // Anfahrkosten werden ausgeschlossen, da sie zusätzliche Kosten sind
-      const getBestPrice = (prices: Record<string, number | string>): number => {
-        if (!prices || Object.keys(prices).length === 0) return 0;
+      const cheapest = getCheapestPricedService(swcForCheapest);
+      const travelCostConfig = resolveTravelCostConfig(
+        result.travel_cost_config,
+        swcForCheapest
+      );
 
-        // Filtere Anfahrkosten aus der Preisberechnung aus
-        const pricesWithoutTravelCosts = Object.entries(prices)
-          .filter(([key, price]) => {
-            // Schließe "Anfahrkosten" aus der Preisberechnung aus
-            if (key === 'Anfahrkosten') {
-              console.log('🚗 Excluding travel costs from price calculation:', price);
-              return false;
-            }
-            return price !== '' && price !== null && price !== undefined;
-          })
-          .map(([key, price]) => {
-            const num = typeof price === 'string' ? parseFloat(price) : price;
-            return isNaN(num) ? 0 : num;
-          })
-          .filter(price => price > 0);
-
-        return pricesWithoutTravelCosts.length > 0 ? Math.min(...pricesWithoutTravelCosts) : 0;
-      };
-
-      const bestPrice = getBestPrice(prices) || Number(result.hourly_rate) || 0;
+      const bestPrice =
+        cheapest?.price ??
+        (minNumericPriceExcludingTravel(prices) || Number(result.hourly_rate) || 0);
 
       // Use the data from the view directly
       const firstName = result.first_name || '';
@@ -1005,6 +1022,8 @@ export const caretakerSearchService = {
         hourlyRate: bestPrice,
         prices: prices,
         services: services,
+        servicesWithCategories: swcForCheapest,
+        travelCostConfig,
         bio: result.short_about_me || 'Keine Beschreibung verfügbar.',
         responseTime: 'unter 1 Stunde',
         verified: result.is_verified || false,

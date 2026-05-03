@@ -724,6 +724,7 @@ export type Database = {
           updated_at: string | null
           vat_id: string | null
           zertifikate: string[] | null
+          travel_cost_config: Json | null
         }
         Insert: {
           animal_types?: string[] | null
@@ -769,6 +770,7 @@ export type Database = {
           updated_at?: string | null
           vat_id?: string | null
           zertifikate?: string[] | null
+          travel_cost_config?: Json | null
         }
         Update: {
           animal_types?: string[] | null
@@ -814,6 +816,7 @@ export type Database = {
           updated_at?: string | null
           vat_id?: string | null
           zertifikate?: string[] | null
+          travel_cost_config?: Json | null
         }
         Relationships: [
           {
@@ -3486,6 +3489,7 @@ export type Database = {
           sunday_availability: Json | null
           tax_number: string | null
           thursday_availability: Json | null
+          travel_cost_config: Json | null
           tuesday_availability: Json | null
           updated_at: string | null
           vat_id: string | null
@@ -3541,6 +3545,7 @@ export type Database = {
           short_term_available: boolean | null
           spezialisierungen: string[] | null
           street: string | null
+          travel_cost_config: Json | null
           user_type: string | null
           zertifikate: string[] | null
         }

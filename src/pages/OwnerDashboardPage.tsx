@@ -108,6 +108,7 @@ function OwnerDashboardPage() {
   const { isPremiumUser } = useSubscription();
   const { toasts, showSuccess, showError, removeToast } = useToast();
   const [ownerApprovalLoading, setOwnerApprovalLoading] = useState(false);
+  const [approvalHintDismissed, setApprovalHintDismissed] = useState(false);
   const navigate = useNavigate();
   const [profileLoadAttempts, setProfileLoadAttempts] = useState(0);
   // Onboarding-Modal State
@@ -1723,14 +1724,23 @@ function OwnerDashboardPage() {
                           </button>
                         )}
 
+                        {!approvalHintDismissed && (
                         <div
-                          className="w-full max-w-md lg:max-w-sm rounded-lg border border-gray-100 bg-gray-50/90 p-3 text-left text-xs sm:text-sm text-gray-600 leading-relaxed"
+                          className="relative w-full max-w-md lg:max-w-sm rounded-lg border border-gray-100 bg-gray-50/90 py-3 pl-3 pr-10 text-left text-xs sm:text-sm text-gray-600 leading-relaxed"
                           role="region"
                           aria-label="Hinweis zur Profil-Sichtbarkeit"
                         >
+                          <button
+                            type="button"
+                            onClick={() => setApprovalHintDismissed(true)}
+                            className="absolute top-2 right-2 rounded p-0.5 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
+                            aria-label="Hinweis schließen"
+                          >
+                            <X className="h-4 w-4" aria-hidden />
+                          </button>
                           <div className="flex gap-2">
                             <Info className="h-4 w-4 shrink-0 text-primary-600 mt-0.5" aria-hidden />
-                            <div className="space-y-2">
+                            <div className="min-w-0 space-y-2 flex-1">
                               <p className="font-medium text-gray-800">Profil ist ohne Freigabe nicht öffentlich</p>
                               <p>
                                 Ohne erfolgreiche Freigabe erscheint dein öffentliches Profil nicht und deine Gesuche sind
@@ -1756,6 +1766,7 @@ function OwnerDashboardPage() {
                             </div>
                           </div>
                         </div>
+                        )}
                     </div>
                   )}
 

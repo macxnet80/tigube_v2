@@ -20,14 +20,22 @@ import { useSubscription } from '../lib/auth/useSubscription';
 import RegistrationSuccessModal from '../components/ui/RegistrationSuccessModal';
 import ProfileImageCropper from '../components/ui/ProfileImageCropper';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
-import { DEFAULT_SERVICE_CATEGORIES, type ServiceCategory, type CategorizedService } from '../lib/types/service-categories';
+import { DEFAULT_SERVICE_CATEGORIES, type ServiceCategory, type CategorizedService, type TravelCostConfig } from '../lib/types/service-categories';
 import { ServiceUtils as SupabaseServiceUtils } from '../lib/supabase/service-categories';
 import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityContext';
 import { useToast } from '../hooks/useToast';
 import ToastContainer from '../components/ui/ToastContainer';
 import { VerificationService, type VerificationDocument } from '../lib/services/verificationService';
 import CaretakerContactTab from '../components/ui/CaretakerContactTab';
-import { isCaretaker } from '../lib/utils';
+import { isCaretaker, formatCurrency } from '../lib/utils';
+import {
+  formatTravelCostGerman,
+  getCheapestPricedService,
+  isExcludedFromAbPrice,
+  parseEffectivePriceType,
+  priceTypeSuffixGerman,
+  resolveTravelCostConfig,
+} from '../lib/pricing/servicePricing';
 import RefGrowDashboard from '../components/ui/RefGrowDashboard';
 import DashboardReleaseTeaser from '../components/dashboard/DashboardReleaseTeaser';
 
@@ -98,6 +106,7 @@ function CaretakerDashboardPage() {
 
   // Approval state
   const [approvalLoading, setApprovalLoading] = useState(false);
+  const [approvalHintDismissed, setApprovalHintDismissed] = useState(false);
 
   // Verification state
   const [verificationRequest, setVerificationRequest] = useState<VerificationDocument | null>(null);
@@ -276,18 +285,30 @@ function CaretakerDashboardPage() {
     servicesWithCategories: CategorizedService[];
     animal_types: string[];
     prices: Record<string, string>;
+    travelCostDraft: { pricePerKm: string; freeKm: string };
   }>(() => {
     const saved = sessionStorage.getItem('servicesDraft');
     if (saved) {
-      return JSON.parse(saved);
+      const p = JSON.parse(saved);
+      const prices = p.prices ?? {};
+      return {
+        services: p.services ?? [],
+        servicesWithCategories: p.servicesWithCategories ?? [],
+        animal_types: p.animal_types ?? [],
+        prices,
+        travelCostDraft: p.travelCostDraft ?? {
+          pricePerKm: typeof prices.Anfahrkosten === 'string' ? prices.Anfahrkosten : '',
+          freeKm: '',
+        },
+      };
     }
 
-    // Fallback-Werte für initiale Initialisierung
     return {
       services: [],
       servicesWithCategories: [],
       animal_types: [],
       prices: {},
+      travelCostDraft: { pricePerKm: '', freeKm: '' },
     };
   });
 
@@ -314,25 +335,44 @@ function CaretakerDashboardPage() {
       if (Array.isArray(servicesWithCategories)) {
         servicesWithCategories.forEach((service: any) => {
           if (service.name && service.name !== 'Anfahrkosten') {
-            // Prüfe, ob es ein Standard-Service ist
             if (defaultServices.includes(service.name)) {
               normalizedServices.push(service.name);
             }
             if (service.price) {
               prices[service.name] = service.price.toString();
             }
-          } else if (service.name === 'Anfahrkosten' && service.price) {
-            // Anfahrkosten separat behandeln
-            prices['Anfahrkosten'] = service.price.toString();
           }
         });
       }
 
+      const rawTc = profile.travel_cost_config;
+      let travelCostDraft = { pricePerKm: '', freeKm: '' };
+      if (rawTc && typeof rawTc === 'object' && !Array.isArray(rawTc)) {
+        const o = rawTc as Record<string, unknown>;
+        if (o.price_per_km != null && o.price_per_km !== '') {
+          travelCostDraft = {
+            ...travelCostDraft,
+            pricePerKm: String(o.price_per_km).replace('.', ','),
+          };
+        }
+        if (o.free_km != null && o.free_km !== '') {
+          travelCostDraft = { ...travelCostDraft, freeKm: String(o.free_km) };
+        }
+      } else {
+        const leg = (profile.services_with_categories || []).find(
+          (s: any) => s?.name === 'Anfahrkosten' && s?.price
+        );
+        if (leg?.price != null && leg.price !== '') {
+          travelCostDraft = { pricePerKm: String(leg.price).replace('.', ','), freeKm: '' };
+        }
+      }
+
       setServicesDraft({
         services: normalizedServices,
-        servicesWithCategories: servicesWithCategories,
+        servicesWithCategories,
         animal_types: profile.animal_types || [],
-        prices: prices,
+        prices,
+        travelCostDraft,
       });
     }
   }, [profile]);
@@ -605,7 +645,11 @@ function CaretakerDashboardPage() {
     setServicesDraft(d => {
       const newPrices = { ...d.prices };
       delete newPrices[key];
-      return { ...d, prices: newPrices };
+      return {
+        ...d,
+        prices: newPrices,
+        servicesWithCategories: d.servicesWithCategories.filter(s => s.name !== key),
+      };
     });
   }
   function handleAddPrice() {
@@ -618,7 +662,8 @@ function CaretakerDashboardPage() {
     const newService: CategorizedService = {
       name: newKey,
       category_id: 8, // Default: Allgemein
-      category_name: 'Allgemein'
+      category_name: 'Allgemein',
+      price_type: 'per_hour',
     };
     setServicesDraft(d => ({
       ...d,
@@ -626,69 +671,112 @@ function CaretakerDashboardPage() {
     }));
   }
 
+  function resolveSavePriceType(
+    meta: CategorizedService | undefined
+  ): 'per_hour' | 'per_visit' | 'per_day' {
+    const t = meta?.price_type;
+    if (t === 'per_visit') return 'per_visit';
+    if (t === 'per_day') return 'per_day';
+    return 'per_hour';
+  }
+
+  function handleTravelCostDraftChange(field: 'pricePerKm' | 'freeKm', value: string) {
+    const nextVal =
+      field === 'freeKm' ? value.replace(/[^0-9]/g, '') : validatePriceInput(value);
+    setServicesDraft(d => ({
+      ...d,
+      travelCostDraft: { ...d.travelCostDraft, [field]: nextVal },
+    }));
+  }
+
+  function handleServicePriceTypeChange(serviceName: string, priceType: 'per_hour' | 'per_visit') {
+    setServicesDraft(d => {
+      const ix = d.servicesWithCategories.findIndex(s => s.name === serviceName);
+      const next = [...d.servicesWithCategories];
+      if (ix >= 0) {
+        next[ix] = { ...next[ix], price_type: priceType };
+      } else {
+        next.push({
+          name: serviceName,
+          category_id: 8,
+          category_name: 'Allgemein',
+          price_type: priceType,
+        });
+      }
+      return { ...d, servicesWithCategories: next };
+    });
+  }
+
   // Speichern der Leistungen
   const handleSaveServices = async () => {
     if (!user || !profile) return;
 
     try {
-
-
-      // Sammle alle aktiven Services (Standard + Custom)
       const allActiveServices: CategorizedService[] = [];
 
-      // 1. Standard-Services hinzufügen
       servicesDraft.services.forEach(serviceName => {
         const price = servicesDraft.prices[serviceName];
+        const meta = servicesDraft.servicesWithCategories.find(s => s.name === serviceName);
+        const pt = resolveSavePriceType(meta);
         const service: CategorizedService = {
           name: serviceName,
-          category_id: 8, // Default: Allgemein
-          category_name: 'Allgemein',
-          ...(price && price.trim() !== '' && {
-            price: parseFloat(price),
-            price_type: 'per_hour'
-          })
+          category_id: meta?.category_id ?? 8,
+          category_name: meta?.category_name ?? 'Allgemein',
+          ...(price &&
+            price.trim() !== '' && {
+              price: parseFloat(price.replace(',', '.')),
+              price_type: pt,
+            }),
         };
         allActiveServices.push(service);
       });
 
-      // 2. Custom-Services hinzufügen (aus prices, aber nicht in services)
       Object.keys(servicesDraft.prices).forEach(serviceName => {
-        if (!servicesDraft.services.includes(serviceName) && serviceName !== 'Anfahrkosten' && !serviceName.startsWith('custom_')) {
+        if (
+          !servicesDraft.services.includes(serviceName) &&
+          serviceName !== 'Anfahrkosten'
+        ) {
           const price = servicesDraft.prices[serviceName];
           if (price && price.trim() !== '') {
-            // Finde die Kategorie für diesen Service
             const existingService = servicesDraft.servicesWithCategories.find(s => s.name === serviceName);
+            const pt = resolveSavePriceType(existingService);
             const service: CategorizedService = {
               name: serviceName,
               category_id: existingService?.category_id || 8,
               category_name: existingService?.category_name || 'Allgemein',
-              price: parseFloat(price),
-              price_type: 'per_hour'
+              price: parseFloat(price.replace(',', '.')),
+              price_type: pt,
             };
             allActiveServices.push(service);
           }
         }
       });
 
-      // 3. Anfahrkosten als separaten Service hinzufügen
-      const travelCosts = servicesDraft.prices['Anfahrkosten'];
-      if (travelCosts && travelCosts.trim() !== '') {
-        const travelService: CategorizedService = {
-          name: 'Anfahrkosten',
-          category_id: 8,
-          category_name: 'Allgemein',
-          price: parseFloat(travelCosts),
-          price_type: 'per_visit'
-        };
-        allActiveServices.push(travelService);
+      const pkRaw = servicesDraft.travelCostDraft.pricePerKm.replace(',', '.').trim();
+      const fkRaw = servicesDraft.travelCostDraft.freeKm.trim();
+      const pk = pkRaw === '' ? NaN : parseFloat(pkRaw);
+      const fk = fkRaw === '' ? NaN : parseInt(fkRaw, 10);
+
+      let travelCostConfigPayload: TravelCostConfig | null = null;
+      if (!Number.isNaN(pk) && pk > 0) {
+        travelCostConfigPayload = { price_per_km: pk };
+        if (!Number.isNaN(fk) && fk > 0) travelCostConfigPayload.free_km = fk;
+      } else if (!Number.isNaN(fk) && fk > 0) {
+        travelCostConfigPayload = { free_km: fk };
+      } else {
+        travelCostConfigPayload = null;
       }
 
+      const minFromServices = getCheapestPricedService(allActiveServices)?.price ?? null;
 
-
-      // Nur die Leistungs-Felder speichern (neue Struktur)
-      const { data, error } = await caretakerProfileService.saveProfile(user.id, {
+      const { error } = await caretakerProfileService.saveProfile(user.id, {
         servicesWithCategories: allActiveServices,
         animalTypes: servicesDraft.animal_types,
+        travelCostConfig:
+          travelCostConfigPayload && Object.keys(travelCostConfigPayload).length > 0
+            ? travelCostConfigPayload
+            : null,
+        hourlyRate: minFromServices != null ? minFromServices : null,
       });
 
       if (error) {
@@ -697,18 +785,36 @@ function CaretakerDashboardPage() {
         return;
       }
 
-
-
-      // Aktualisiere das Profil mit den neuen Daten
       setProfile((prev: any) => ({
         ...prev,
         services_with_categories: allActiveServices,
         animal_types: servicesDraft.animal_types,
+        travel_cost_config: travelCostConfigPayload,
+        hourly_rate: minFromServices != null ? minFromServices : prev.hourly_rate,
+      }));
+
+      const nextPrices = { ...servicesDraft.prices };
+      delete nextPrices['Anfahrkosten'];
+
+      setServicesDraft(d => ({
+        ...d,
+        prices: nextPrices,
+        travelCostDraft: travelCostConfigPayload
+          ? {
+              pricePerKm:
+                travelCostConfigPayload.price_per_km != null
+                  ? String(travelCostConfigPayload.price_per_km).replace('.', ',')
+                  : '',
+              freeKm:
+                travelCostConfigPayload.free_km != null
+                  ? String(travelCostConfigPayload.free_km)
+                  : '',
+            }
+          : { pricePerKm: '', freeKm: '' },
       }));
 
       setEditServices(false);
-      setError(null); // Lösche eventuelle Fehler
-      // Cleanup sessionStorage
+      setError(null);
       sessionStorage.removeItem('editServices');
       sessionStorage.removeItem('servicesDraft');
     } catch (error) {
@@ -728,25 +834,44 @@ function CaretakerDashboardPage() {
     if (Array.isArray(servicesWithCategories)) {
       servicesWithCategories.forEach((service: any) => {
         if (service.name && service.name !== 'Anfahrkosten') {
-          // Prüfe, ob es ein Standard-Service ist
           if (defaultServices.includes(service.name)) {
             normalizedServices.push(service.name);
           }
           if (service.price) {
             prices[service.name] = service.price.toString();
           }
-        } else if (service.name === 'Anfahrkosten' && service.price) {
-          // Anfahrkosten separat behandeln
-          prices['Anfahrkosten'] = service.price.toString();
         }
       });
+    }
+
+    const rawTc = profile?.travel_cost_config;
+    let travelCostDraft = { pricePerKm: '', freeKm: '' };
+    if (rawTc && typeof rawTc === 'object' && !Array.isArray(rawTc)) {
+      const o = rawTc as Record<string, unknown>;
+      if (o.price_per_km != null && o.price_per_km !== '') {
+        travelCostDraft = {
+          ...travelCostDraft,
+          pricePerKm: String(o.price_per_km).replace('.', ','),
+        };
+      }
+      if (o.free_km != null && o.free_km !== '') {
+        travelCostDraft = { ...travelCostDraft, freeKm: String(o.free_km) };
+      }
+    } else {
+      const leg = (profile?.services_with_categories || []).find(
+        (s: any) => s?.name === 'Anfahrkosten' && s?.price
+      );
+      if (leg?.price != null && leg.price !== '') {
+        travelCostDraft = { pricePerKm: String(leg.price).replace('.', ','), freeKm: '' };
+      }
     }
 
     setServicesDraft({
       services: normalizedServices,
       servicesWithCategories: servicesWithCategories,
       animal_types: profile?.animal_types || [],
-      prices: prices,
+      prices,
+      travelCostDraft,
     });
     setEditServices(false);
     // Cleanup sessionStorage
@@ -1386,25 +1511,44 @@ function CaretakerDashboardPage() {
           if (Array.isArray(servicesWithCategories)) {
             servicesWithCategories.forEach((service: any) => {
               if (service.name && service.name !== 'Anfahrkosten') {
-                // Prüfe, ob es ein Standard-Service ist
                 if (defaultServices.includes(service.name)) {
                   normalizedServices.push(service.name);
                 }
                 if (service.price) {
                   prices[service.name] = service.price.toString();
                 }
-              } else if (service.name === 'Anfahrkosten' && service.price) {
-                // Anfahrkosten separat behandeln
-                prices['Anfahrkosten'] = service.price.toString();
               }
             });
+          }
+
+          const rawTc = (ensuredProfile as any).travel_cost_config;
+          let travelCostDraft = { pricePerKm: '', freeKm: '' };
+          if (rawTc && typeof rawTc === 'object' && !Array.isArray(rawTc)) {
+            const o = rawTc as Record<string, unknown>;
+            if (o.price_per_km != null && o.price_per_km !== '') {
+              travelCostDraft = {
+                ...travelCostDraft,
+                pricePerKm: String(o.price_per_km).replace('.', ','),
+              };
+            }
+            if (o.free_km != null && o.free_km !== '') {
+              travelCostDraft = { ...travelCostDraft, freeKm: String(o.free_km) };
+            }
+          } else {
+            const leg = servicesWithCategories.find(
+              (s: any) => s?.name === 'Anfahrkosten' && s?.price
+            );
+            if (leg?.price != null && leg.price !== '') {
+              travelCostDraft = { pricePerKm: String(leg.price).replace('.', ','), freeKm: '' };
+            }
           }
 
           setServicesDraft({
             services: normalizedServices,
             servicesWithCategories: servicesWithCategories,
             animal_types: (ensuredProfile as any).animal_types || [],
-            prices: prices,
+            prices,
+            travelCostDraft,
           });
         }
 
@@ -2652,14 +2796,23 @@ function CaretakerDashboardPage() {
                           </button>
                         )}
 
+                        {!approvalHintDismissed && (
                         <div
-                          className="w-full max-w-md lg:max-w-sm rounded-lg border border-gray-100 bg-gray-50/90 p-3 text-left text-xs sm:text-sm text-gray-600 leading-relaxed"
+                          className="relative w-full max-w-md lg:max-w-sm rounded-lg border border-gray-100 bg-gray-50/90 py-3 pl-3 pr-10 text-left text-xs sm:text-sm text-gray-600 leading-relaxed"
                           role="region"
                           aria-label="Hinweis zur Profil-Sichtbarkeit"
                         >
+                          <button
+                            type="button"
+                            onClick={() => setApprovalHintDismissed(true)}
+                            className="absolute top-2 right-2 rounded p-0.5 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1"
+                            aria-label="Hinweis schließen"
+                          >
+                            <X className="h-4 w-4" aria-hidden />
+                          </button>
                           <div className="flex gap-2">
                             <Info className="h-4 w-4 shrink-0 text-primary-600 mt-0.5" aria-hidden />
-                            <div className="space-y-2">
+                            <div className="min-w-0 space-y-2 flex-1">
                               <p className="font-medium text-gray-800">Profil ist ohne Freigabe nicht öffentlich</p>
                               <p>
                                 Ohne erfolgreiche Freigabe erscheint Ihr Profil nicht in der Betreuer-Suche und ist für andere Nutzer nicht sichtbar.
@@ -2684,6 +2837,7 @@ function CaretakerDashboardPage() {
                             </div>
                           </div>
                         </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2917,16 +3071,24 @@ function CaretakerDashboardPage() {
                       <div className="mb-4">
                         <span className="font-semibold text-gray-900">Leistungen:</span>
                         <div className="mt-2 space-y-2">
-                          {(profile?.services_with_categories && Array.isArray(profile.services_with_categories) && profile.services_with_categories.length > 0) ? (
-                            (profile?.services_with_categories ?? []).map((service: any, index: number) => {
+                          {(profile?.services_with_categories &&
+                            Array.isArray(profile.services_with_categories) &&
+                            profile.services_with_categories.some((s: any) => s?.name && !isExcludedFromAbPrice(s.name))) ? (
+                              <>
+                              {(profile?.services_with_categories ?? [])
+                                .filter((s: any) => s?.name && !isExcludedFromAbPrice(s.name))
+                                .map((service: any, index: number) => {
                               const isStandardService = defaultServices.includes(service.name);
-                              const isTravelCosts = service.name === 'Anfahrkosten';
 
                               return (
-                                <div key={index} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg border gap-3 ${isTravelCosts ? 'bg-orange-50 border-orange-200' :
-                                  isStandardService ? 'bg-green-50 border-green-200' :
-                                    'bg-blue-50 border-blue-200'
-                                  }`}>
+                                <div
+                                  key={index}
+                                  className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg border gap-3 ${
+                                    isStandardService
+                                      ? 'bg-green-50 border-green-200'
+                                      : 'bg-blue-50 border-blue-200'
+                                  }`}
+                                >
                                   <div className="flex items-center gap-3">
                                     <div className="w-4 h-4 rounded border-2 border-primary-300 bg-primary-100 flex items-center justify-center shrink-0">
                                       <Check className="w-3 h-3 text-primary-600" />
@@ -2941,10 +3103,12 @@ function CaretakerDashboardPage() {
                                   <div className="text-right w-full sm:w-auto">
                                     {service.price ? (
                                       <span className="font-semibold text-primary-600">
-                                        {service.price} €
-                                        {service.price_type === 'per_hour' ? '/h' :
-                                          service.price_type === 'per_visit' ? '/Besuch' :
-                                            service.price_type === 'per_day' ? '/Tag' : ''}
+                                        {formatCurrency(
+                                          typeof service.price === 'string'
+                                            ? parseFloat(service.price)
+                                            : Number(service.price)
+                                        )}
+                                        {priceTypeSuffixGerman(parseEffectivePriceType(service.price_type))}
                                       </span>
                                     ) : (
                                       <span className="text-sm text-gray-400">Kein Preis</span>
@@ -2952,7 +3116,33 @@ function CaretakerDashboardPage() {
                                   </div>
                                 </div>
                               );
-                            })
+                            })}
+                              {formatTravelCostGerman(
+                                resolveTravelCostConfig(
+                                  profile?.travel_cost_config,
+                                  profile?.services_with_categories ?? []
+                                )
+                              ) && (
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 rounded-lg border gap-3 bg-orange-50 border-orange-200">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-4 h-4 rounded border-2 border-orange-300 bg-orange-100 flex items-center justify-center shrink-0">
+                                      <Check className="w-3 h-3 text-orange-600" />
+                                    </div>
+                                    <span className="font-medium text-gray-900">Anfahrtskosten</span>
+                                  </div>
+                                  <div className="text-right w-full sm:w-auto">
+                                    <span className="font-semibold text-primary-600">
+                                      {formatTravelCostGerman(
+                                        resolveTravelCostConfig(
+                                          profile?.travel_cost_config,
+                                          profile?.services_with_categories ?? []
+                                        )
+                                      )}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
                               <span className="text-gray-400">Keine Leistungen angegeben</span>
@@ -2987,20 +3177,64 @@ function CaretakerDashboardPage() {
                                   checked={servicesDraft.services.includes(service)}
                                   onChange={e => {
                                     if (e.target.checked) {
-                                      handleServicesChange('services', [...servicesDraft.services, service]);
+                                      setServicesDraft(d => ({
+                                        ...d,
+                                        services: [...d.services, service],
+                                        servicesWithCategories: d.servicesWithCategories.some(
+                                          s => s.name === service
+                                        )
+                                          ? d.servicesWithCategories
+                                          : [
+                                              ...d.servicesWithCategories,
+                                              {
+                                                name: service,
+                                                category_id: 8,
+                                                category_name: 'Allgemein',
+                                                price_type: 'per_hour',
+                                              },
+                                            ],
+                                      }));
                                     } else {
-                                      handleServicesChange('services', servicesDraft.services.filter((s: string) => s !== service));
-                                      // Entferne auch den Preis wenn Service deaktiviert wird
                                       const newPrices = { ...servicesDraft.prices };
                                       delete newPrices[service];
-                                      handleServicesChange('prices', newPrices);
+                                      setServicesDraft(d => ({
+                                        ...d,
+                                        services: d.services.filter((s: string) => s !== service),
+                                        prices: newPrices,
+                                        servicesWithCategories: d.servicesWithCategories.filter(
+                                          s => s.name !== service
+                                        ),
+                                      }));
                                     }
                                   }}
                                 />
                                 <span className="font-medium text-gray-700">{service}</span>
                                 <span className="text-sm text-gray-500">({servicePriceLabels[service] || '€'})</span>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2 justify-end">
+                                <select
+                                  className={`input w-32 text-sm ${!servicesDraft.services.includes(service) ? 'opacity-50 bg-gray-100' : ''}`}
+                                  value={
+                                    ['per_visit', 'per_day'].includes(
+                                      String(
+                                        servicesDraft.servicesWithCategories.find(s => s.name === service)
+                                          ?.price_type
+                                      )
+                                    )
+                                      ? 'per_visit'
+                                      : 'per_hour'
+                                  }
+                                  onChange={e =>
+                                    handleServicePriceTypeChange(
+                                      service,
+                                      e.target.value as 'per_hour' | 'per_visit'
+                                    )
+                                  }
+                                  disabled={!servicesDraft.services.includes(service)}
+                                >
+                                  <option value="per_hour">€/h</option>
+                                  <option value="per_visit">€/Besuch</option>
+                                </select>
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -3020,7 +3254,9 @@ function CaretakerDashboardPage() {
                       <div>
                         <label className="block text-sm font-medium mb-3">Zusätzliche Leistungen</label>
                         <div className="space-y-3">
-                          {Object.entries(servicesDraft.prices).filter(([k, _]) => !defaultServices.includes(k)).map(([k, v], index) => {
+                          {Object.entries(servicesDraft.prices)
+                            .filter(([k, _]) => !defaultServices.includes(k) && k !== 'Anfahrkosten')
+                            .map(([k, v], index) => {
                             // Finde die Kategorie für diesen Service
                             const serviceCategory = servicesDraft.servicesWithCategories.find(service =>
                               service.name === k
@@ -3089,6 +3325,27 @@ function CaretakerDashboardPage() {
                                     </option>
                                   ))}
                                 </select>
+                                <select
+                                  className="input w-28 text-sm shrink-0"
+                                  value={
+                                    ['per_visit', 'per_day'].includes(
+                                      String(
+                                        servicesDraft.servicesWithCategories.find(s => s.name === k)?.price_type
+                                      )
+                                    )
+                                      ? 'per_visit'
+                                      : 'per_hour'
+                                  }
+                                  onChange={e =>
+                                    handleServicePriceTypeChange(
+                                      k,
+                                      e.target.value as 'per_hour' | 'per_visit'
+                                    )
+                                  }
+                                >
+                                  <option value="per_hour">€/h</option>
+                                  <option value="per_visit">€/Besuch</option>
+                                </select>
                                 <input
                                   type="text"
                                   inputMode="decimal"
@@ -3120,19 +3377,35 @@ function CaretakerDashboardPage() {
                         </div>
                       </div>
 
-                      {/* Anfahrkosten */}
+                      {/* Anfahrkosten (€/km, optional Frei‑km) */}
                       <div>
                         <label className="block text-sm font-medium mb-3">{travelCostsLabel}</label>
-                        <div className="flex items-center gap-4 p-3 border rounded-lg">
-                          <span className="font-medium text-gray-700 flex-1">Anfahrkosten</span>
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            className="input w-24"
-                            placeholder="€/Km"
-                            value={servicesDraft.prices['Anfahrkosten'] || ''}
-                            onChange={e => handlePriceChange('Anfahrkosten', e.target.value)}
-                          />
+                        <div className="flex flex-wrap items-center gap-4 p-3 border rounded-lg">
+                          <span className="font-medium text-gray-700 flex-1 min-w-[120px]">Anfahrtskosten</span>
+                          <div className="flex flex-wrap gap-3 items-center">
+                            <label className="flex items-center gap-2 text-sm text-gray-600">
+                              €/km
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                className="input w-28"
+                                placeholder="z.B. 0,30"
+                                value={servicesDraft.travelCostDraft.pricePerKm}
+                                onChange={e => handleTravelCostDraftChange('pricePerKm', e.target.value)}
+                              />
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-600">
+                              erste km frei
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                className="input w-20"
+                                placeholder="0"
+                                value={servicesDraft.travelCostDraft.freeKm}
+                                onChange={e => handleTravelCostDraftChange('freeKm', e.target.value)}
+                              />
+                            </label>
+                          </div>
                         </div>
                       </div>
 

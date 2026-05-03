@@ -16,10 +16,11 @@ import LoadingSpinner from '../components/ui/LoadingSpinner';
 import AdvertisementBanner from '../components/ui/AdvertisementBanner';
 import { BetreuerAdvancedFilters } from '../components/ui/BetreuerAdvancedFilters';
 import DienstleisterCrossSearchCard from '../components/ui/DienstleisterCrossSearchCard';
-import { cn } from '../lib/utils';
+import { cn, formatCurrency } from '../lib/utils';
 import { searchCaretakers as searchCaretakersService, type CaretakerDisplayData, type SearchFilters } from '../lib/supabase/caretaker-search';
 import { searchRelatedDienstleister, type DienstleisterResult, type CrossSearchFilters } from '../lib/supabase/cross-search';
 import { DEFAULT_SERVICE_CATEGORIES } from '../lib/types/service-categories';
+import { getCheapestPricedService, minNumericPriceExcludingTravel, priceTypeSuffixGerman } from '../lib/pricing/servicePricing';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import useCurrentUsage from '../hooks/useCurrentUsage';
 import { useAuth } from '../lib/auth/AuthContext';
@@ -695,7 +696,7 @@ function SearchPage() {
 
                       {maxPrice < 100 && (
                         <div className="flex items-center bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm">
-                          💰 Max. €{maxPrice}/Std
+                          💰 Max. {formatCurrency(maxPrice)} (günstigste Leistung)
                           <button
                             onClick={() => setMaxPrice(100)}
                             className="ml-2 hover:text-primary-900"
@@ -959,57 +960,27 @@ function CaretakerCard({ caretaker }: CaretakerCardProps) {
 
   // Funktion zum Ermitteln des besten Preises für die Anzeige
   const getDisplayPrice = (caretaker: Caretaker) => {
-    // 1. Neue Struktur: Preise aus services_with_categories
-    if (caretaker.servicesWithCategories && Array.isArray(caretaker.servicesWithCategories)) {
-      const validPrices = caretaker.servicesWithCategories
-        .filter(service =>
-          service.price &&
-          service.price !== '' &&
-          service.price !== null &&
-          service.price !== undefined &&
-          service.name !== 'Anfahrkosten' // Schließe Anfahrkosten aus
-        )
-        .map(service => {
-          const price = typeof service.price === 'string' ? parseFloat(service.price) : service.price;
-          return isNaN(price) ? 0 : price;
-        })
-        .filter(price => price > 0);
-
-      if (validPrices.length > 0) {
-        const minPrice = Math.min(...validPrices);
-        return `ab €${minPrice}/Std.`;
-      }
+    const cheapest = getCheapestPricedService(caretaker.servicesWithCategories);
+    if (cheapest) {
+      return `ab ${formatCurrency(cheapest.price)}${priceTypeSuffixGerman(cheapest.priceType)}`;
     }
 
-    // 2. Fallback: Alte prices-Struktur (für Kompatibilität)
     if (caretaker.prices && Object.keys(caretaker.prices).length > 0) {
-      const pricesWithoutTravelCosts = Object.entries(caretaker.prices)
-        .filter(([key, price]) => {
-          // Schließe "Anfahrkosten" aus der Preisberechnung aus
-          if (key === 'Anfahrkosten') {
-            return false;
-          }
-          return price !== '' && price !== null && price !== undefined;
-        })
-        .map(([, price]) => {
-          const num = typeof price === 'string' ? parseFloat(price) : price;
-          return isNaN(num) ? 0 : num;
-        })
-        .filter(price => price > 0);
-
-      if (pricesWithoutTravelCosts.length > 0) {
-        const minPrice = Math.min(...pricesWithoutTravelCosts);
-        return `ab €${minPrice}/Std.`;
+      const minLegacy = minNumericPriceExcludingTravel(caretaker.prices);
+      if (minLegacy > 0) {
+        return `ab ${formatCurrency(minLegacy)}/h`;
       }
     }
 
-    // 3. Fallback zu hourlyRate
     if (caretaker.hourlyRate && caretaker.hourlyRate > 0) {
-      return `ab €${caretaker.hourlyRate}/Std.`;
+      return `ab ${formatCurrency(caretaker.hourlyRate)}/h`;
     }
 
-    // 4. Standard-Text
-    return <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>;
+    return (
+      <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">
+        a. A.
+      </span>
+    );
   };
 
   return (

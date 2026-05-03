@@ -1,8 +1,8 @@
 import { Star, MapPin, Briefcase, Clock, Verified } from 'lucide-react';
 import DienstleisterCategoryIcon, { getCategoryColor } from './DienstleisterCategoryIcon';
 import { useNavigate } from 'react-router-dom';
-import { cn } from '../../lib/utils';
-import { formatCurrency } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
+import { getCheapestPricedService, priceTypeSuffixGerman } from '../../lib/pricing/servicePricing';
 import type { DienstleisterResult } from '../../lib/supabase/cross-search';
 
 interface DienstleisterCrossSearchCardProps {
@@ -17,8 +17,16 @@ export default function DienstleisterCrossSearchCard({ dienstleister }: Dienstle
   };
 
   const getDisplayPrice = () => {
+    const cheapest = getCheapestPricedService(
+      Array.isArray(dienstleister.services_with_categories)
+        ? (dienstleister.services_with_categories as any[])
+        : null
+    );
+    if (cheapest) {
+      return `ab ${formatCurrency(cheapest.price)}${priceTypeSuffixGerman(cheapest.priceType)}`;
+    }
     if (dienstleister.hourly_rate && dienstleister.hourly_rate > 0) {
-      return formatCurrency(dienstleister.hourly_rate) + '/Std.';
+      return `ab ${formatCurrency(dienstleister.hourly_rate)}/h`;
     }
     return 'Preis auf Anfrage';
   };

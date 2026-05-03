@@ -33,6 +33,8 @@ export interface DienstleisterResult {
   stil_beschreibung: string | null;
   created_at: string | null;
   updated_at: string | null;
+  /** Aus dienstleister_search_view, falls vorhanden */
+  services_with_categories?: unknown[] | null;
 }
 
 export interface CrossSearchFilters {

@@ -9,13 +9,20 @@ export interface ServiceCategory {
   updated_at: string;
 }
 
+/** Anfahrtskosten gesondert gespeichert (caretaker_profiles.travel_cost_config) */
+export interface TravelCostConfig {
+  price_per_km?: number;
+  free_km?: number;
+}
+
 // Service with Category Information and Price
 export interface CategorizedService {
   name: string;
   category_id: number;
   category_name: string;
-  price?: number; // Optional price for the service
-  price_type?: 'per_hour' | 'per_visit' | 'per_day'; // Type of pricing
+  price?: number;
+  /** Hauptfälle: Stunde oder Besuch. `per_day` nur noch für ältere Datensätze (Anzeige /h | /Besuch | /Tag). */
+  price_type?: 'per_hour' | 'per_visit' | 'per_day';
 }
 
 // Extended Caretaker Profile Types
@@ -46,6 +53,7 @@ export interface CaretakerProfileWithCategories {
   tax_number: string | null;
   updated_at: string | null;
   vat_id: string | null;
+  travel_cost_config?: TravelCostConfig | null;
 }
 
 // Service Management Types for UI

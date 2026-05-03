@@ -16,6 +16,14 @@ import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import { getOrCreateConversation } from '../lib/supabase/chatService';
 import { ownerCaretakerService, caretakerPartnerService } from '../lib/supabase/db';
 import { formatCurrency, isCaretaker } from '../lib/utils';
+import {
+  formatTravelCostGerman,
+  getCheapestPricedService,
+  isExcludedFromAbPrice,
+  parseEffectivePriceType,
+  priceTypeSuffixGerman,
+  resolveTravelCostConfig,
+} from '../lib/pricing/servicePricing';
 import { cn } from '../lib/utils';
 import { supabase } from '../lib/supabase/client';
 import type { DienstleisterProfil } from '../lib/types/dienstleister';
@@ -462,33 +470,34 @@ function DienstleisterProfilePage() {
     dienstleister.kategorie_id
   );
 
-  // Berechne den niedrigsten Preis aus services_with_categories für Header-Anzeige
+  // Berechne den niedrigsten Preis aus services_with_categories für Header-Anzeige (ohne Anfahrt)
   const getHeaderPrice = () => {
-    // Wenn hourly_rate vorhanden ist, verwende diesen
+    const cheapest = getCheapestPricedService(dienstleister.services_with_categories);
+    if (cheapest) {
+      return `ab ${formatCurrency(cheapest.price)}${priceTypeSuffixGerman(cheapest.priceType)}`;
+    }
     if (dienstleister.hourly_rate && dienstleister.hourly_rate > 0) {
-      return `ab ${formatCurrency(dienstleister.hourly_rate)}/Std`;
+      return `ab ${formatCurrency(dienstleister.hourly_rate)}/h`;
     }
-
-    // Ansonsten suche den niedrigsten Preis aus services_with_categories
-    if (dienstleister.services_with_categories && Array.isArray(dienstleister.services_with_categories) && dienstleister.services_with_categories.length > 0) {
-      const prices = dienstleister.services_with_categories
-        .filter((service: any) => !service.name?.startsWith('custom_'))
-        .map((service: any) => {
-          if (service.price && Number(service.price) > 0 && service.price_type === 'per_hour') {
-            return Number(service.price);
-          }
-          return null;
-        })
-        .filter((price: number | null) => price !== null) as number[];
-
-      if (prices.length > 0) {
-        const minPrice = Math.min(...prices);
-        return `ab ${formatCurrency(minPrice)}/Std`;
-      }
-    }
-
-    return <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>;
+    return (
+      <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">
+        a. A.
+      </span>
+    );
   };
+
+  const dienstleisterSwcFiltered = Array.isArray(dienstleister.services_with_categories)
+    ? dienstleister.services_with_categories.filter(
+        (s: any) => !s.name?.startsWith('custom_') && !isExcludedFromAbPrice(s.name)
+      )
+    : [];
+
+  const dienstleisterTravelLabel = formatTravelCostGerman(
+    resolveTravelCostConfig(
+      dienstleister.travel_cost_config,
+      dienstleister.services_with_categories
+    )
+  );
 
   return (
     <div className="bg-gray-50 min-h-screen pb-16">
@@ -953,31 +962,20 @@ function DienstleisterProfilePage() {
                 Leistungen & Preise
               </h2>
               <div className="space-y-6">
-                {dienstleister.services_with_categories && Array.isArray(dienstleister.services_with_categories) &&
-                  dienstleister.services_with_categories.filter((s: any) => !s.name?.startsWith('custom_')).length > 0 ? (
-                  dienstleister.services_with_categories
-                    .filter((s: any) => !s.name?.startsWith('custom_'))
-                    .map((service: any, index: number) => {
+                {dienstleisterSwcFiltered.length > 0 ? (
+                  <>
+                    {dienstleisterSwcFiltered.map((service: any, index: number) => {
                       const serviceName = service.name || 'Unbekannte Leistung';
                       const servicePrice = service.price;
-                      const priceType = service.price_type || 'per_hour';
+                      const effType = parseEffectivePriceType(service.price_type || 'per_hour');
 
-                      let displayPrice: React.ReactNode = <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>;
+                      let displayPrice: React.ReactNode = (
+                        <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">
+                          a. A.
+                        </span>
+                      );
                       if (servicePrice !== null && servicePrice !== undefined && Number(servicePrice) > 0) {
-                        if (priceType === 'per_hour') {
-                          displayPrice = `${formatCurrency(Number(servicePrice))}/Std`;
-                        } else if (priceType === 'per_visit') {
-                          // Spezielle Behandlung für Anfahrkosten
-                          if (serviceName.toLowerCase().includes('anfahr') || serviceName.toLowerCase().includes('fahrt')) {
-                            displayPrice = `${formatCurrency(Number(servicePrice))}/km`;
-                          } else {
-                            displayPrice = `${formatCurrency(Number(servicePrice))}/Besuch`;
-                          }
-                        } else if (priceType === 'per_day') {
-                          displayPrice = `${formatCurrency(Number(servicePrice))}/Tag`;
-                        } else {
-                          displayPrice = `${formatCurrency(Number(servicePrice))}`;
-                        }
+                        displayPrice = `${formatCurrency(Number(servicePrice))}${priceTypeSuffixGerman(effType)}`;
                       }
 
                       return (
@@ -993,16 +991,27 @@ function DienstleisterProfilePage() {
                           </span>
                         </div>
                       );
-                    })
+                    })}
+                  </>
                 ) : dienstleister.hourly_rate && dienstleister.hourly_rate > 0 ? (
                   <div className="text-center py-4">
                     <span className="text-lg font-semibold text-primary-600">
-                      ab {formatCurrency(dienstleister.hourly_rate)}/Std
+                      ab {formatCurrency(dienstleister.hourly_rate)}/h
                     </span>
                   </div>
                 ) : (
                   <div className="text-center py-4">
-                    <span className="text-gray-600 cursor-help border-b border-dotted" title="Preis auf Anfrage">a. A.</span>
+                    <span className="text-gray-600 cursor-help border-b border-dotted" title="Preis auf Anfrage">
+                      a. A.
+                    </span>
+                  </div>
+                )}
+                {dienstleisterTravelLabel && (
+                  <div className="flex justify-between items-start gap-4 p-3 rounded-lg border border-orange-200 bg-orange-50">
+                    <span className="text-gray-800 font-medium flex-1">Anfahrtskosten</span>
+                    <span className="text-lg font-semibold text-primary-600 text-right shrink-0 whitespace-nowrap">
+                      {dienstleisterTravelLabel}
+                    </span>
                   </div>
                 )}
               </div>

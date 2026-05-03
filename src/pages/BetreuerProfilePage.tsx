@@ -20,6 +20,15 @@ import { useShortTermAvailability } from '../contexts/ShortTermAvailabilityConte
 import HomePhotosSection from '../components/ui/HomePhotosSection';
 import ResponseTimeDisplay from '../components/ui/ResponseTimeDisplay';
 import { getCaretakerResponseTime, calculateCaretakerResponseTime } from '../lib/supabase/responseTimeService';
+import type { TravelCostConfig } from '../lib/types/service-categories';
+import {
+  formatTravelCostGerman,
+  getCheapestPricedService,
+  parseEffectivePriceType,
+  parseServicesWithCategoriesJson,
+  priceTypeSuffixGerman,
+  resolveTravelCostConfig,
+} from '../lib/pricing/servicePricing';
 
 interface Caretaker {
   id: string | null;
@@ -48,6 +57,8 @@ interface Caretaker {
   short_term_available?: boolean;
   overnight_availability?: Record<string, boolean>; // Übernachtungs-Verfügbarkeit pro Wochentag
   short_about_me?: string; // Kurze Beschreibung für die Profilseite
+  servicesWithCategories?: any[];
+  travelCostConfig?: TravelCostConfig | null;
 }
 
 interface Review {
@@ -88,6 +99,8 @@ function BetreuerProfilePage() {
   const [responseTimeData, setResponseTimeData] = useState<{ text: string; messageCount: number } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     const fetchCaretaker = async () => {
       if (!id) {
         setError('Keine Betreuer-ID angegeben');
@@ -103,6 +116,8 @@ function BetreuerProfilePage() {
         // Use the getCaretakerById function from db.ts
         // Übergebe user.id als viewerId, damit das eigene Profil auch ohne Freigabe geladen wird
         const { data, error: fetchError } = await caretakerSearchService.getCaretakerById(id, user?.id);
+
+        if (cancelled) return;
 
         console.log('🔍 Fetch result:', { data, error: fetchError });
 
@@ -133,21 +148,30 @@ function BetreuerProfilePage() {
             ...data,
             short_term_available: user && data.userId === user.id ? shortTermAvailable : data.short_term_available
           };
-          setCaretaker(updatedData);
+          if (!cancelled) {
+            setCaretaker(updatedData);
+          }
 
           // Profile loaded
         }
       } catch (err) {
         console.error('Error fetching caretaker:', err);
-        setError('Unerwarteter Fehler beim Laden des Profils');
-        setCaretaker(null);
+        if (!cancelled) {
+          setError('Unerwarteter Fehler beim Laden des Profils');
+          setCaretaker(null);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchCaretaker();
-  }, [id, user, shortTermAvailable]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id, user?.id]);
 
   // Update caretaker's short_term_available when context changes
   useEffect(() => {
@@ -510,6 +534,12 @@ function BetreuerProfilePage() {
 
   const displayName = formatCaretakerName(caretaker.name);
 
+  const caretakerSwcParsed = parseServicesWithCategoriesJson(caretaker.servicesWithCategories);
+
+  const betreuerTravelLabel = formatTravelCostGerman(
+    resolveTravelCostConfig(caretaker.travelCostConfig, caretakerSwcParsed)
+  );
+
   // Sprach-zu-Code Mapping
   const getLanguageFlag = (language: string) => {
     const languageMap: Record<string, any> = {
@@ -648,8 +678,26 @@ function BetreuerProfilePage() {
                 <div className="flex items-start gap-3">
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary-600">
-                      {caretaker.hourlyRate > 0 ? `ab ${formatCurrency(caretaker.hourlyRate)}/Std` : <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>}
+                      {(() => {
+                        const cheapest = getCheapestPricedService(caretakerSwcParsed);
+                        if (cheapest) {
+                          return `ab ${formatCurrency(cheapest.price)}${priceTypeSuffixGerman(cheapest.priceType)}`;
+                        }
+                        if (caretaker.hourlyRate > 0) {
+                          return `ab ${formatCurrency(caretaker.hourlyRate)}/h`;
+                        }
+                        return (
+                          <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">
+                            a. A.
+                          </span>
+                        );
+                      })()}
                     </div>
+                    {betreuerTravelLabel && (
+                      <p className="text-sm text-gray-600 mt-2 max-w-[14rem] ml-auto text-right leading-snug">
+                        Anfahrt: <span className="font-medium text-gray-800">{betreuerTravelLabel}</span>
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -897,19 +945,36 @@ function BetreuerProfilePage() {
                 {caretaker.services
                   .filter(service => typeof service === 'string' && !service.startsWith('custom_'))
                   .map(service => {
-                    // Suche Service-spezifischen Preis
-                    const servicePrice = caretaker.prices && caretaker.prices[service];
+                    const swc = caretakerSwcParsed.find(
+                      (s: any) => s && s.name === service
+                    );
+                    const servicePrice =
+                      swc?.price ??
+                      (caretaker.prices && caretaker.prices[service]);
 
-                    // Prüfe ob ein gültiger Preis vorhanden ist (nicht leer, nicht null, nicht undefined)
-                    const hasValidPrice = servicePrice &&
+                    const hasValidPrice =
+                      servicePrice !== undefined &&
                       servicePrice !== '' &&
                       servicePrice !== null &&
-                      servicePrice !== undefined &&
-                      (typeof servicePrice === 'number' ? servicePrice > 0 : parseFloat(servicePrice) > 0);
+                      (typeof servicePrice === 'number'
+                        ? servicePrice > 0
+                        : parseFloat(String(servicePrice)) > 0);
+
+                    const suffix = swc
+                      ? priceTypeSuffixGerman(parseEffectivePriceType(swc.price_type))
+                      : '/h';
 
                     const displayPrice = hasValidPrice
-                      ? (typeof servicePrice === 'string' ? `${servicePrice}€` : `${servicePrice}€`)
-                      : <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">a. A.</span>;
+                      ? `${formatCurrency(
+                          typeof servicePrice === 'string'
+                            ? parseFloat(servicePrice)
+                            : Number(servicePrice)
+                        )}${suffix}`
+                      : (
+                          <span title="Preis auf Anfrage" className="cursor-help border-b border-dotted border-current">
+                            a. A.
+                          </span>
+                        );
 
                     return (
                       <div key={service} className="flex justify-between items-start gap-4">
@@ -920,6 +985,14 @@ function BetreuerProfilePage() {
                       </div>
                     );
                   })}
+                {betreuerTravelLabel && (
+                  <div className="flex justify-between items-start gap-4 p-3 rounded-lg border border-orange-200 bg-orange-50">
+                    <span className="text-gray-800 font-medium flex-1">Anfahrtskosten</span>
+                    <span className="text-lg font-semibold text-primary-600 text-right shrink-0 whitespace-nowrap">
+                      {betreuerTravelLabel}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

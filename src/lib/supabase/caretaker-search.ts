@@ -1,5 +1,11 @@
 import { supabase } from './client';
-import { ServiceUtils, type CategorizedService } from './service-categories';
+import {
+  getCheapestPricedService,
+  isExcludedFromAbPrice,
+  priceRecordFromServicesExcludingTravel,
+  resolveTravelCostConfig,
+} from '../pricing/servicePricing';
+import type { TravelCostConfig } from '../types/service-categories';
 
 export interface SearchFilters {
   petType?: string;
@@ -37,6 +43,7 @@ export interface CaretakerDisplayData {
   verified: boolean;
   isCommercial: boolean;
   short_term_available?: boolean;
+  travelCostConfig?: TravelCostConfig | null;
 }
 
 /**
@@ -106,6 +113,7 @@ interface CaretakerViewRow {
   vat_id: string | null;
   short_term_available: boolean | null;
   overnight_availability: any;
+  travel_cost_config?: unknown;
 }
 
 function transformCaretakerData(viewData: CaretakerViewRow): CaretakerDisplayData {
@@ -159,7 +167,7 @@ function transformCaretakerData(viewData: CaretakerViewRow): CaretakerDisplayDat
     servicesWithCategories = [];
   }
 
-  // Preise verarbeiten - kann JSON object sein
+  // Preise verarbeiten - kann JSON object sein (Legacy-View)
   let prices: Record<string, number | string> = {};
   try {
     if (viewData.prices && typeof viewData.prices === 'object') {
@@ -170,7 +178,24 @@ function transformCaretakerData(viewData: CaretakerViewRow): CaretakerDisplayDat
     prices = {};
   }
 
-  const bestPrice = getBestPrice(prices) || Number(viewData.hourly_rate) || 0;
+  const swcPrices = priceRecordFromServicesExcludingTravel(servicesWithCategories);
+  const mergedPrices: Record<string, number | string> = { ...prices, ...swcPrices };
+
+  if (services.length === 0 && servicesWithCategories.length > 0) {
+    services = servicesWithCategories
+      .map((s: any) => s.name)
+      .filter(Boolean)
+      .filter((name: string) => !isExcludedFromAbPrice(name));
+  } else {
+    services = services.filter((name) => !isExcludedFromAbPrice(name));
+  }
+
+  const cheapest = getCheapestPricedService(servicesWithCategories);
+  const fallbackNumeric =
+    getBestPrice(mergedPrices) || Number(viewData.hourly_rate) || 0;
+  const bestPrice = cheapest?.price ?? fallbackNumeric;
+
+  const travelCostConfig = resolveTravelCostConfig(viewData.travel_cost_config, servicesWithCategories);
 
   const result: CaretakerDisplayData = {
     id: viewData.id || '',
@@ -181,7 +206,7 @@ function transformCaretakerData(viewData: CaretakerViewRow): CaretakerDisplayDat
     rating: Number(viewData.rating) || 0,
     reviewCount: viewData.review_count || 0,
     hourlyRate: bestPrice, // Verwende den besten Preis aus service-spezifischen Preisen
-    prices: prices,
+    prices: mergedPrices,
     services: services,
     servicesWithCategories: servicesWithCategories,
     animalTypes: animalTypes,
@@ -189,6 +214,7 @@ function transformCaretakerData(viewData: CaretakerViewRow): CaretakerDisplayDat
     verified: viewData.is_verified || false,
     isCommercial: viewData.is_commercial || false,
     short_term_available: viewData.short_term_available || false,
+    travelCostConfig,
   };
 
 
@@ -312,6 +338,7 @@ export async function getCaretakerById(id: string): Promise<{ data: CaretakerDis
       .select(`
         id,
         services,
+        services_with_categories,
         prices,
         hourly_rate,
         rating,
@@ -321,6 +348,8 @@ export async function getCaretakerById(id: string): Promise<{ data: CaretakerDis
         long_about_me,
         is_commercial,
         short_term_available,
+        animal_types,
+        travel_cost_config,
         users!inner(
           id,
           first_name,
